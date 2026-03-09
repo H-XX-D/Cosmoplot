@@ -1179,6 +1179,47 @@ function intervalSummary(
   return `${formatNumber(interval.low, digits)}-${formatNumber(interval.high, digits)}${suffix} (${formatNumber(interval.median, digits)}${suffix} median)`;
 }
 
+function intervalSpan(
+  interval: { low: number | null; high: number | null } | null | undefined,
+  digits: number,
+  suffix = "",
+) {
+  if (!interval) return null;
+  if (interval.low === null || interval.high === null) return null;
+  return `${formatNumber(interval.low, digits)}-${formatNumber(interval.high, digits)}${suffix}`;
+}
+
+function compactPlanetFluxTemp(system: UniverseSystem, planet: UniversePlanet, science?: PlanetScienceBundle | null) {
+  const propagation = activePropagation(planet, science);
+  const fluxText = propagation?.fluxEarthMultiple
+    ? intervalSpan(propagation.fluxEarthMultiple, 2, " S⊕")
+    : (() => {
+        const flux = science?.radiation.fluxEarthMultiple ?? insolationEarth(system, planet);
+        return flux !== null && flux !== undefined ? `${formatNumber(flux, 2)} S⊕` : null;
+      })();
+  const tempText = propagation?.equilibriumK
+    ? intervalSpan(propagation.equilibriumK, 0, " K")
+    : planet.equilibriumK
+      ? `${formatNumber(planet.equilibriumK, 0)} K`
+      : null;
+  return [fluxText ? `Flux ${fluxText}` : null, tempText ? `Temp ${tempText}` : null].filter(Boolean).join(" · ");
+}
+
+function compactPlanetMassRadius(planet: UniversePlanet, science?: PlanetScienceBundle | null) {
+  const propagation = activePropagation(planet, science);
+  const radiusText = propagation?.radiusEarth
+    ? intervalSpan(propagation.radiusEarth, 2, " R⊕")
+    : planet.radiusEarth
+      ? `${formatNumber(planet.radiusEarth, 2)} R⊕`
+      : null;
+  const massText = propagation?.massEarth
+    ? intervalSpan(propagation.massEarth, 2, " M⊕")
+    : planet.massEarth
+      ? `${formatNumber(planet.massEarth, 2)} M⊕`
+      : null;
+  return [radiusText ? `R ${radiusText}` : null, massText ? `M ${massText}` : null].filter(Boolean).join(" · ");
+}
+
 function jwstModeSummary(science?: PlanetScienceBundle | null) {
   const modes = (science?.spectrum.jwstObservations ?? [])
     .map((observation) => [observation.instrumentName, observation.filters].filter(Boolean).join(" "))
@@ -4631,10 +4672,23 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Host star</div>
                         <div className="mt-1 text-sm text-white">{selectedSystem.name} · {selectedSystem.stellar.spectralType ?? "Unknown"}</div>
+                        <div className="mt-1 text-xs text-slate-300/68">
+                          {selectedSystem.stellar.radiusSolar
+                            ? `R ${formatNumber(selectedSystem.stellar.radiusSolar, 2)} R☉`
+                            : "R unresolved"}
+                          {selectedSystem.stellar.photometry.jMag !== null || selectedSystem.stellar.photometry.kMag !== null
+                            ? ` · J/K ${formatNumber(selectedSystem.stellar.photometry.jMag, 2)} / ${formatNumber(selectedSystem.stellar.photometry.kMag, 2)}`
+                            : ""}
+                        </div>
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
                         <div className="mt-1 text-sm text-white">{selectedPlanet ? "Planet detail" : "System overview"}</div>
+                        {selectedPlanet ? (
+                          <div className="mt-1 text-xs text-slate-300/68">
+                            {compactPlanetFluxTemp(selectedSystem, selectedPlanet, selectedPlanetScience) || compactPlanetMassRadius(selectedPlanet, selectedPlanetScience) || "Science summary unresolved"}
+                          </div>
+                        ) : null}
                         {mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason ? (
                           <div className="mt-1 text-xs text-sky-100/62">{mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason}</div>
                         ) : null}
@@ -4652,9 +4706,14 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                           key={planet.id}
                           type="button"
                           onClick={() => setSelectedPlanetId(planet.id)}
-                          className={`rounded-full border px-3 py-2 text-xs uppercase tracking-[0.18em] transition ${selectedPlanet?.id === planet.id ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/18 hover:bg-white/[0.06]"}`}
+                          className={`rounded-2xl border px-3 py-2 text-left transition ${selectedPlanet?.id === planet.id ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/18 hover:bg-white/[0.06]"}`}
                         >
-                          {planet.name}
+                          <div className="text-xs uppercase tracking-[0.18em]">{planet.name}</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">
+                            {compactPlanetFluxTemp(selectedSystem, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
+                              || compactPlanetMassRadius(planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
+                              || "Science summary unresolved"}
+                          </div>
                         </button>
                       ))
                     ) : (
