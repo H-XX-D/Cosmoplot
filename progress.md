@@ -1,0 +1,77 @@
+Original prompt: refactor and isolate the rendering work into a new /Users/hendrixx./Cosmoplot app, rewrite the UX/UI as a modern React/Node/TypeScript website, keep what works, replace what doesn't, pull official-source data on demand with caching, and target photorealistic renderings.
+
+2026-03-06
+- Scaffolded a fresh Next.js TypeScript/Tailwind app in /Users/hendrixx./Cosmoplot.
+- Chosen architecture: Next.js app router for React UI + Node route handlers for official-source ingestion/caching.
+- Next work: replace starter UI, install rendering/data dependencies, and port a first isolated universe renderer.
+2026-03-06
+- Added the first live NASA Exoplanet Archive fetcher and filesystem cache in the new app.
+- Added RA/Dec/distance normalization and a grouped universe snapshot model for the renderer to consume.
+- Replaced the starter landing page with a more atmospheric shell: fixed nebula background, center-emission sky treatment, stronger typography, and science workflow framing around the renderer.
+- Kept the new renderer data-first: the stage is still visually simple, but it is now downstream of normalized science objects rather than static page data.
+- Added a stronger Coriolis/eddy pass to the procedural planet preview in src/components/ui/planet-globe.tsx.
+- Banded worlds now get explicit jet filaments layered over the belts, plus stronger vortical drift tied to hemisphere and spin.
+- Cloud-bearing worlds now get spiral storm traces/fronts so atmospheric motion reads as circulation instead of static blobs.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Browser artifact target: output/playwright/science-deck-eddies.png.
+- Refactored the procedural planet surface into a shared renderer so the 2D dossier globe and the active-system 3D planets use the same science-driven appearance logic.
+- Active-system planets now use animated canvas-driven textures instead of flat emissive color spheres.
+- Selection flow still defaults to the first valid planet in the chosen system through memo fallback and explicit system-pick handlers.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Browser artifact target: output/playwright/science-deck-shared-surface.png.
+- Replaced the selected host star's flat material with an animated shader-driven photosphere/corona treatment.
+- Added explicit planet double-click fly-to in the active system view so planet selection can drive camera focus instead of only card state.
+- Replaced the simple planet atmosphere shell with a shader shell, moving the 3D pipeline toward a shader-based material stack while keeping the shared science-driven surface map underneath.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Browser artifact target: output/playwright/science-deck-star-shader-pass.png.
+- Added Sun + the 8 solar-system planets as a first-class system in the universe snapshot and set the initial selection to Sun/Earth.
+- Single-click selection on stars and planets now waits briefly so a double-click can promote to fly-to without firing the single-click action first.
+- Shifted the render direction toward science-informed art direction: more vivid regime-based palettes and stronger day/night contrast.
+- Boosted selected-star luminosity with brighter in-scene emission and explicit triangular starburst rays.
+- Slowed active-system orbit animation to 2.6 simulated days per second so the scene reads more like a navigable system.
+- Validation after this pass: npm run lint ✅, npm run build ✅.
+
+2026-03-06
+- Finished the shared reference-texture path so Earth and archetype-backed worlds can feed both the dossier globe and the active-system 3D renderer from the same materialized source.
+- Rebalanced gas-giant chemistry for Jupiter/Saturn/Uranus/Neptune and added solar-system-specific appearance overrides so band contrast and volume stop reading as generic palette fills.
+- Moved the synopsis into the top of the right-side visual panel, removed the visible Sun disk from that 2D viewer, and changed follow-lock so manual zoom is preserved while the camera tracks the planet.
+- Validation after this pass: npm run lint ✅, npm run build ✅.
+- Locked the current star pass to shader-only work: strengthened selected-star internal dodge/burn structure (hotter white-yellow core, burned limb, warmer dodge veins, corona ray field) and switched non-selected catalog stars to a harder internal dodge treatment.
+- Kept the 2D planet pane isolated from this pass after reverting the accidental flat-strip/materialized reference regression.
+- Fixed the 2D analog-disc motion bug so it drifts one direction instead of oscillating back and forth.
+- Validation after this pass: npm run lint ✅, npm run build ✅, Playwright page snapshot ✅, console: 0 errors / 1 warning.
+- Replaced the old rocky-world blob painter with a cached terrain generator inspired by the layer workflow from Astrographer's satellite-texture tutorial: heightfield first, then bedrock, sediment, vegetation, ice, and restrained relief shading.
+- Replaced the old gas-planet paint-first approach with a cached banded-swirl generator: layered belt fields, storm masks, turbulence, haze, and then only a light animated overlay for motion.
+- Reduced the generic artistic overlays on synthetic planets so the new generated textures dominate instead of being buried under random patch noise.
+- Validation after this pass: npm run lint ✅, npm run build ✅, Playwright viewport screenshot ✅, console: 0 errors / 1 warning.
+- Expanded the official NASA Exoplanet Archive pull so the main universe snapshot now carries supplemental physical/stellar fields: density, insolation, eccentricity, inclination, transit depth/duration, stellar luminosity/age/metallicity/log g, host photometry, and archive-side uncertainty columns.
+- Added a selected-planet internet enrichment route at src/app/api/science/planet/route.ts backed by NASA Exoplanet Archive + STScI exo.MAST, cached on disk, and returning a deeper per-planet science bundle instead of relying on the old local science registry.
+- The new bundle now includes radiation context, a ported magnetosphere proxy layer (magnetic factor, stellar-wind stress, corrected binding ratio, surface field, magnetopause, protection class), host photometry, uncertainty blocks, official references, and exo.MAST-linked spectral-file metadata.
+- Wired the selected-planet enrichment into the UI: synopsis, observed cards, derived cards, uncertainty cards, chart stack, provenance, and observation-planning text now consume the deeper bundle when it resolves. Added a 2D magnetic-field-line toggle in the visual pane, with bow-shock / tail stretching driven by radiation pressure.
+- Validation after this pass: npm run lint ✅, npm run build ✅, direct API probe for /api/science/planet?name=K2-18%20b ✅ returning flux + magnetosphere + photometry + official sources.
+
+2026-03-06
+- Joined product-level JWST evidence into the selected-planet bundle: exo.MAST curated spectra + official MAST JWST observations/products now compile cleanly in src/lib/science/official/planet-science.ts.
+- Wired atmosphere evidence downstream into the selected-planet UI and render path in src/components/universe/universe-stage.tsx: synopsis, derived metrics, planning text, chart rows, and analysis now consume molecule tags, wavelength coverage, cloud interpretation, and JWST inventory counts.
+- The selected-planet visual model now prefers atmosphere-derived chemistry tags and cloud-cover evidence over class-only priors; generic gas/ice/sub-Neptune chemistry weighting was strengthened in src/components/ui/planet-globe.tsx.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Next validation target: live API/browser check for WASP-39 b or K2-18 b.
+
+2026-03-06
+- Hardened NASA archive TAP input handling in src/lib/science/official/exoplanet-archive.ts by normalizing and allowlisting search/name input before building the query string. TAP still requires textual SQL/ADQL, so the hardening path is input validation plus literal escaping rather than true parameter binding.
+- Consolidated duplicated helper functions into src/lib/utils.ts: clamp, lerp, hsla, and measurementBounds. Updated universe-stage.tsx, planet-globe.tsx, build-universe.ts, and planet-science.ts to consume the shared helpers.
+- Verified the reported missing-asset issue is stale for the currently referenced files under public/assets/reference and public/assets/solar-analogs.
+- Validation after this pass: npm run lint ✅, npm run build ✅.
+2026-03-07
+- Added a server-side legacy analysis loader in src/lib/science/local/legacy-analysis.ts that reads /Users/hendrixx./Desktop/EXOPLANET_ANALYSES/site/cosmoplot/science_registry.js directly, caches it by mtime, and projects typed planet/system summaries into the rewrite.
+- Merged the legacy bundle into src/lib/science/catalog/build-universe.ts so the wide-field snapshot now carries localAnalysis summaries per system and planet, fills some missing stellar/planetary fields from the old registry, and flags interesting systems without overriding official archive values when they exist.
+- Merged the legacy bundle into src/lib/science/official/planet-science.ts so the selected-planet route now returns localAnalysis narratives, habitability notes, molecule tags, magnetosphere/radiation fallbacks, and report-file metadata alongside the official NASA/exo.MAST/MAST bundle.
+- Added narrative fallback to /Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses when a target exists in the registry but not in an EXOPLANET_ANALYSES system folder. Verified live route returns long local narratives for K2-18 b, TRAPPIST-1 e, WASP-39 b, and Earth.
+- Updated src/components/universe/universe-stage.tsx to surface the merged local analysis in hover tooltips, selection status, metric cards, synopsis text, and the under-map full analysis panel. When a selected planet has a local narrative, the analysis panel now uses it instead of the generated placeholder block.
+- Re-tuned active selected-system lighting so the host-star light distance scales against the outer orbit span instead of using a fixed short range. This brings the new stage closer to the old site's host-lighting behavior.
+- Science-language correction: local-analysis text is passed through a minimal wording scrub so legacy "binding energy" framework labels are no longer presented verbatim as if they were direct measured quantities. A full escape-physics audit is still pending.
+- Validation after this pass: npm run lint ✅, npm run build ✅, /api/science/planet returns localAnalysis reports+narrative ✅, interesting systems now show up in /api/science/universe ✅, live route reopened at http://127.0.0.1:3000/#science-deck.
+2026-03-09
+- Added first-pass numerical spectrum support to the selected-planet bundle in src/lib/science/official/planet-science.ts. Curated exo.MAST transmission files now materialize into numeric series arrays, and the server attempts product-level MAST spectral DB retrieval for supported JWST filenames when public numeric payloads are available.
+- Extended the selected-planet contract in src/lib/science/types.ts with numeric spectrum series and propagated interval types. The selected bundle now returns `spectrum.numericSeries` plus a `propagation` block.
+- Added deterministic Monte Carlo propagation (1200 samples, seeded by planet name) for density, surface gravity, luminosity, incident flux, scale height, and one-scale-height signal amplitude. The sampler prefers archive/exo.MAST uncertainties and only falls back to small floor sigmas when required.
+- Updated the UI in src/components/universe/universe-stage.tsx so the JWST coverage card reports parsed numeric spectrum series and the uncertainty panel reports Monte Carlo-derived density/gravity and flux/scale-height intervals.
+- Updated the landing copy in src/app/page.tsx so uncertainty propagation is no longer described as entirely future work.
+- Validation after this pass: npm run lint ✅, npm run build ✅, live route probe for WASP-39 b ✅ (`numericSeries=1`, `propagation.sampleCount=1200`), live route probe for K2-18 b ✅, browser snapshot/screenshot ✅ on the production server.
+- Remaining gap in this area: public curated spectra now parse numerically, but many JWST product filenames in the current inventory are still unsupported/private from the public spectral DB path, so broader X1DINTS/S3D coverage still needs either additional public routes or authenticated/product-specific download handling.
