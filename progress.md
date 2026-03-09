@@ -75,3 +75,16 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Updated the landing copy in src/app/page.tsx so uncertainty propagation is no longer described as entirely future work.
 - Validation after this pass: npm run lint ✅, npm run build ✅, live route probe for WASP-39 b ✅ (`numericSeries=1`, `propagation.sampleCount=1200`), live route probe for K2-18 b ✅, browser snapshot/screenshot ✅ on the production server.
 - Remaining gap in this area: public curated spectra now parse numerically, but many JWST product filenames in the current inventory are still unsupported/private from the public spectral DB path, so broader X1DINTS/S3D coverage still needs either additional public routes or authenticated/product-specific download handling.
+2026-03-09
+- Expanded deep-sky kinds in src/components/universe/universe-stage.tsx to include galaxies and pulsars. Added Andromeda, Triangulum, the Large/Small Magellanic Clouds, Vela Pulsar, Geminga, and PSR B1257+12 with Sun-centered coordinates, hover/fly-to behavior, and persistent labels for galaxies/pulsars.
+- Extended deep-sky procedural rendering so galaxy and pulsar anchors have their own visual treatment instead of reusing nebula logic. Galaxies now render as brighter spiral/irregular luminous structures; pulsars render as compact blue-white starbursts.
+- Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
+- Hardened the planet generators in src/components/ui/planet-globe.tsx:
+  - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,
+  - Venusian worlds get stronger super-rotation streak layers,
+  - Hycean worlds get stronger current/stream structure,
+  - ice giants now diverge from sub-Neptunes with polar haze/storm treatment,
+  - sub-Neptunes now use a humid veil/cloud-mass pass,
+  - gas giants now split more clearly by hot-jupiter / classic gas giant / saturnian behavior.
+- Widened the public curated-spectrum parsing slice and product-level public attempts in src/lib/science/official/planet-science.ts while keeping the unsupported/private JWST-product limitation explicit.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, browser snapshot ✅, console 0 errors / 1 warning.

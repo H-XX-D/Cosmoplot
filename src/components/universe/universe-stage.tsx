@@ -68,7 +68,7 @@ type CameraFlight = {
   duration: number;
 };
 
-type DeepSkyKind = "emission" | "dark" | "molecular" | "planetary" | "supernova";
+type DeepSkyKind = "emission" | "dark" | "molecular" | "planetary" | "supernova" | "galaxy" | "pulsar";
 
 type DeepSkyObject = {
   name: string;
@@ -152,6 +152,13 @@ const DEEP_SKY_CATALOG: DeepSkyObject[] = [
   { name: "Eagle Nebula", kind: "emission", raDeg: 274.7, decDeg: -13.8067, distancePc: 2000, sizePc: 21, tint: "#56deff", accent: "#ffb36a" },
   { name: "Crab Nebula", kind: "supernova", raDeg: 83.6335, decDeg: 22.0151, distancePc: 1993, sizePc: 4, tint: "#6bd5ff", accent: "#ffb35a" },
   { name: "Helix Nebula", kind: "planetary", raDeg: 337.4185, decDeg: -20.8397, distancePc: 215, sizePc: 1.8, tint: "#4ce0ff", accent: "#9effd3" },
+  { name: "Andromeda Galaxy", kind: "galaxy", raDeg: 10.6847, decDeg: 41.2687, distancePc: 778000, sizePc: 45000, tint: "#7bc6ff", accent: "#ffe1b3" },
+  { name: "Triangulum Galaxy", kind: "galaxy", raDeg: 23.4621, decDeg: 30.6599, distancePc: 857000, sizePc: 30000, tint: "#69cfff", accent: "#ffd89d" },
+  { name: "Large Magellanic Cloud", kind: "galaxy", raDeg: 80.8942, decDeg: -69.7561, distancePc: 49970, sizePc: 9000, tint: "#78d2ff", accent: "#fff0bf" },
+  { name: "Small Magellanic Cloud", kind: "galaxy", raDeg: 13.1866, decDeg: -72.8286, distancePc: 61700, sizePc: 7000, tint: "#8cd8ff", accent: "#fff2c2" },
+  { name: "Vela Pulsar", kind: "pulsar", raDeg: 128.8369, decDeg: -45.1764, distancePc: 287, sizePc: 0.8, tint: "#8ac8ff", accent: "#d9f0ff" },
+  { name: "Geminga", kind: "pulsar", raDeg: 98.4756, decDeg: 17.7703, distancePc: 250, sizePc: 0.7, tint: "#87beff", accent: "#f0f8ff" },
+  { name: "PSR B1257+12", kind: "pulsar", raDeg: 194.546, decDeg: 12.682, distancePc: 710, sizePc: 0.7, tint: "#90c2ff", accent: "#edf6ff" },
 ];
 
 const REFERENCE_STAR_CATALOG: ReferenceStar[] = [
@@ -467,6 +474,10 @@ function deepSkyKindLabel(kind: DeepSkyKind) {
       return "Planetary nebula";
     case "supernova":
       return "Supernova remnant";
+    case "galaxy":
+      return "Nearby galaxy";
+    case "pulsar":
+      return "Pulsar";
     default:
       return "Emission nebula";
   }
@@ -563,7 +574,66 @@ function getNebulaTexture(entry: DeepSkyObject) {
   ctx.save();
   ctx.translate(cx, cy);
 
-  if (entry.kind === "dark" || entry.kind === "molecular") {
+  if (entry.kind === "pulsar") {
+    const halo = ctx.createRadialGradient(0, 0, size * 0.02, 0, 0, size * 0.22);
+    halo.addColorStop(0, hexToRgba(entry.accent, 0.95));
+    halo.addColorStop(0.25, hexToRgba(entry.tint, 0.82));
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = "screen";
+    ctx.strokeStyle = hexToRgba(entry.accent, 0.72);
+    for (let ray = 0; ray < 10; ray += 1) {
+      const angle = (Math.PI * 2 * ray) / 10 + seed * Math.PI * 0.6;
+      const inner = size * 0.05;
+      const outer = size * (ray % 2 === 0 ? 0.4 : 0.28);
+      ctx.lineWidth = ray % 2 === 0 ? 4 : 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+      ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  } else if (entry.kind === "galaxy") {
+    const glow = ctx.createRadialGradient(0, 0, size * 0.02, 0, 0, size * 0.42);
+    glow.addColorStop(0, hexToRgba(entry.accent, 0.24));
+    glow.addColorStop(0.42, hexToRgba(entry.tint, 0.16));
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+
+    const arms = entry.name.includes("Magellanic") ? 2 : 4;
+    for (let arm = 0; arm < arms; arm += 1) {
+      ctx.beginPath();
+      for (let step = 0; step <= 220; step += 1) {
+        const t = step / 220;
+        const angle = arm * ((Math.PI * 2) / arms) + t * 3.8 + seed * 0.7;
+        const radius = size * (0.04 + t * 0.34 + Math.sin(t * 18 + arm) * 0.008);
+        const x = Math.cos(angle) * radius * (entry.name.includes("Magellanic") ? 1.15 : 1.0);
+        const y = Math.sin(angle) * radius * 0.62;
+        if (step === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = hexToRgba(arm % 2 === 0 ? entry.tint : entry.accent, 0.18);
+      ctx.lineWidth = arm % 2 === 0 ? 16 : 10;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    const core = ctx.createRadialGradient(0, 0, size * 0.01, 0, 0, size * 0.16);
+    core.addColorStop(0, hexToRgba("#ffffff", 0.95));
+    core.addColorStop(0.45, hexToRgba(entry.accent, 0.78));
+    core.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size * 0.18, size * 0.11, seed * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (entry.kind === "dark" || entry.kind === "molecular") {
     const outer = ctx.createRadialGradient(0, 0, size * 0.06, 0, 0, size * 0.42);
     outer.addColorStop(0, hexToRgba(entry.tint, 0.12));
     outer.addColorStop(0.55, hexToRgba(entry.tint, entry.kind === "dark" ? 0.08 : 0.12));
@@ -2262,11 +2332,52 @@ function DeepSkyAnchor({
   onHoverChange: (hover: StageHover | null) => void;
 }) {
   const texture = useMemo(() => getNebulaTexture(entry), [entry]);
-  const primaryOpacity = entry.kind === "dark" ? 0.92 : entry.kind === "molecular" ? 0.84 : 1.18;
-  const hazeOpacity = entry.kind === "dark" ? 0.34 : entry.kind === "molecular" ? 0.28 : 0.4;
-  const hazeScale = entry.kind === "dark" || entry.kind === "molecular" ? 2.1 : 2.7;
-  const bloomOpacity = entry.kind === "dark" ? 0.12 : entry.kind === "molecular" ? 0.16 : 0.24;
-  const bloomScale = entry.kind === "dark" || entry.kind === "molecular" ? 2.7 : 3.3;
+  const primaryOpacity =
+    entry.kind === "dark"
+      ? 0.92
+      : entry.kind === "molecular"
+        ? 0.84
+        : entry.kind === "galaxy"
+          ? 1.12
+          : entry.kind === "pulsar"
+            ? 1.22
+            : 1.18;
+  const hazeOpacity =
+    entry.kind === "dark"
+      ? 0.34
+      : entry.kind === "molecular"
+        ? 0.28
+        : entry.kind === "galaxy"
+          ? 0.36
+          : entry.kind === "pulsar"
+            ? 0.2
+            : 0.4;
+  const hazeScale =
+    entry.kind === "dark" || entry.kind === "molecular"
+      ? 2.1
+      : entry.kind === "galaxy"
+        ? 2.9
+        : entry.kind === "pulsar"
+          ? 2.2
+          : 2.7;
+  const bloomOpacity =
+    entry.kind === "dark"
+      ? 0.12
+      : entry.kind === "molecular"
+        ? 0.16
+        : entry.kind === "galaxy"
+          ? 0.18
+          : entry.kind === "pulsar"
+            ? 0.3
+            : 0.24;
+  const bloomScale =
+    entry.kind === "dark" || entry.kind === "molecular"
+      ? 2.7
+      : entry.kind === "galaxy"
+        ? 3.6
+        : entry.kind === "pulsar"
+          ? 2.9
+          : 3.3;
   const cartesianPc = useMemo(() => equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc), [entry]);
 
   useEffect(() => {
@@ -2692,7 +2803,9 @@ function StageScene({
     return DEEP_SKY_CATALOG.map((entry) => ({
       entry,
       display: logScaledVector(equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc)),
-      scale: extendedObjectDisplaySize(entry.distancePc, entry.sizePc),
+      scale:
+        extendedObjectDisplaySize(entry.distancePc, entry.sizePc)
+        * (entry.kind === "galaxy" ? 1.7 : entry.kind === "pulsar" ? 1.45 : 1),
     }));
   }, []);
   const whiteDwarfMarkers = useMemo(() => {
@@ -3015,6 +3128,13 @@ function StageScene({
           }}
         >
           <DeepSkyAnchor entry={entry} scale={scale} onHoverChange={onHoverChange} />
+          {entry.kind === "galaxy" || entry.kind === "pulsar" ? (
+            <SystemInterestTag
+              label={entry.kind === "galaxy" ? "galaxy" : "pulsar"}
+              accent={entry.kind === "galaxy" ? entry.accent : entry.tint}
+              offset={entry.kind === "galaxy" ? scale * 0.34 : scale * 0.28}
+            />
+          ) : null}
         </group>
       ))}
 

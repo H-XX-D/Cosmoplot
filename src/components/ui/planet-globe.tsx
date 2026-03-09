@@ -856,9 +856,10 @@ function buildAirlessTerrainTexture(
 
   const image = ctx.createImageData(size, size);
   const heatBias = clamp(((equilibriumK ?? 420) - 380) / 800, 0, 0.18);
-  const lowRock = mixColor({ h: 28, s: 10, l: 26 }, base, 0.34);
-  const midRock = mixColor({ h: 32, s: 12, l: 42 }, accent, 0.32);
-  const highRock = mixColor({ h: 36, s: 14, l: 64 }, accent, 0.18);
+  const coolBias = clamp((320 - (equilibriumK ?? 320)) / 260, 0, 0.16);
+  const lowRock = mixColor({ h: 24 + coolBias * 20, s: 8, l: 22 }, base, 0.24);
+  const midRock = mixColor({ h: 30 + coolBias * 12, s: 10, l: 38 }, accent, 0.26);
+  const highRock = mixColor({ h: 34 + coolBias * 10, s: 12, l: 60 }, accent, 0.16);
 
   for (let y = 0; y < size; y += 1) {
     const v = y / (size - 1);
@@ -870,8 +871,10 @@ function buildAirlessTerrainTexture(
       const elevation = clamp(macro * 0.58 + ridged * 0.28 + fine * 0.14, 0, 1);
       const mineral = mixColor(lowRock, midRock, smoothstep(0.18, 0.7, elevation));
       const lit = mixColor(mineral, highRock, smoothstep(0.66, 0.94, ridged));
-      const warmed = mixColor(lit, { h: 22, s: 34, l: 56 }, heatBias * smoothstep(0.58, 0.92, fine));
-      const rgb = hslToRgb(warmed);
+      const warmed = mixColor(lit, { h: 18, s: 28, l: 52 }, heatBias * smoothstep(0.58, 0.92, fine));
+      const cooled = mixColor(warmed, { h: 214, s: 14, l: 58 }, coolBias * smoothstep(0.62, 0.94, macro) * 0.45);
+      const metalTint = mixColor(cooled, { h: 28, s: 22, l: 48 }, smoothstep(0.48, 0.9, ridged) * 0.18);
+      const rgb = hslToRgb(metalTint);
       image.data[(y * size + x) * 4] = rgb[0];
       image.data[(y * size + x) * 4 + 1] = rgb[1];
       image.data[(y * size + x) * 4 + 2] = rgb[2];
@@ -895,22 +898,181 @@ function buildAirlessTerrainTexture(
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
+
+    const ejectaRays = 5 + Math.floor(seeded(seed, 4100 + i * 31) * 6);
+    ctx.globalCompositeOperation = "soft-light";
+    for (let ray = 0; ray < ejectaRays; ray += 1) {
+      const angle = (Math.PI * 2 * ray) / ejectaRays + seeded(seed, 4300 + i * 37) * Math.PI * 0.4;
+      const length = radius * (1.8 + seeded(seed, 4500 + i * 41 + ray) * 1.6);
+      ctx.strokeStyle = `rgba(236, 220, 198, ${0.035 + seeded(seed, 4700 + i * 43 + ray) * 0.05})`;
+      ctx.lineWidth = Math.max(0.6, radius * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * radius * 0.28, cy + Math.sin(angle) * radius * 0.28);
+      ctx.lineTo(cx + Math.cos(angle) * length, cy + Math.sin(angle) * length);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
   }
+
+  ctx.globalCompositeOperation = "multiply";
+  for (let i = 0; i < Math.round(size * 0.05); i += 1) {
+    const x0 = seeded(seed, 5200 + i * 17) * size;
+    const y0 = seeded(seed, 5400 + i * 19) * size;
+    const x1 = x0 + (seeded(seed, 5600 + i * 23) - 0.5) * size * 0.24;
+    const y1 = y0 + (seeded(seed, 5800 + i * 29) - 0.5) * size * 0.2;
+    ctx.strokeStyle = `rgba(34, 28, 22, ${0.06 + seeded(seed, 6000 + i * 31) * 0.08})`;
+    ctx.lineWidth = 0.5 + seeded(seed, 6200 + i * 37) * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = "source-over";
 
   AIRLESS_TEXTURE_CACHE.set(cacheKey, canvas);
   return canvas;
 }
 
 function buildGasGiantTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  return buildBandedSwirlTexture(size, seed, props, chemistry);
+  const cacheKey = ["gas-giant-special", size, seed, props.regime, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na"].join("|");
+  const cached = GAS_TEXTURE_CACHE.get(cacheKey);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  const localProps = {
+    ...props,
+    bandCount:
+      props.regime === "hot-jupiter"
+        ? Math.max(props.bandCount ?? 12, 14)
+        : props.regime === "saturnian"
+          ? Math.min(props.bandCount ?? 7, 8)
+          : Math.max(props.bandCount ?? 10, 10),
+  };
+  ctx.drawImage(buildBandedSwirlTexture(size, seed, localProps, chemistry), 0, 0, size, size);
+
+  if (props.regime === "saturnian") {
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 8; i += 1) {
+      const y = size * (0.12 + seeded(seed, 14500 + i * 17) * 0.76);
+      const lane = ctx.createLinearGradient(0, y - size * 0.03, 0, y + size * 0.03);
+      lane.addColorStop(0, hsla({ h: 42, s: 14, l: 94 }, 0));
+      lane.addColorStop(0.5, hsla({ h: 42, s: 14, l: 94 }, 0.08));
+      lane.addColorStop(1, hsla({ h: 42, s: 14, l: 94 }, 0));
+      ctx.fillStyle = lane;
+      ctx.fillRect(0, y - size * 0.04, size, size * 0.08);
+    }
+  } else if (props.regime === "hot-jupiter") {
+    ctx.globalCompositeOperation = "overlay";
+    const thermal = ctx.createLinearGradient(0, 0, size, size);
+    thermal.addColorStop(0, hsla({ h: 18, s: 86, l: 66 }, 0.14));
+    thermal.addColorStop(0.5, hsla({ h: 340, s: 70, l: 44 }, 0.08));
+    thermal.addColorStop(1, hsla({ h: 24, s: 82, l: 58 }, 0.14));
+    ctx.fillStyle = thermal;
+    ctx.fillRect(0, 0, size, size);
+  } else {
+    ctx.globalCompositeOperation = "soft-light";
+    for (let i = 0; i < 10; i += 1) {
+      const cx = size * (0.08 + seeded(seed, 14600 + i * 19) * 0.84);
+      const cy = size * (0.16 + seeded(seed, 14700 + i * 23) * 0.68);
+      const radius = size * (0.02 + seeded(seed, 14800 + i * 29) * 0.04);
+      const eddy = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      eddy.addColorStop(0, hsla(chemistry.stormColor, 0.2));
+      eddy.addColorStop(1, hsla(chemistry.stormColor, 0));
+      ctx.fillStyle = eddy;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.globalCompositeOperation = "source-over";
+  GAS_TEXTURE_CACHE.set(cacheKey, canvas);
+  return canvas;
 }
 
 function buildIceGiantTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  return buildBandedSwirlTexture(size, seed, props, chemistry);
+  const cacheKey = ["ice-giant-special", size, seed, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na"].join("|");
+  const cached = CLOUDWORLD_TEXTURE_CACHE.get(cacheKey);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  ctx.drawImage(buildBandedSwirlTexture(size, seed, props, chemistry), 0, 0, size, size);
+  ctx.globalCompositeOperation = "screen";
+  const poleGlow = ctx.createRadialGradient(size * 0.5, size * 0.08, size * 0.02, size * 0.5, size * 0.08, size * 0.28);
+  poleGlow.addColorStop(0, hsla({ h: 196, s: 28, l: 95 }, 0.24));
+  poleGlow.addColorStop(1, hsla({ h: 196, s: 28, l: 95 }, 0));
+  ctx.fillStyle = poleGlow;
+  ctx.fillRect(0, 0, size, size * 0.34);
+  const southGlow = ctx.createRadialGradient(size * 0.5, size * 0.92, size * 0.02, size * 0.5, size * 0.92, size * 0.28);
+  southGlow.addColorStop(0, hsla({ h: 196, s: 28, l: 95 }, 0.18));
+  southGlow.addColorStop(1, hsla({ h: 196, s: 28, l: 95 }, 0));
+  ctx.fillStyle = southGlow;
+  ctx.fillRect(0, size * 0.66, size, size * 0.34);
+
+  ctx.globalCompositeOperation = "soft-light";
+  for (let i = 0; i < 10; i += 1) {
+    const cx = size * (0.12 + seeded(seed, 8100 + i * 17) * 0.76);
+    const cy = size * (seeded(seed, 8200 + i * 19) < 0.5 ? 0.18 : 0.82);
+    const radius = size * (0.025 + seeded(seed, 8300 + i * 23) * 0.05);
+    const storm = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    storm.addColorStop(0, hsla({ h: 182, s: 24, l: 88 }, 0.3));
+    storm.addColorStop(1, hsla({ h: 204, s: 20, l: 50 }, 0));
+    ctx.fillStyle = storm;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+
+  CLOUDWORLD_TEXTURE_CACHE.set(cacheKey, canvas);
+  return canvas;
 }
 
 function buildSubNeptuneTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  return buildBandedSwirlTexture(size, seed, props, chemistry);
+  const cacheKey = ["sub-neptune-special", size, seed, props.planetColor.h, props.accentColor.h, props.cloudCover ?? "na"].join("|");
+  const cached = CLOUDWORLD_TEXTURE_CACHE.get(cacheKey);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  ctx.drawImage(buildBandedSwirlTexture(size, seed, { ...props, bandCount: Math.max(props.bandCount ?? 6, 8) }, chemistry), 0, 0, size, size);
+  ctx.globalCompositeOperation = "screen";
+  for (let i = 0; i < 14; i += 1) {
+    const cx = size * (0.08 + seeded(seed, 9100 + i * 13) * 0.84);
+    const cy = size * (0.12 + seeded(seed, 9200 + i * 17) * 0.76);
+    const rx = size * (0.04 + seeded(seed, 9300 + i * 19) * 0.08);
+    const ry = rx * (0.5 + seeded(seed, 9400 + i * 23) * 0.5);
+    const rot = seeded(seed, 9500 + i * 29) * Math.PI;
+    const cloud = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    cloud.addColorStop(0, hsla({ h: 188, s: 18, l: 96 }, 0.22));
+    cloud.addColorStop(0.7, hsla({ h: 188, s: 18, l: 96 }, 0.08));
+    cloud.addColorStop(1, hsla({ h: 188, s: 18, l: 96 }, 0));
+    ctx.fillStyle = cloud;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = "overlay";
+  const veil = ctx.createLinearGradient(0, 0, size, size);
+  veil.addColorStop(0, hsla({ h: chemistry.bandBase.h, s: chemistry.bandBase.s + 10, l: chemistry.bandBase.l + 10 }, 0.08));
+  veil.addColorStop(1, hsla({ h: chemistry.bandAccent.h, s: chemistry.bandAccent.s, l: chemistry.bandAccent.l - 8 }, 0.08));
+  ctx.fillStyle = veil;
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = "source-over";
+
+  CLOUDWORLD_TEXTURE_CACHE.set(cacheKey, canvas);
+  return canvas;
 }
 
 function buildVenusianTexture(
@@ -978,6 +1140,23 @@ function buildVenusianTexture(
   }
 
   ctx.putImageData(image, 0, 0);
+  ctx.globalCompositeOperation = "soft-light";
+  for (let stream = 0; stream < 16; stream += 1) {
+    const y = size * (0.08 + seeded(seed, 12000 + stream * 17) * 0.84);
+    const amp = size * (0.008 + seeded(seed, 12100 + stream * 19) * 0.014);
+    const cycles = 1.4 + seeded(seed, 12200 + stream * 23) * 2.8;
+    ctx.strokeStyle = hsla({ h: 40, s: 24, l: 94 }, 0.09);
+    ctx.lineWidth = 1.2 + seeded(seed, 12300 + stream * 29) * 1.8;
+    ctx.beginPath();
+    for (let x = 0; x <= size; x += 5) {
+      const px = x / size;
+      const py = y + Math.sin(px * Math.PI * 2 * cycles + stream * 0.8) * amp + (fbm2D(seed + 12400 + stream, px * 4.8, stream * 0.2, 3) - 0.5) * amp * 1.4;
+      if (x === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = "source-over";
   CLOUDWORLD_TEXTURE_CACHE.set(cacheKey, canvas);
   return canvas;
 }
@@ -1049,6 +1228,24 @@ function buildHyceanTexture(
   }
 
   ctx.putImageData(image, 0, 0);
+  ctx.globalCompositeOperation = "screen";
+  for (let current = 0; current < 18; current += 1) {
+    const y = size * (0.08 + seeded(seed, 13000 + current * 17) * 0.84);
+    const amp = size * (0.006 + seeded(seed, 13100 + current * 19) * 0.018);
+    const cycles = 1.6 + seeded(seed, 13200 + current * 23) * 3.4;
+    ctx.strokeStyle = hsla({ h: 188, s: 20, l: 96 }, 0.06 + cloudCover * 0.04);
+    ctx.lineWidth = 1 + seeded(seed, 13300 + current * 29) * 2;
+    ctx.beginPath();
+    for (let x = 0; x <= size; x += 5) {
+      const px = x / size;
+      const gyre = (fbm2D(seed + 13400 + current, px * 7.4, y / size * 4.2, 4) - 0.5) * amp * 2;
+      const py = y + Math.sin(px * Math.PI * 2 * cycles + current * 0.7) * amp + gyre;
+      if (x === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = "source-over";
   CLOUDWORLD_TEXTURE_CACHE.set(cacheKey, canvas);
   return canvas;
 }
