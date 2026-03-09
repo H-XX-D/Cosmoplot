@@ -153,3 +153,7 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Extended the legacy-narrative sanitizer again in src/lib/science/local/legacy-analysis.ts to catch recurring `validated`, `Framework Validation`, `guaranteed`, and similar framework-overclaim phrasing that remained in the local documents.
 - Added explicit evidence-class labels to the active hover/readout layer in src/components/universe/universe-stage.tsx so planet, host-star, reference-star, and white-dwarf tooltips now distinguish archive/catalog values, derived quantities, and Monte Carlo intervals.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
+
+- Reworked the star color pipeline in src/components/universe/universe-stage.tsx so selected and distant star shaders now use a temperature-driven hotness term and blackbody-style base color instead of a uniformly warm-biased dodge/burn stack.
+- Hot A/B/O stars now retain blue-white photosphere/corona accents while cooler K/M stars keep warmer orange-red structure; the fixed warm corona mix was removed in favor of temperature-aware shader accents.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright smoke screenshot ✅ at .playwright-cli/page-2026-03-09T23-38-32-069Z.png.

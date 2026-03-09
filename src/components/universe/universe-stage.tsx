@@ -102,6 +102,7 @@ type StarRenderStyle = {
   rim: string;
   corona: string;
   halo: string;
+  hotness: number;
   radiusScale: number;
   glowScale: number;
   glowOpacity: number;
@@ -219,6 +220,7 @@ const STAR_FRAGMENT_SHADER = `
   uniform float uTime;
   uniform vec3 uCoreColor;
   uniform vec3 uRimColor;
+  uniform float uHotness;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -297,16 +299,36 @@ const STAR_FRAGMENT_SHADER = `
     float faculaMask = faculae * (0.28 + limb * 0.92);
     float umbra = spotMask * (0.6 + spotPits * 0.42 + spotRidges * 0.14);
     float penumbra = spotClusters * 0.24 + umbra * 0.28;
-    vec3 hotCore = mix(uCoreColor, vec3(1.0, 0.985, 0.9), 0.7);
-    vec3 warmCore = mix(uCoreColor, vec3(1.0, 0.86, 0.5), 0.48);
-    vec3 flareCore = mix(uCoreColor, vec3(1.0, 0.94, 0.74), 0.62);
-    vec3 orangeBurn = mix(uRimColor, vec3(1.0, 0.56, 0.22), 0.72);
-    vec3 emberOrange = mix(vec3(1.0, 0.66, 0.26), vec3(0.95, 0.42, 0.12), ridgeField * 0.5);
+    vec3 hotCore = mix(
+      mix(uCoreColor, vec3(1.0, 0.985, 0.9), 0.7),
+      mix(uCoreColor, vec3(0.86, 0.93, 1.0), 0.72),
+      uHotness
+    );
+    vec3 warmCore = mix(
+      mix(uCoreColor, vec3(1.0, 0.86, 0.5), 0.48),
+      mix(uCoreColor, vec3(0.78, 0.88, 1.0), 0.54),
+      uHotness
+    );
+    vec3 flareCore = mix(
+      mix(uCoreColor, vec3(1.0, 0.94, 0.74), 0.62),
+      mix(uCoreColor, vec3(0.9, 0.96, 1.0), 0.68),
+      uHotness
+    );
+    vec3 orangeBurn = mix(
+      mix(uRimColor, vec3(1.0, 0.56, 0.22), 0.72),
+      mix(uRimColor, vec3(0.54, 0.74, 1.0), 0.6),
+      uHotness
+    );
+    vec3 emberOrange = mix(
+      mix(vec3(1.0, 0.66, 0.26), vec3(0.95, 0.42, 0.12), ridgeField * 0.5),
+      mix(vec3(0.74, 0.84, 1.0), vec3(0.48, 0.66, 1.0), ridgeField * 0.5),
+      uHotness
+    );
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.1, 0.0, 1.0));
     color *= 0.82 + convection * 0.16 + granulation * 0.28 + subGranulation * 0.26 + emberCells * 0.2;
     color *= 1.0 - umbra * (0.66 + mottling * 0.4) - penumbra * 0.22;
-    color = mix(color, blendMultiply(color, vec3(0.8, 0.68, 0.54) - shadowWeb * 0.22 - ridgeField * 0.08), 0.58);
+    color = mix(color, blendMultiply(color, mix(vec3(0.8, 0.68, 0.54), vec3(0.72, 0.82, 0.98), uHotness) - shadowWeb * 0.22 - ridgeField * 0.08), 0.58);
     color = mix(color, blendSubtract(color, vec3(shadowWeb * 0.18 + charWeb * 0.22 + blackPits * 0.2)), 0.46);
     color = mix(color, blendColorBurn(color, vec3(0.8 - shadowWeb * 0.38 - spotClusters * 0.18 - spotPits * 0.1 - blackPits * 0.12)), 0.54 + umbra * 0.3);
     color = mix(color, blendColorDodge(color, vec3(hotVein * 0.5 + plasmaVeins * 0.42 + granulation * 0.24 + emberCells * 0.28)), 0.66);
@@ -333,6 +355,7 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
   uniform float uTime;
   uniform vec3 uCoreColor;
   uniform vec3 uRimColor;
+  uniform float uHotness;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -375,13 +398,17 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
     float limb = pow(1.0 - facing, 1.5);
     float coreHotspot = pow(max(0.0, 1.0 - distance(vUv, vec2(0.5)) * 2.0), 4.2);
-    vec3 emberTone = mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4);
-    vec3 burnTone = mix(uRimColor, vec3(1.0, 0.5, 0.18), 0.38);
+    vec3 emberTone = mix(
+      mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4),
+      mix(vec3(0.78, 0.88, 1.0), vec3(0.52, 0.7, 1.0), pits * 0.4),
+      uHotness
+    );
+    vec3 burnTone = mix(mix(uRimColor, vec3(1.0, 0.5, 0.18), 0.38), mix(uRimColor, vec3(0.54, 0.74, 1.0), 0.5), uHotness);
     float pulse = 0.92 + 0.08 * sin(uTime * 2.2 + vUv.x * 18.0 + vUv.y * 11.0);
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.96 + (1.0 - granulation) * 0.08, 0.0, 1.0));
     color *= 0.8 + granulation * 0.2;
-    color = mix(color, blendMultiply(color, vec3(0.74, 0.58, 0.42)), 0.38);
+    color = mix(color, blendMultiply(color, mix(vec3(0.74, 0.58, 0.42), vec3(0.72, 0.82, 0.98), uHotness)), 0.38);
     color = mix(color, blendSubtract(color, vec3(pits * 0.16 + shadow * 0.12)), 0.36);
     color = mix(color, blendColorBurn(color, burnTone), ember * 0.1 + pits * 0.08);
     color = mix(color, blendColorDodge(color, vec3(0.34 + granulation * 0.38 + pits * 0.24)), 0.82);
@@ -402,6 +429,7 @@ const CORONA_FRAGMENT_SHADER = `
 
   uniform float uTime;
   uniform vec3 uColor;
+  uniform float uHotness;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -437,7 +465,8 @@ const CORONA_FRAGMENT_SHADER = `
     float rayField = rays(vUv, uTime);
     float shell = smoothstep(0.18, 0.96, radius) * (1.0 - smoothstep(0.84, 1.2, radius));
     float alpha = fresnel * (0.22 + flicker * 0.14 + plume * 0.1) + rayField * 0.24 * shell;
-    vec3 coronaColor = mix(uColor, vec3(1.0, 0.84, 0.58), 0.28 + rayField * 0.22);
+    vec3 accent = mix(vec3(1.0, 0.84, 0.58), vec3(0.74, 0.87, 1.0), uHotness);
+    vec3 coronaColor = mix(uColor, accent, 0.28 + rayField * 0.22);
     gl_FragColor = vec4(coronaColor, alpha);
   }
 `;
@@ -468,6 +497,56 @@ function hashUnit(value: string) {
 function hexToRgba(hex: string, alpha: number) {
   const color = new THREE.Color(hex);
   return `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${alpha})`;
+}
+
+function mixHexColors(fromHex: string, toHex: string, amount: number) {
+  const from = new THREE.Color(fromHex);
+  from.lerp(new THREE.Color(toHex), clamp(amount, 0, 1));
+  return `#${from.getHexString()}`;
+}
+
+function liftHexColor(hex: string, lightnessOffset: number, saturationScale = 1) {
+  const color = new THREE.Color(hex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  color.getHSL(hsl);
+  color.setHSL(hsl.h, clamp(hsl.s * saturationScale, 0, 1), clamp(hsl.l + lightnessOffset, 0, 1));
+  return `#${color.getHexString()}`;
+}
+
+function temperatureHotness(teff: number | null, spectralType: string | null = null) {
+  if (teff !== null && teff !== undefined) return clamp((teff - 3200) / 8800, 0, 1);
+  const bucket = spectralBucket(spectralType);
+  if (bucket === "O") return 1;
+  if (bucket === "B") return 0.92;
+  if (bucket === "A") return 0.8;
+  if (bucket === "F") return 0.56;
+  if (bucket === "G") return 0.34;
+  if (bucket === "K") return 0.16;
+  if (bucket === "M") return 0.04;
+  return 0.3;
+}
+
+function kelvinHexColor(teff: number | null, fallback = "#ffd18a") {
+  if (!teff || Number.isNaN(teff)) return fallback;
+  const temperature = clamp(teff, 1000, 40000) / 100;
+  let red: number;
+  let green: number;
+  let blue: number;
+  if (temperature <= 66) {
+    red = 255;
+    green = 99.4708025861 * Math.log(temperature) - 161.1195681661;
+    blue = temperature <= 19 ? 0 : 138.5177312231 * Math.log(temperature - 10) - 305.0447927307;
+  } else {
+    red = 329.698727446 * Math.pow(temperature - 60, -0.1332047592);
+    green = 288.1221695283 * Math.pow(temperature - 60, -0.0755148492);
+    blue = 255;
+  }
+  const color = new THREE.Color(
+    clamp(red, 0, 255) / 255,
+    clamp(green, 0, 255) / 255,
+    clamp(blue, 0, 255) / 255,
+  );
+  return `#${color.getHexString()}`;
 }
 
 function extendedObjectDisplaySize(distancePc: number, sizePc: number) {
@@ -738,12 +817,14 @@ function getNebulaTexture(entry: DeepSkyObject) {
 function stellarStyleFromData({
   seedKey,
   spectralType,
+  effectiveTemperatureK,
   luminositySolar,
   radiusSolar,
   apparentMagnitude,
 }: {
   seedKey: string;
   spectralType: string | null;
+  effectiveTemperatureK: number | null;
   luminositySolar: number | null;
   radiusSolar: number | null;
   apparentMagnitude?: number | null;
@@ -752,6 +833,7 @@ function stellarStyleFromData({
   const luminosity = clamp(Math.log10(1 + Math.max(luminositySolar ?? 0.1, 0.1)), 0, 1.5);
   const radius = Math.max(radiusSolar ?? 1, 0.25);
   const variation = hashUnit(seedKey);
+  const hotness = temperatureHotness(effectiveTemperatureK, spectralType);
 
   const paletteByBucket: Record<string, Pick<StarRenderStyle, "core" | "rim" | "corona" | "halo">> = {
     O: { core: "#eef7ff", rim: "#5f99ff", corona: "#8fc0ff", halo: "#edf7ff" },
@@ -765,7 +847,13 @@ function stellarStyleFromData({
     Unspecified: { core: "#fff0c6", rim: "#ffbb76", corona: "#ffdaab", halo: "#fff0cf" },
   };
 
-  const palette = paletteByBucket[bucket] ?? paletteByBucket.Other;
+  const bucketPalette = paletteByBucket[bucket] ?? paletteByBucket.Other;
+  const blackbody = kelvinHexColor(effectiveTemperatureK, bucketPalette.core);
+  const core = liftHexColor(mixHexColors(bucketPalette.core, blackbody, 0.74), hotness > 0.55 ? 0.08 : 0.04, hotness > 0.55 ? 0.84 : 1.08);
+  const rimAccent = hotness > 0.55 ? "#7eaeff" : bucket === "M" ? "#ff7655" : bucket === "K" ? "#ffab67" : "#ffc879";
+  const rim = liftHexColor(mixHexColors(bucketPalette.rim, mixHexColors(blackbody, rimAccent, hotness > 0.55 ? 0.46 : 0.34), 0.66), -0.03, hotness > 0.55 ? 0.92 : 1.14);
+  const corona = liftHexColor(mixHexColors(bucketPalette.corona, mixHexColors(blackbody, hotness > 0.55 ? "#d7e8ff" : "#ffd8a8", 0.48), 0.72), 0.06, hotness > 0.55 ? 0.86 : 1.06);
+  const halo = liftHexColor(mixHexColors(bucketPalette.halo, hotness > 0.55 ? "#f7fbff" : "#fff4df", 0.7), 0.1, 0.78);
   const hotStarBoost = bucket === "O" || bucket === "B" || bucket === "A";
   const brightnessScale = apparentMagnitude !== null && apparentMagnitude !== undefined
     ? clamp(1.34 - apparentMagnitude * 0.08 + (hotStarBoost ? 0.1 : 0), 0.42, 1.6)
@@ -773,7 +861,11 @@ function stellarStyleFromData({
   const sizeLift = clamp(0.9 + luminosity * 0.16 + Math.sqrt(radius) * 0.1 + brightnessScale * 0.05 + variation * 0.05, 0.84, 1.52);
 
   return {
-    ...palette,
+    core,
+    rim,
+    corona,
+    halo,
+    hotness,
     radiusScale: sizeLift,
     glowScale: clamp(1.48 + luminosity * 0.34 + brightnessScale * 0.22 + variation * 0.12 + (hotStarBoost ? 0.18 : 0), 1.4, 2.55),
     glowOpacity: clamp(0.08 + luminosity * 0.08 + brightnessScale * 0.08 + variation * 0.03 + (hotStarBoost ? 0.05 : 0), 0.08, 0.4),
@@ -785,6 +877,7 @@ function stellarStyle(system: UniverseSystem): StarRenderStyle {
   return stellarStyleFromData({
     seedKey: system.id,
     spectralType: system.stellar.spectralType,
+    effectiveTemperatureK: system.stellar.effectiveTemperatureK,
     luminositySolar: stellarLuminosity(system),
     radiusSolar: system.stellar.radiusSolar,
     apparentMagnitude: system.stellar.photometry.vMag ?? system.stellar.photometry.jMag ?? system.stellar.photometry.kMag,
@@ -795,6 +888,7 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
   const base = stellarStyleFromData({
     seedKey: anchor.id,
     spectralType: anchor.spectralType ?? "A",
+    effectiveTemperatureK: anchor.effectiveTemperatureK ?? 10000,
     luminositySolar: 0.001,
     radiusSolar: anchor.radiusSolar ?? 0.012,
   });
@@ -805,6 +899,7 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
     rim: "#9ec9ff",
     corona: "#d4e7ff",
     halo: "#ffffff",
+    hotness: 0.9,
     radiusScale: 0.74,
     glowScale: 1.26,
     glowOpacity: 0.16,
@@ -814,19 +909,18 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
 
 function stellarColor(teff: number | null, spectralType: string | null = null) {
   const bucket = spectralBucket(spectralType);
-  if (bucket === "O") return "#6ea9ff";
-  if (bucket === "B") return "#a9cbff";
-  if (bucket === "A") return "#f7fbff";
-  if (bucket === "F") return "#fff2d2";
-  if (bucket === "G") return "#ffd88f";
-  if (bucket === "K") return "#ffb16f";
-  if (bucket === "M") return "#ff845e";
-  if (!teff) return "#ffd18a";
-  if (teff >= 9000) return "#a8c2ff";
-  if (teff >= 7500) return "#d7e3ff";
-  if (teff >= 6000) return "#ffe9bc";
-  if (teff >= 5000) return "#ffc88f";
-  return "#ff946f";
+  const fallbackByBucket: Record<string, string> = {
+    O: "#7aaeff",
+    B: "#a9cbff",
+    A: "#f7fbff",
+    F: "#fff3d8",
+    G: "#ffe1a3",
+    K: "#ffbe78",
+    M: "#ff8c62",
+    Other: "#ffd18a",
+    Unspecified: "#ffd18a",
+  };
+  return kelvinHexColor(teff, fallbackByBucket[bucket] ?? "#ffd18a");
 }
 
 function spectralBucket(spectralType: string | null) {
@@ -1619,7 +1713,7 @@ function buildSynopsis(system: UniverseSystem, planet: UniversePlanet | null, sc
   const cloudFraction = science?.atmosphere.cloudCoverFraction;
   const fluxRange = intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕");
   const tempRange = intervalSummary(propagation?.equilibriumK, 0, " K");
-  return `${planet.name} is modeled here as a ${planetClass(planet)} in the ${system.name} system. Official archive radius and mass place it in a ${density ? `${formatNumber(density, 2)} g/cm³ bulk-density` : "density-unresolved"} regime, while the host star and semi-major axis imply ${insolation ? `${formatNumber(insolation, 2)} S⊕ incident flux` : "an unresolved irradiation field"}. The current temperature regime is ${temperatureClass(planet.equilibriumK)}${dayside ? ` with a dayside estimate near ${formatNumber(dayside, 0)} K` : ""}${orbitVelocity ? ` and an orbital velocity near ${formatNumber(orbitVelocity, 1)} km/s` : ""}${magnetic ? `; the current magnetic proxy is ${formatNumber(magnetic, 1)} microT with ${protection} shielding.` : ""}${science?.retention ? ` Escape audit: ${retentionDisplayValue(science.retention)} via ${titleCaseSlug(science.retention.dominantLossProcess)}.` : ""}${fluxRange ? ` Propagated flux range: ${fluxRange}.` : ""}${tempRange ? ` Propagated equilibrium-temperature range: ${tempRange}.` : ""}${science ? ` JWST/MAST currently contributes ${jwstObservationCount} observation${jwstObservationCount === 1 ? "" : "s"} and ${jwstProductCount} product${jwstProductCount === 1 ? "" : "s"}${coverage ? ` across ${coverage}` : ""}. ${chemistry ? `Atmosphere evidence presently favors ${chemistry}. ` : ""}${science.atmosphere.cloudInterpretation}${cloudFraction !== null && cloudFraction !== undefined ? ` Cloud proxy: ${formatNumber(cloudFraction * 100, 0)}%.` : ""}` : ""}${local?.habitability ? ` Local analysis assessment: ${local.habitability}.` : local?.interestingReason ? ` Local analysis flag: ${local.interestingReason}.` : ""}`;
+  return `${planet.name} is modeled here as a ${planetClass(planet)} in the ${system.name} system. [Archive] Radius and mass place it in a ${density ? `${formatNumber(density, 2)} g/cm³ bulk-density` : "density-unresolved"} regime, while [Derived] host-star luminosity and semi-major axis imply ${insolation ? `${formatNumber(insolation, 2)} S⊕ incident flux` : "an unresolved irradiation field"}. The current temperature regime is ${temperatureClass(planet.equilibriumK)}${dayside ? ` with a [Model] dayside estimate near ${formatNumber(dayside, 0)} K` : ""}${orbitVelocity ? ` and a [Derived] orbital velocity near ${formatNumber(orbitVelocity, 1)} km/s` : ""}${magnetic ? `; the current [Model] magnetic proxy is ${formatNumber(magnetic, 1)} microT with ${protection} shielding.` : ""}${science?.retention ? ` [Model] Escape audit: ${retentionDisplayValue(science.retention)} via ${titleCaseSlug(science.retention.dominantLossProcess)}.` : ""}${fluxRange ? ` [MC] Propagated flux range: ${fluxRange}.` : ""}${tempRange ? ` [MC] Propagated equilibrium-temperature range: ${tempRange}.` : ""}${science ? ` [JWST] Inventory currently contributes ${jwstObservationCount} observation${jwstObservationCount === 1 ? "" : "s"} and ${jwstProductCount} product${jwstProductCount === 1 ? "" : "s"}${coverage ? ` across ${coverage}` : ""}. ${chemistry ? `[JWST] Atmosphere evidence presently favors ${chemistry}. ` : ""}${science.atmosphere.cloudInterpretation}${cloudFraction !== null && cloudFraction !== undefined ? ` [Model] Cloud proxy: ${formatNumber(cloudFraction * 100, 0)}%.` : ""}` : ""}${local?.habitability ? ` [Local] Local analysis assessment: ${local.habitability}.` : local?.interestingReason ? ` [Local] Local analysis flag: ${local.interestingReason}.` : ""}`;
 }
 
 function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null): Metric[] {
@@ -2048,7 +2142,7 @@ function buildObservationPlan(system: UniverseSystem, planet: UniversePlanet | n
   const tempRange = intervalSummary(propagation?.equilibriumK, 0, " K");
   const radiusRange = intervalSummary(propagation?.radiusEarth, 2, " R⊕");
   const recommendations = buildPlannerRecommendations(system, planet, science).map(plannerRecommendationText).join(" | ");
-  return `Next observation priority: constrain atmosphere and orbit jointly. ${planet.name} currently reads as a ${thermal} target with ${insolation ? `${formatNumber(insolation, 2)} S⊕ insolation` : "unresolved insolation"}, ${brightness !== null && brightness !== undefined ? `J=${formatNumber(brightness, 2)} mag` : "unresolved J-band brightness"}, and ${kBrightness !== null && kBrightness !== undefined ? `K=${formatNumber(kBrightness, 2)} mag` : "unresolved K-band brightness"}. ${fluxRange ? `Propagated flux range: ${fluxRange}. ` : ""}${tempRange ? `Propagated equilibrium-temperature range: ${tempRange}. ` : ""}${radiusRange ? `Propagated radius range: ${radiusRange}. ` : ""}${spectra ? `The joined JWST inventory already contains ${science?.spectrum.jwstObservations.length ?? 0} observation(s), ${science?.spectrum.jwstProducts.length ?? 0} product(s), ${science?.spectrum.numericSeries.length ?? 0} parsed numeric spectrum series, and ${spectra} linked spectral asset(s)` : "No exo.MAST / MAST spectral assets were returned in this pass."}${coverage ? ` spanning ${coverage}` : ""}${modes.length ? ` via ${modes.join(", ")}` : ""}. ${signal !== null ? `Propagated one-scale-height signal is ${intervalSummary(propagation?.oneScaleHeightSignalPpm, 0, " ppm") ?? `${formatNumber(signal, 0)} ppm`}.` : "Scale-height signal remains unresolved."} Planner recommendations: ${recommendations}. ETC/APT visibility and saturation screening are still required before any of these modes should be treated as executable observation setups.`;
+  return `Next observation priority: constrain atmosphere and orbit jointly. ${planet.name} currently reads as a ${thermal} target with ${insolation ? `[Derived] ${formatNumber(insolation, 2)} S⊕ insolation` : "[Derived] unresolved insolation"}, ${brightness !== null && brightness !== undefined ? `[Archive] J=${formatNumber(brightness, 2)} mag` : "[Archive] unresolved J-band brightness"}, and ${kBrightness !== null && kBrightness !== undefined ? `[Archive] K=${formatNumber(kBrightness, 2)} mag` : "[Archive] unresolved K-band brightness"}. ${fluxRange ? `[MC] Propagated flux range: ${fluxRange}. ` : ""}${tempRange ? `[MC] Propagated equilibrium-temperature range: ${tempRange}. ` : ""}${radiusRange ? `[MC] Propagated radius range: ${radiusRange}. ` : ""}${spectra ? `[JWST] Inventory contains ${science?.spectrum.jwstObservations.length ?? 0} observation(s), ${science?.spectrum.jwstProducts.length ?? 0} product(s), ${science?.spectrum.numericSeries.length ?? 0} parsed numeric spectrum series, and ${spectra} linked spectral asset(s)` : "[JWST] No exo.MAST / MAST spectral assets were returned in this pass."}${coverage ? ` spanning ${coverage}` : ""}${modes.length ? ` via ${modes.join(", ")}` : ""}. ${signal !== null ? `[MC] Propagated one-scale-height signal is ${intervalSummary(propagation?.oneScaleHeightSignalPpm, 0, " ppm") ?? `${formatNumber(signal, 0)} ppm`}.` : "[MC] Scale-height signal remains unresolved."} [Planner] Recommendations: ${recommendations}. ETC/APT visibility and saturation screening are still required before any of these modes should be treated as executable observation setups.`;
 }
 
 function analysisClaim(input: {
@@ -2391,10 +2485,10 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
     const compactness = systemCompactness(system) ?? 0;
     const lum = stellarLuminosity(system);
     return [
-      { label: "Distance", value: Math.min(system.distancePc, 40), max: 40, note: `${formatNumber(system.distancePc, 1)} pc`, hue: 190 },
-      { label: "Planets", value: Math.min(system.planetCount, 10), max: 10, note: `${system.planetCount} in snapshot`, hue: 32 },
-      { label: "Luminosity", value: Math.min(stellarLuminosity(system) ?? 0.2, 4), max: 4, note: lum ? `${formatNumber(lum, 2)} L☉` : "pending", hue: 215 },
-      { label: "Compactness", value: Math.min(compactness, 3), max: 3, note: compactness ? `${formatNumber(compactness, 2)} AU` : "pending", hue: 332 },
+      { label: "Distance", value: Math.min(system.distancePc, 40), max: 40, note: `[Archive] ${formatNumber(system.distancePc, 1)} pc`, hue: 190 },
+      { label: "Planets", value: Math.min(system.planetCount, 10), max: 10, note: `[Snapshot] ${system.planetCount} in snapshot`, hue: 32 },
+      { label: "Luminosity", value: Math.min(stellarLuminosity(system) ?? 0.2, 4), max: 4, note: lum ? `[Derived] ${formatNumber(lum, 2)} L☉` : "[Derived] pending", hue: 215 },
+      { label: "Compactness", value: Math.min(compactness, 3), max: 3, note: compactness ? `[Derived] ${formatNumber(compactness, 2)} AU` : "[Derived] pending", hue: 332 },
     ];
   }
 
@@ -2408,7 +2502,9 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
       label: "Radius",
       value: Math.min(radiusValue, 8),
       max: 8,
-      note: intervalSummary(propagation?.radiusEarth, 2, " R⊕") ?? (planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "pending"),
+      note: propagation?.radiusEarth
+        ? `[MC] ${intervalSummary(propagation.radiusEarth, 2, " R⊕") ?? "range unresolved"}`
+        : planet.radiusEarth ? `[Archive] ${formatNumber(planet.radiusEarth, 2)} R⊕` : "[Archive] pending",
       hue: 192,
       intervalLow: propagation?.radiusEarth.low ?? null,
       intervalHigh: propagation?.radiusEarth.high ?? null,
@@ -2417,7 +2513,9 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
       label: "Mass",
       value: Math.min(massValue, 25),
       max: 25,
-      note: intervalSummary(propagation?.massEarth, 2, " M⊕") ?? (planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "pending"),
+      note: propagation?.massEarth
+        ? `[MC] ${intervalSummary(propagation.massEarth, 2, " M⊕") ?? "range unresolved"}`
+        : planet.massEarth ? `[Archive] ${formatNumber(planet.massEarth, 2)} M⊕` : "[Archive] pending",
       hue: 24,
       intervalLow: propagation?.massEarth.low ?? null,
       intervalHigh: propagation?.massEarth.high ?? null,
@@ -2426,7 +2524,11 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
       label: "Temp",
       value: Math.min(tempValue, 1600),
       max: 1600,
-      note: science?.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K day` : intervalSummary(propagation?.equilibriumK, 0, " K") ?? (planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "pending"),
+      note: science?.temperatures.daysideK
+        ? `[Model] ${formatNumber(science.temperatures.daysideK, 0)} K day`
+        : propagation?.equilibriumK
+          ? `[MC] ${intervalSummary(propagation.equilibriumK, 0, " K") ?? "range unresolved"}`
+          : planet.equilibriumK ? `[Archive] ${formatNumber(planet.equilibriumK, 0)} K` : "[Archive] pending",
       hue: 334,
       intervalLow: propagation?.equilibriumK.low ?? null,
       intervalHigh: propagation?.equilibriumK.high ?? null,
@@ -2435,19 +2537,21 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
       label: "Flux",
       value: Math.min(fluxValue, 12),
       max: 12,
-      note: intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕") ?? (planet.insolationEarth ? `${formatNumber(planet.insolationEarth, 2)} S⊕` : "pending"),
+      note: propagation?.fluxEarthMultiple
+        ? `[MC] ${intervalSummary(propagation.fluxEarthMultiple, 2, " S⊕") ?? "range unresolved"}`
+        : planet.insolationEarth ? `[Derived] ${formatNumber(planet.insolationEarth, 2)} S⊕` : "[Derived] pending",
       hue: 214,
       intervalLow: propagation?.fluxEarthMultiple.low ?? null,
       intervalHigh: propagation?.fluxEarthMultiple.high ?? null,
     },
     ...(science
       ? [
-          { label: "Field", value: Math.min(science.magnetosphere.surfaceFieldMicroTesla ?? 0, 120), max: 120, note: science.magnetosphere.surfaceFieldMicroTesla ? `${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "pending", hue: 178 },
+          { label: "Field", value: Math.min(science.magnetosphere.surfaceFieldMicroTesla ?? 0, 120), max: 120, note: science.magnetosphere.surfaceFieldMicroTesla ? `[Model] ${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "[Model] pending", hue: 178 },
           ...(science.atmosphere.cloudCoverFraction !== null && science.atmosphere.cloudCoverFraction !== undefined
-            ? [{ label: "Cloud", value: science.atmosphere.cloudCoverFraction * 100, max: 100, note: `${formatNumber(science.atmosphere.cloudCoverFraction * 100, 0)}% proxy`, hue: 196 }]
+            ? [{ label: "Cloud", value: science.atmosphere.cloudCoverFraction * 100, max: 100, note: `[Model] ${formatNumber(science.atmosphere.cloudCoverFraction * 100, 0)}% proxy`, hue: 196 }]
             : []),
           ...(science.atmosphere.spectralAmplitudePpm !== null && science.atmosphere.spectralAmplitudePpm !== undefined
-            ? [{ label: "Spec Amp", value: Math.min(science.atmosphere.spectralAmplitudePpm, 1200), max: 1200, note: `${formatNumber(science.atmosphere.spectralAmplitudePpm, 0)} ppm`, hue: 286 }]
+            ? [{ label: "Spec Amp", value: Math.min(science.atmosphere.spectralAmplitudePpm, 1200), max: 1200, note: `[JWST] ${formatNumber(science.atmosphere.spectralAmplitudePpm, 0)} ppm`, hue: 286 }]
             : wavelengthCoverageText(science)
               ? [{
                   label: "JWST Span",
@@ -2456,7 +2560,7 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
                     12,
                   ),
                   max: 12,
-                  note: wavelengthCoverageText(science)!,
+                  note: `[JWST] ${wavelengthCoverageText(science)!}`,
                   hue: 286,
                 }]
               : []),
@@ -2820,15 +2924,17 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
       uTime: { value: 0 },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
+      uHotness: { value: style.hotness },
     }),
-    [coreColor, rimColor],
+    [coreColor, rimColor, style.hotness],
   );
   const coronaUniforms = useMemo(
     () => ({
       uTime: { value: 0 },
       uColor: { value: coronaColor },
+      uHotness: { value: style.hotness },
     }),
-    [coronaColor],
+    [coronaColor, style.hotness],
   );
 
   useFrame(({ clock }) => {
@@ -2885,8 +2991,9 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
       uTime: { value: 0 },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
+      uHotness: { value: style.hotness },
     }),
-    [coreColor, rimColor],
+    [coreColor, rimColor, style.hotness],
   );
 
   useFrame(({ clock }) => {
@@ -3577,6 +3684,7 @@ function StageScene({
         const style = stellarStyleFromData({
           seedKey: `reference-${star.name}`,
           spectralType: star.spectralType,
+          effectiveTemperatureK: star.effectiveTemperatureK,
           luminositySolar: star.luminositySolar,
           radiusSolar: star.radiusSolar,
         });
