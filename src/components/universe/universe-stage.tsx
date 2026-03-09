@@ -131,6 +131,7 @@ type AdvancedStageFilters = {
   requireJwst: boolean;
   requireStudied: boolean;
   requireInteresting: boolean;
+  uncertaintyMode: "median" | "propagated";
 };
 
 const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
@@ -146,6 +147,7 @@ const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
   requireJwst: false,
   requireStudied: false,
   requireInteresting: false,
+  uncertaintyMode: "median",
 };
 
 const WORLD_Y_AXIS = new THREE.Vector3(0, 1, 0);
@@ -947,6 +949,58 @@ function matchesNumericRange(value: number | null, min: number, max: number, def
   return value >= min && value <= max;
 }
 
+function matchesIntervalRange(
+  low: number | null,
+  high: number | null,
+  min: number,
+  max: number,
+  defaultMin: number,
+  defaultMax: number,
+) {
+  const active = min !== defaultMin || max !== defaultMax;
+  if (!active) return true;
+  if (low === null || low === undefined || high === null || high === undefined || Number.isNaN(low) || Number.isNaN(high)) {
+    return false;
+  }
+  return high >= min && low <= max;
+}
+
+function planetFluxForFilter(system: UniverseSystem, planet: UniversePlanet, uncertaintyMode: AdvancedStageFilters["uncertaintyMode"]) {
+  if (uncertaintyMode === "propagated" && planet.propagation) {
+    return {
+      low: planet.propagation.fluxEarthMultiple.low,
+      median: planet.propagation.fluxEarthMultiple.median,
+      high: planet.propagation.fluxEarthMultiple.high,
+      hasInterval: true,
+    };
+  }
+  const flux = insolationEarth(system, planet);
+  return {
+    low: flux,
+    median: flux,
+    high: flux,
+    hasInterval: false,
+  };
+}
+
+function planetGravityForFilter(planet: UniversePlanet, uncertaintyMode: AdvancedStageFilters["uncertaintyMode"]) {
+  if (uncertaintyMode === "propagated" && planet.propagation) {
+    return {
+      low: planet.propagation.surfaceGravityMs2.low,
+      median: planet.propagation.surfaceGravityMs2.median,
+      high: planet.propagation.surfaceGravityMs2.high,
+      hasInterval: true,
+    };
+  }
+  const gravity = surfaceGravityMs2(planet);
+  return {
+    low: gravity,
+    median: gravity,
+    high: gravity,
+    hasInterval: false,
+  };
+}
+
 function systemMatchesAdvancedFilters(system: UniverseSystem, filters: AdvancedStageFilters) {
   const studied = Boolean(system.localAnalysis?.studied || system.planets.some((planet) => planet.localAnalysis?.studied));
   const interesting = Boolean(system.localAnalysis?.interesting || system.planets.some((planet) => planet.localAnalysis?.interesting));
@@ -957,12 +1011,16 @@ function systemMatchesAdvancedFilters(system: UniverseSystem, filters: AdvancedS
   if (filters.requireJwst && !system.planets.some((planet) => hasJwstEvidence(planet, system))) return false;
 
   return system.planets.some((planet) => {
-    const flux = insolationEarth(system, planet);
-    const gravity = surfaceGravityMs2(planet);
+    const flux = planetFluxForFilter(system, planet, filters.uncertaintyMode);
+    const gravity = planetGravityForFilter(planet, filters.uncertaintyMode);
     return (
-      matchesNumericRange(flux, filters.minFlux, filters.maxFlux, DEFAULT_ADVANCED_STAGE_FILTERS.minFlux, DEFAULT_ADVANCED_STAGE_FILTERS.maxFlux) &&
+      (flux.hasInterval
+        ? matchesIntervalRange(flux.low, flux.high, filters.minFlux, filters.maxFlux, DEFAULT_ADVANCED_STAGE_FILTERS.minFlux, DEFAULT_ADVANCED_STAGE_FILTERS.maxFlux)
+        : matchesNumericRange(flux.median, filters.minFlux, filters.maxFlux, DEFAULT_ADVANCED_STAGE_FILTERS.minFlux, DEFAULT_ADVANCED_STAGE_FILTERS.maxFlux)) &&
       matchesNumericRange(planet.equilibriumK, filters.minTemp, filters.maxTemp, DEFAULT_ADVANCED_STAGE_FILTERS.minTemp, DEFAULT_ADVANCED_STAGE_FILTERS.maxTemp) &&
-      matchesNumericRange(gravity, filters.minGravity, filters.maxGravity, DEFAULT_ADVANCED_STAGE_FILTERS.minGravity, DEFAULT_ADVANCED_STAGE_FILTERS.maxGravity) &&
+      (gravity.hasInterval
+        ? matchesIntervalRange(gravity.low, gravity.high, filters.minGravity, filters.maxGravity, DEFAULT_ADVANCED_STAGE_FILTERS.minGravity, DEFAULT_ADVANCED_STAGE_FILTERS.maxGravity)
+        : matchesNumericRange(gravity.median, filters.minGravity, filters.maxGravity, DEFAULT_ADVANCED_STAGE_FILTERS.minGravity, DEFAULT_ADVANCED_STAGE_FILTERS.maxGravity)) &&
       matchesNumericRange(planet.radiusEarth, filters.minRadius, filters.maxRadius, DEFAULT_ADVANCED_STAGE_FILTERS.minRadius, DEFAULT_ADVANCED_STAGE_FILTERS.maxRadius)
     );
   });
@@ -1805,6 +1863,20 @@ function buildObservationPlan(system: UniverseSystem, planet: UniversePlanet | n
   return `Next observation priority: constrain atmosphere and orbit jointly. ${planet.name} currently reads as a ${thermal} target with ${insolation ? `${formatNumber(insolation, 2)} S⊕ insolation` : "unresolved insolation"}, ${brightness !== null && brightness !== undefined ? `J=${formatNumber(brightness, 2)} mag` : "unresolved J-band brightness"}, and ${kBrightness !== null && kBrightness !== undefined ? `K=${formatNumber(kBrightness, 2)} mag` : "unresolved K-band brightness"}. ${spectra ? `The joined JWST inventory already contains ${science?.spectrum.jwstObservations.length ?? 0} observation(s), ${science?.spectrum.jwstProducts.length ?? 0} product(s), ${science?.spectrum.numericSeries.length ?? 0} parsed numeric spectrum series, and ${spectra} linked spectral asset(s)` : "No exo.MAST / MAST spectral assets were returned in this pass."}${coverage ? ` spanning ${coverage}` : ""}${modes.length ? ` via ${modes.join(", ")}` : ""}. ${signal !== null ? `Propagated one-scale-height signal is ${formatNumber(signal, 0)} ppm.` : "Scale-height signal remains unresolved."} Planner recommendations: ${recommendations}. ETC/APT visibility and saturation screening are still required before any of these modes should be treated as executable observation setups.`;
 }
 
+function analysisClaim(input: {
+  label: string;
+  classification: "O" | "D" | "I" | "S";
+  value: string;
+  source: string;
+  equation?: string;
+}) {
+  const suffix = [
+    `source: ${input.source}`,
+    input.equation,
+  ].filter(Boolean).join(" | ");
+  return `- ${input.label} [${input.classification}]: ${input.value}${suffix ? ` {${suffix}}` : ""}`;
+}
+
 function dedupeSources(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
   const combined = [...system.provenance, ...(planet?.provenance ?? []), ...(science?.sources ?? [])];
   const seen = new Set<string>();
@@ -1818,12 +1890,54 @@ function dedupeSources(system: UniverseSystem, planet: UniversePlanet | null, sc
 function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
   const local = mergedLocalAnalysis(system, planet, science);
   if (planet && science?.localAnalysis?.narrative) {
+    const localStructuredClaims = [
+      analysisClaim({
+        label: "Distance",
+        classification: "O",
+        value: `${formatNumber(system.distancePc, 2)} pc (${formatNumber(distanceLy(system.distancePc), 2)} ly)`,
+        source: "NASA Exoplanet Archive host row",
+      }),
+      analysisClaim({
+        label: "Bulk density",
+        classification: "D",
+        value: densityGcc(planet) ? `${formatNumber(densityGcc(planet), 2)} g/cm³` : "requires both mass and radius",
+        source: "pl_bmasse + pl_rade from archive/enrichment bundle",
+        equation: "Eq: rho = 5.51 * (M/M⊕) / (R/R⊕)^3",
+      }),
+      ...(science
+        ? [
+            analysisClaim({
+              label: "Propagated density / gravity",
+              classification: "D",
+              value: `${formatNumber(science.propagation.densityGcc.median, 2)} g/cm³ / ${formatNumber(science.propagation.surfaceGravityMs2.median, 1)} m/s²`,
+              source: `selected-planet Monte Carlo propagation (${science.propagation.sampleCount} samples, ${science.propagation.inputMode})`,
+              equation: "Eq: rho(M,R), g(M,R)",
+            }),
+            analysisClaim({
+              label: "Escape / retention audit",
+              classification: "I",
+              value: `${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}`,
+              source: "selected-planet escape-regime audit",
+              equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
+            }),
+            analysisClaim({
+              label: "JWST coverage",
+              classification: "O",
+              value: `${science.spectrum.jwstObservations.length} observation(s), ${science.spectrum.jwstProducts.length} product(s), ${science.spectrum.numericSeries.length} parsed numeric series`,
+              source: "exo.MAST + MAST JWST observation/product inventory",
+            }),
+          ]
+        : []),
+    ];
     const localLines = [
       `TARGET: ${planet.name}`,
       `HOST SYSTEM: ${system.name}`,
       `LOCAL ANALYSIS SOURCE: ${science.localAnalysis.sourceLabel}${science.localAnalysis.registryVersion ? ` (${science.localAnalysis.registryVersion})` : ""}`,
       ...(science.localAnalysis.habitability ? [`LOCAL HABITABILITY FLAG: ${science.localAnalysis.habitability}`] : []),
       ...(science.localAnalysis.interestingReason ? [`LOCAL INTERESTING FLAG: ${science.localAnalysis.interestingReason}`] : []),
+      "",
+      "STRUCTURED CLAIM BASIS",
+      ...localStructuredClaims,
       "",
       "PHYSICS CAVEATS",
       ...science.localAnalysis.caveats.map((line) => `- ${line}`),
@@ -1853,49 +1967,216 @@ function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, sc
     `FRAME: Sun-centered equatorial XYZ generated from official archive RA / Dec / distance.`,
     "",
     "OBSERVED INPUTS [O]",
-    `- Distance [O]: ${formatNumber(system.distancePc, 2)} pc (${formatNumber(distanceLy(system.distancePc), 2)} ly).`,
-    `- Right Ascension / Declination [O]: ${formatNumber(system.raDeg, 3)}° / ${formatSigned(system.decDeg, 3)}°.`,
-    `- Host effective temperature [O]: ${system.stellar.effectiveTemperatureK ? `${formatNumber(system.stellar.effectiveTemperatureK, 0)} K` : "not present in the current row set"}.`,
-    `- Host radius / mass [O]: ${system.stellar.radiusSolar ? `${formatNumber(system.stellar.radiusSolar, 2)} R☉` : "unknown"} / ${system.stellar.massSolar ? `${formatNumber(system.stellar.massSolar, 2)} M☉` : "unknown"}.`,
-    `- Spectral type [O]: ${system.stellar.spectralType ?? "not specified"}.`,
-    `- Host photometry [O]: V=${formatNumber(system.stellar.photometry.vMag, 2)} mag, J=${formatNumber(system.stellar.photometry.jMag, 2)} mag, K=${formatNumber(system.stellar.photometry.kMag, 2)} mag.`,
+    analysisClaim({
+      label: "Distance",
+      classification: "O",
+      value: `${formatNumber(system.distancePc, 2)} pc (${formatNumber(distanceLy(system.distancePc), 2)} ly)`,
+      source: "NASA Exoplanet Archive host row",
+    }),
+    analysisClaim({
+      label: "Right ascension / declination",
+      classification: "O",
+      value: `${formatNumber(system.raDeg, 3)}° / ${formatSigned(system.decDeg, 3)}°`,
+      source: "NASA Exoplanet Archive host row",
+    }),
+    analysisClaim({
+      label: "Host effective temperature",
+      classification: "O",
+      value: system.stellar.effectiveTemperatureK ? `${formatNumber(system.stellar.effectiveTemperatureK, 0)} K` : "not present in the current row set",
+      source: "st_teff / selected-host enrichment",
+    }),
+    analysisClaim({
+      label: "Host radius / mass",
+      classification: "O",
+      value: `${system.stellar.radiusSolar ? `${formatNumber(system.stellar.radiusSolar, 2)} R☉` : "unknown"} / ${system.stellar.massSolar ? `${formatNumber(system.stellar.massSolar, 2)} M☉` : "unknown"}`,
+      source: "st_rad + st_mass / selected-host enrichment",
+    }),
+    analysisClaim({
+      label: "Spectral type",
+      classification: "O",
+      value: system.stellar.spectralType ?? "not specified",
+      source: "archive spectral type / local science merge",
+    }),
+    analysisClaim({
+      label: "Host photometry",
+      classification: "O",
+      value: `V=${formatNumber(system.stellar.photometry.vMag, 2)} mag, J=${formatNumber(system.stellar.photometry.jMag, 2)} mag, K=${formatNumber(system.stellar.photometry.kMag, 2)} mag`,
+      source: "sy_vmag + sy_jmag + sy_kmag",
+    }),
     ...(planet
       ? [
-          `- Planet radius [O]: ${planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "not present"}.`,
-          `- Planet mass [O]: ${planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "not present"}.`,
-          `- Equilibrium temperature [O]: ${planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "not present"}.`,
-          `- Semi-major axis / orbital period [O]: ${planet.semiMajorAxisAu ? `${formatNumber(planet.semiMajorAxisAu, 3)} AU` : "not present"} / ${planet.orbitalPeriodDays ? `${formatNumber(planet.orbitalPeriodDays, 2)} d` : "not present"}.`,
-          `- Eccentricity / inclination [O]: ${planet.eccentricity !== null && planet.eccentricity !== undefined ? formatNumber(planet.eccentricity, 3) : "not present"} / ${planet.inclinationDeg !== null && planet.inclinationDeg !== undefined ? `${formatNumber(planet.inclinationDeg, 2)}°` : "not present"}.`,
+          analysisClaim({
+            label: "Planet radius",
+            classification: "O",
+            value: planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "not present",
+            source: "pl_rade / selected-planet enrichment",
+          }),
+          analysisClaim({
+            label: "Planet mass",
+            classification: "O",
+            value: planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "not present",
+            source: "pl_bmasse / selected-planet enrichment",
+          }),
+          analysisClaim({
+            label: "Equilibrium temperature",
+            classification: "O",
+            value: planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "not present",
+            source: "pl_eqt / selected-planet enrichment",
+          }),
+          analysisClaim({
+            label: "Semi-major axis / orbital period",
+            classification: "O",
+            value: `${planet.semiMajorAxisAu ? `${formatNumber(planet.semiMajorAxisAu, 3)} AU` : "not present"} / ${planet.orbitalPeriodDays ? `${formatNumber(planet.orbitalPeriodDays, 2)} d` : "not present"}`,
+            source: "pl_orbsmax + pl_orbper / selected-planet enrichment",
+          }),
+          analysisClaim({
+            label: "Eccentricity / inclination",
+            classification: "O",
+            value: `${planet.eccentricity !== null && planet.eccentricity !== undefined ? formatNumber(planet.eccentricity, 3) : "not present"} / ${planet.inclinationDeg !== null && planet.inclinationDeg !== undefined ? `${formatNumber(planet.inclinationDeg, 2)}°` : "not present"}`,
+            source: "pl_orbeccen + pl_orbincl",
+          }),
         ]
-      : [`- Planet count [O]: ${system.planetCount}.`]),
+      : [analysisClaim({
+          label: "Planet count",
+          classification: "O",
+          value: String(system.planetCount),
+          source: "archive-confirmed planet inventory in current snapshot",
+        })]),
     "",
     "DERIVED AND INFERRED CONTEXT [D/I]",
-    `- Sun-centered XYZ [D]: (${formatSigned(xyz.x, 3)}, ${formatSigned(xyz.y, 3)}, ${formatSigned(xyz.z, 3)}) pc.`,
-    `- Host luminosity proxy [D]: ${lum ? `${formatNumber(lum, 3)} L☉` : "insufficient stellar radius / temperature"}.`,
-    `- First-pass habitable-zone estimate [I]: ${hz ? `${formatNumber(hz.inner, 2)} to ${formatNumber(hz.outer, 2)} AU` : "not computable from loaded fields"}.`,
+    analysisClaim({
+      label: "Sun-centered XYZ",
+      classification: "D",
+      value: `(${formatSigned(xyz.x, 3)}, ${formatSigned(xyz.y, 3)}, ${formatSigned(xyz.z, 3)}) pc`,
+      source: "archive RA + Dec + distance",
+      equation: "Eq: equatorial -> Cartesian transform",
+    }),
+    analysisClaim({
+      label: "Host luminosity proxy",
+      classification: "D",
+      value: lum ? `${formatNumber(lum, 3)} L☉` : "insufficient stellar radius / temperature",
+      source: "st_rad + st_teff",
+      equation: "Eq: L/L☉ = R² (T/5772 K)^4",
+    }),
+    analysisClaim({
+      label: "First-pass habitable zone",
+      classification: "I",
+      value: hz ? `${formatNumber(hz.inner, 2)} to ${formatNumber(hz.outer, 2)} AU` : "not computable from loaded fields",
+      source: "derived luminosity proxy",
+      equation: "Eq: a_HZ ∝ sqrt(L/L☉)",
+    }),
     ...(planet
       ? [
-          `- Planet class [I]: ${planetClass(planet)}.`,
-          `- Thermal regime [I]: ${temperatureClass(planet.equilibriumK)}.`,
-          `- Bulk density [D]: ${density ? `${formatNumber(density, 2)} g/cm³` : "requires both mass and radius"}.`,
-          `- Incident flux [D]: ${flux ? `${formatNumber(flux, 2)} S⊕` : "requires host luminosity and semi-major axis"}.`,
-          `- Orbital velocity [D]: ${speed ? `${formatNumber(speed, 2)} km/s` : "requires host mass and semi-major axis"}.`,
+          analysisClaim({
+            label: "Planet class",
+            classification: "I",
+            value: planetClass(planet),
+            source: "planet radius/mass regime interpretation",
+          }),
+          analysisClaim({
+            label: "Thermal regime",
+            classification: "I",
+            value: temperatureClass(planet.equilibriumK),
+            source: "equilibrium-temperature regime interpretation",
+          }),
+          analysisClaim({
+            label: "Bulk density",
+            classification: "D",
+            value: density ? `${formatNumber(density, 2)} g/cm³` : "requires both mass and radius",
+            source: "pl_bmasse + pl_rade",
+            equation: "Eq: rho = 5.51 * (M/M⊕) / (R/R⊕)^3",
+          }),
+          analysisClaim({
+            label: "Incident flux",
+            classification: "D",
+            value: flux ? `${formatNumber(flux, 2)} S⊕` : "requires host luminosity and semi-major axis",
+            source: science?.radiation.fluxEarthMultiple !== null && science?.radiation.fluxEarthMultiple !== undefined
+              ? "selected-planet official enrichment bundle"
+              : "derived luminosity proxy + semi-major axis",
+            equation: "Eq: S/S⊕ = (L/L☉) / a²",
+          }),
+          analysisClaim({
+            label: "Orbital velocity",
+            classification: "D",
+            value: speed ? `${formatNumber(speed, 2)} km/s` : "requires host mass and semi-major axis",
+            source: "stellar mass + semi-major axis",
+            equation: "Eq: v ≈ 29.78 * sqrt(M★/a)",
+          }),
           ...(science
             ? [
-                `- Dayside / nightside [I]: ${science.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K` : "unresolved"} / ${science.temperatures.nightsideK ? `${formatNumber(science.temperatures.nightsideK, 0)} K` : "unresolved"}.`,
-                `- Magnetic field / magnetopause [I]: ${science.magnetosphere.surfaceFieldMicroTesla ? `${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "unresolved"} / ${science.magnetosphere.magnetopauseRadii ? `${formatNumber(science.magnetosphere.magnetopauseRadii, 1)} Rp` : "unresolved"}.`,
-                `- Shielding class [I]: ${science.magnetosphere.protection}.`,
-                `- JWST observations / products [O]: ${science.spectrum.jwstObservations.length} / ${science.spectrum.jwstProducts.length}.`,
-                `- Spectral assets / parsed series [O]: ${science.spectrum.fileCount} / ${science.spectrum.numericSeries.length}.`,
-                `- Wavelength coverage [O]: ${coverage ?? "not yet constrained from the returned assets"}.`,
-                `- Atmosphere evidence [I]: ${chemistry ?? "No molecule tags yet"}.`,
-                `- Cloud / haze interpretation [I]: ${science.atmosphere.cloudInterpretation}`,
-                `- Propagated density / gravity [D]: ${formatNumber(science.propagation.densityGcc.median, 2)} g/cm³ / ${formatNumber(science.propagation.surfaceGravityMs2.median, 1)} m/s² from ${science.propagation.sampleCount} Monte Carlo samples (${science.propagation.inputMode}).`,
-                `- Escape / retention audit [I]: ${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}; Jeans λ(N2) ${science.retention.jeansLambdaN2 ? formatNumber(science.retention.jeansLambdaN2, 1) : "unresolved"}; irradiation stress ${science.retention.irradiationStress ? `${formatNumber(science.retention.irradiationStress, 2)} S⊕` : "unresolved"}.`,
+                analysisClaim({
+                  label: "Dayside / nightside temperatures",
+                  classification: "I",
+                  value: `${science.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K` : "unresolved"} / ${science.temperatures.nightsideK ? `${formatNumber(science.temperatures.nightsideK, 0)} K` : "unresolved"}`,
+                  source: "selected-planet thermal redistribution layer",
+                }),
+                analysisClaim({
+                  label: "Magnetic field / magnetopause",
+                  classification: "I",
+                  value: `${science.magnetosphere.surfaceFieldMicroTesla ? `${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "unresolved"} / ${science.magnetosphere.magnetopauseRadii ? `${formatNumber(science.magnetosphere.magnetopauseRadii, 1)} Rp` : "unresolved"}`,
+                  source: "selected-planet magnetosphere audit",
+                  equation: "Eq: dynamo/stellar-wind proxy + escape-regime context",
+                }),
+                analysisClaim({
+                  label: "Shielding class",
+                  classification: "I",
+                  value: science.magnetosphere.protection,
+                  source: "selected-planet magnetosphere audit",
+                }),
+                analysisClaim({
+                  label: "JWST observations / products",
+                  classification: "O",
+                  value: `${science.spectrum.jwstObservations.length} / ${science.spectrum.jwstProducts.length}`,
+                  source: "MAST JWST observation/product inventory",
+                }),
+                analysisClaim({
+                  label: "Spectral assets / parsed series",
+                  classification: "O",
+                  value: `${science.spectrum.fileCount} / ${science.spectrum.numericSeries.length}`,
+                  source: "exo.MAST curated spectra + public JWST numeric extraction",
+                }),
+                analysisClaim({
+                  label: "Wavelength coverage",
+                  classification: "O",
+                  value: coverage ?? "not yet constrained from the returned assets",
+                  source: "curated spectra + JWST mode coverage merge",
+                }),
+                analysisClaim({
+                  label: "Atmosphere evidence",
+                  classification: "I",
+                  value: chemistry ?? "No molecule tags yet",
+                  source: "curated transmission spectra + JWST coverage metadata + local chemistry tags",
+                  equation: "Eq: transmission amplitude/slope heuristic vs one-scale-height expectation",
+                }),
+                analysisClaim({
+                  label: "Cloud / haze interpretation",
+                  classification: "I",
+                  value: science.atmosphere.cloudInterpretation,
+                  source: "selected-planet atmosphere evidence layer",
+                }),
+                analysisClaim({
+                  label: "Propagated density / gravity",
+                  classification: "D",
+                  value: `${formatNumber(science.propagation.densityGcc.median, 2)} g/cm³ / ${formatNumber(science.propagation.surfaceGravityMs2.median, 1)} m/s² from ${science.propagation.sampleCount} Monte Carlo samples (${science.propagation.inputMode})`,
+                  source: "Monte Carlo propagation over archive/exo.MAST uncertainties",
+                  equation: "Eq: rho(M,R), g(M,R)",
+                }),
+                analysisClaim({
+                  label: "Escape / retention audit",
+                  classification: "I",
+                  value: `${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}; Jeans λ(N2) ${science.retention.jeansLambdaN2 ? formatNumber(science.retention.jeansLambdaN2, 1) : "unresolved"}; irradiation stress ${science.retention.irradiationStress ? `${formatNumber(science.retention.irradiationStress, 2)} S⊕` : "unresolved"}`,
+                  source: "selected-planet escape-regime audit",
+                  equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
+                }),
               ]
             : []),
         ]
-      : [`- System compactness [I]: ${systemCompactness(system) ? `${formatNumber(systemCompactness(system), 3)} AU mean orbit` : "insufficient semi-major-axis coverage"}.`]),
+      : [analysisClaim({
+          label: "System compactness",
+          classification: "I",
+          value: systemCompactness(system) ? `${formatNumber(systemCompactness(system), 3)} AU mean orbit` : "insufficient semi-major-axis coverage",
+          source: "mean semi-major axis across planets in current snapshot",
+        })]),
     "",
     "SCIENCE INTERPRETATION",
     planet
@@ -3869,6 +4150,23 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <label className="space-y-1.5 sm:col-span-2">
+                        <span className="text-[0.62rem] uppercase tracking-[0.2em] text-slate-300/56">Uncertainty mode</span>
+                        <select
+                          value={advancedFilters.uncertaintyMode}
+                          onChange={(event) => {
+                            const next = event.target.value === "propagated" ? "propagated" : "median";
+                            setAdvancedFilters((current) => ({
+                              ...current,
+                              uncertaintyMode: next,
+                            }));
+                          }}
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/56 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-300/30 focus:bg-slate-950/72"
+                        >
+                          <option value="median">Median values only</option>
+                          <option value="propagated">Use propagated intervals</option>
+                        </select>
+                      </label>
                       {[
                         ["Min Flux", "minFlux", advancedFilters.minFlux],
                         ["Max Flux", "maxFlux", advancedFilters.maxFlux],

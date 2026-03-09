@@ -102,3 +102,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Hardened UI provenance in src/components/universe/universe-stage.tsx by attaching source/equation metadata to observed, derived, and uncertainty cards through a shared MetricCard path.
 - Strengthened the legacy atmospheric-retention wording scrub in src/lib/science/local/legacy-analysis.ts so legacy binding-energy language is explicitly reframed as retention-proxy language.
 - Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: live selected-planet route + browser snapshot on the production server.
+
+- Added uncertainty-aware advanced filtering in src/components/universe/universe-stage.tsx with a median vs propagated toggle for flux/gravity range matching.
+- Added structured claim-level provenance formatting to the generated analysis text so the long-form panel now attaches source/equation context inline with the derived claims.
+- Added a structured-claim basis block ahead of legacy local narratives so preserved verbose reports sit next to auditable current-bundle claims instead of standing alone.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: Advanced Filters popout + analysis panel on the production server.
