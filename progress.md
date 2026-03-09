@@ -84,6 +84,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this pass: npm run lint ✅, npm run build ✅, live API spot checks ✅ for WASP-39 b (`hydrodynamic-loss-risk`) and K2-18 b (`volatile-rich-retentive`), Playwright browser load/screenshot ✅ on the production server.
 - Follow-up pass: updated the top-level synopsis text in src/components/universe/universe-stage.tsx so the visible narrative now includes the escape-regime audit plus propagated flux/temperature ranges. The stronger science model is no longer hidden only in the metric stack and lower analysis blocks.
 - Validation after this follow-up: npm run lint ✅, npm run build ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
+- Added deeper provenance into the preserved legacy long-form text in src/lib/science/local/legacy-analysis.ts. Each legacy report now starts with a report-level provenance capsule, and each `SECTION n:` heading is annotated as source-bound, standards/constants, derived-physics, or interpretation-heavy based on its heading.
+- Validation after this provenance pass: npm run lint ✅, npm run build ✅, live selected-planet route ✅ showing the new report capsule and section annotations for K2-18 b.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,

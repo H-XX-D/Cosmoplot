@@ -560,6 +560,21 @@ function sanitizeLegacyNarrative(text: string) {
   const trimmed = text.trim();
   if (!trimmed) return trimmed;
 
+  const annotateSectionHeading = (heading: string) => {
+    const normalized = heading.toUpperCase();
+    let basis = "Legacy local narrative section; read with the structured claim basis and provenance appendix.";
+    if (/OBSERVATIONAL DATA SOURCES|OBSERVATION|DISCOVERY|SPECTROSCOPY|DATA SOURCE/.test(normalized)) {
+      basis = "Source-bound section; prioritize cited references and measured values in this block.";
+    } else if (/FUNDAMENTAL PHYSICAL CONSTANTS|CONSTANTS USED|REFERENCE BODIES/.test(normalized)) {
+      basis = "Standards/constants section; values here are reference inputs rather than target-specific observations.";
+    } else if (/CALCULATION|DERIVED|DENSITY|GRAVITY|FLUX|TEMPERATURE|ORBIT|SCALE HEIGHT|SIGNAL|MAGNETIC|MAGNETOSPHERE|ESCAPE|RETENTION/.test(normalized)) {
+      basis = "Derived-physics section; treat equations and outputs as model-dependent calculations tied to the loaded inputs.";
+    } else if (/INTERPRETATION|COMMENTARY|HABITABILITY|ASSESSMENT|IMPLICATION|SYNTHESIS|CONCLUSION/.test(normalized)) {
+      basis = "Interpretation section; use it downstream of the source-bound and derived sections rather than as a primary measurement.";
+    }
+    return `${heading}\n[SECTION BASIS: ${basis}]`;
+  };
+
   return trimmed
     .replace(/-{40,}\s*SECTION\s+\d+:\s+RAW JSON SNAPSHOT\s+\[O(?:\/I)?\][\s\S]*?(?=(?:-{40,}\s*SECTION\s+\d+:)|$)/gi, "")
     .replace(/\bBinding Energy Framework\b/g, "Legacy Retention Framework")
@@ -567,7 +582,8 @@ function sanitizeLegacyNarrative(text: string) {
     .replace(/\batmospheric binding\b/gi, "atmospheric retention proxy")
     .replace(/\bbinding ratio\b/gi, "retention proxy ratio")
     .replace(/\bE_B\/E_th\b/g, "retention proxy ratio")
-    .replace(/\bbound atmosphere\b/gi, "retained-atmosphere outcome proxy");
+    .replace(/\bbound atmosphere\b/gi, "retained-atmosphere outcome proxy")
+    .replace(/^(SECTION\s+\d+:\s+.+)$/gm, annotateSectionHeading);
 }
 
 function localSourceDescriptor(accessedAt: string): SourceDescriptor {
@@ -620,7 +636,18 @@ export async function getLegacyPlanetBundle(planetName: string, systemName?: str
   const contents = await Promise.all(
     reports.map(async (report) => {
       const text = await fs.readFile(report.path, "utf8");
-      return `# ${report.label}\n\n${sanitizeLegacyNarrative(text)}`;
+      return [
+        `# ${report.label}`,
+        "",
+        "REPORT PROVENANCE CAPSULE",
+        `- File: ${report.filename}`,
+        "- Role: preserved legacy local narrative from the Desktop EXOPLANET_ANALYSES/JWST bundle",
+        "- Numeric and source-bound claims should be checked against the STRUCTURED CLAIM BASIS above",
+        "- Section annotations below label blocks as source-bound, derived-physics, or interpretation-heavy",
+        "- Retention-language passages remain proxy language and are superseded by the rewrite's escape-regime audit",
+        "",
+        sanitizeLegacyNarrative(text),
+      ].join("\n");
     }),
   );
 
