@@ -94,6 +94,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this hover pass: npm run lint ✅, npm run build ✅, Playwright browser smoke check ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Added compact science summaries to the selection summary tiles and the `Planets in focus` list in src/components/universe/universe-stage.tsx. The visible selection UI now carries propagated flux/temperature or mass/radius spans instead of leaving that information buried below the fold.
 - Validation after this selection-summary pass: npm run lint ✅, npm run build ✅, Playwright browser smoke check ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
+- Added compact provenance badges and source notes to the selection summary layer in src/components/universe/universe-stage.tsx. The top-level selection report, active-target tile, and `Planets in focus` list now expose whether a target is currently backed by archive rows, internet enrichment, JWST evidence, Monte Carlo propagation, and/or the local analysis layer.
+- Validation after this provenance-summary pass: npm run lint ✅, npm run build ✅, Playwright browser smoke check ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,

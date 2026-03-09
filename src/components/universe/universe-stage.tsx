@@ -1220,6 +1220,21 @@ function compactPlanetMassRadius(planet: UniversePlanet, science?: PlanetScience
   return [radiusText ? `R ${radiusText}` : null, massText ? `M ${massText}` : null].filter(Boolean).join(" · ");
 }
 
+function compactSourceBadges(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
+  const badges = ["Archive"];
+  if (science) badges.push("Internet");
+  if ((science?.spectrum.jwstObservations.length ?? 0) > 0 || (science?.spectrum.numericSeries.length ?? 0) > 0) badges.push("JWST");
+  if (activePropagation(planet, science)) badges.push("MC");
+  if (mergedLocalAnalysis(system, planet, science)) badges.push("Local");
+  return badges.join(" · ");
+}
+
+function compactSourceNote(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
+  const sources = dedupeSources(system, planet, science);
+  const labels = Array.from(new Set(sources.map((source) => source.name))).slice(0, 3);
+  return labels.join(" · ");
+}
+
 function jwstModeSummary(science?: PlanetScienceBundle | null) {
   const modes = (science?.spectrum.jwstObservations ?? [])
     .map((observation) => [observation.instrumentName, observation.filters].filter(Boolean).join(" "))
@@ -4658,6 +4673,12 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                       {planetScienceLoading ? "Pulling official internet enrichment..." : selectedSystem ? localAnalysisStatus(selectedSystem, selectedPlanet, selectedPlanetScience) : "Archive snapshot only"}
                     </div>
                   ) : null}
+                  {selectedSystem ? (
+                    <div className="mt-2 text-xs leading-5 text-slate-400/78">
+                      Basis: {compactSourceBadges(selectedSystem, selectedPlanet, selectedPlanetScience)}
+                      {selectedPlanet ? ` · ${compactSourceNote(selectedSystem, selectedPlanet, selectedPlanetScience)}` : ""}
+                    </div>
+                  ) : null}
                   <p className="mt-2 text-sm leading-6 text-slate-300/74">
                     {selectedSystem ? buildSynopsis(selectedSystem, selectedPlanet, selectedPlanetScience) : "The current filter set returned no systems."}
                   </p>
@@ -4680,6 +4701,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                             ? ` · J/K ${formatNumber(selectedSystem.stellar.photometry.jMag, 2)} / ${formatNumber(selectedSystem.stellar.photometry.kMag, 2)}`
                             : ""}
                         </div>
+                        <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-slate-400/60">Source: Archive host row</div>
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
@@ -4689,6 +4711,9 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                             {compactPlanetFluxTemp(selectedSystem, selectedPlanet, selectedPlanetScience) || compactPlanetMassRadius(selectedPlanet, selectedPlanetScience) || "Science summary unresolved"}
                           </div>
                         ) : null}
+                        <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-slate-400/60">
+                          Source: {compactSourceBadges(selectedSystem, selectedPlanet, selectedPlanetScience)}
+                        </div>
                         {mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason ? (
                           <div className="mt-1 text-xs text-sky-100/62">{mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason}</div>
                         ) : null}
@@ -4713,6 +4738,9 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                             {compactPlanetFluxTemp(selectedSystem, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
                               || compactPlanetMassRadius(planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
                               || "Science summary unresolved"}
+                          </div>
+                          <div className="mt-1 text-[0.6rem] uppercase tracking-[0.16em] text-slate-400/58">
+                            {compactSourceBadges(selectedSystem, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)}
                           </div>
                         </button>
                       ))
