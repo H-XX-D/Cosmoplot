@@ -3140,6 +3140,7 @@ function ActiveSystemPlanets({
   selectedPlanet,
   selectedPlanetScience,
   onSelectPlanet,
+  onHoverChange,
   onFlyToPlanet,
   planetViewSyncRef,
   simulationDays,
@@ -3152,6 +3153,7 @@ function ActiveSystemPlanets({
   selectedPlanet: UniversePlanet | null;
   selectedPlanetScience?: PlanetScienceBundle | null;
   onSelectPlanet: (planet: UniversePlanet) => void;
+  onHoverChange: (hover: StageHover | null) => void;
   onFlyToPlanet: (target: THREE.Vector3, radius: number) => void;
   planetViewSyncRef?: PlanetViewSyncRef;
   simulationDays: number;
@@ -3182,11 +3184,12 @@ function ActiveSystemPlanets({
       if (pendingPlanetClickRef.current !== null) {
         window.clearTimeout(pendingPlanetClickRef.current);
       }
+      onHoverChange(null);
       if (planetViewSyncRef) {
         planetViewSyncRef.current = null;
       }
     };
-  }, [planetViewSyncRef]);
+  }, [onHoverChange, planetViewSyncRef]);
 
   useEffect(() => {
     if (!planetViewSyncRef) return;
@@ -3347,6 +3350,42 @@ function ActiveSystemPlanets({
     }
   });
 
+  function updatePlanetHover(event: ThreeEvent<PointerEvent>, planet: UniversePlanet, active: boolean, accent: string) {
+    const science = active ? selectedPlanetScience : null;
+    const propagation = activePropagation(planet, science);
+    const flux = science?.radiation.fluxEarthMultiple ?? propagation?.fluxEarthMultiple.median ?? insolationEarth(system, planet);
+    onHoverChange({
+      x: event.nativeEvent.offsetX,
+      y: event.nativeEvent.offsetY,
+      accent,
+      title: planet.name,
+      lines: [
+        `${planetClass(planet)} · ${temperatureClass(science?.temperatures.equilibriumK ?? planet.equilibriumK)}`,
+        propagation?.radiusEarth
+          ? `Radius: ${formatNumber(planet.radiusEarth, 2)} R⊕ · ${intervalSummary(propagation.radiusEarth, 2, " R⊕") ?? "range unresolved"}`
+          : planet.radiusEarth
+            ? `Radius: ${formatNumber(planet.radiusEarth, 2)} R⊕`
+            : "Radius: unresolved",
+        propagation?.massEarth
+          ? `Mass: ${formatNumber(planet.massEarth, 2)} M⊕ · ${intervalSummary(propagation.massEarth, 2, " M⊕") ?? "range unresolved"}`
+          : planet.massEarth
+            ? `Mass: ${formatNumber(planet.massEarth, 2)} M⊕`
+            : "Mass: unresolved",
+        propagation?.equilibriumK
+          ? `Temperature: ${intervalSummary(propagation.equilibriumK, 0, " K") ?? "range unresolved"}`
+          : planet.equilibriumK
+            ? `Temperature: ${formatNumber(planet.equilibriumK, 0)} K`
+            : "Temperature: unresolved",
+        propagation?.fluxEarthMultiple
+          ? `Flux: ${intervalSummary(propagation.fluxEarthMultiple, 2, " S⊕") ?? "range unresolved"}`
+          : flux !== null && flux !== undefined
+            ? `Flux: ${formatNumber(flux, 2)} S⊕`
+            : "Flux: unresolved",
+        ...(science?.retention ? [`Escape audit: ${retentionDisplayValue(science.retention)}`] : []),
+      ],
+    });
+  }
+
   return (
     <>
       {system.planets.slice(0, 10).map((planet, index) => {
@@ -3365,6 +3404,15 @@ function ActiveSystemPlanets({
               ref={(node) => {
                 planetRefs.current[planet.id] = node;
               }}
+              onPointerOver={(event) => {
+                event.stopPropagation();
+                updatePlanetHover(event, planet, active, active ? "#8fd5ff" : "#5fa7d8");
+              }}
+              onPointerMove={(event) => {
+                event.stopPropagation();
+                updatePlanetHover(event, planet, active, active ? "#8fd5ff" : "#5fa7d8");
+              }}
+              onPointerOut={() => onHoverChange(null)}
               onClick={(event) => {
                 event.stopPropagation();
                 if (pendingPlanetClickRef.current !== null) {
@@ -3944,6 +3992,7 @@ function StageScene({
             selectedPlanet={selectedPlanet}
             selectedPlanetScience={selectedPlanetScience}
             onSelectPlanet={onSelectPlanet}
+            onHoverChange={onHoverChange}
             onFlyToPlanet={startFlightToPlanet}
             planetViewSyncRef={planetViewSyncRef}
             simulationDays={simulationDays}
