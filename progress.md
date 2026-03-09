@@ -113,3 +113,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Unified selected-target propagation onto the shared physics module so wide-field and selected-target uncertainty semantics stay aligned.
 - Advanced Filters propagated mode now applies interval-overlap matching for temperature and radius in addition to flux and gravity.
 - Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: selected-planet route + universe snapshot propagation shape on production server.
+
+- Planner text and chart rows in src/components/universe/universe-stage.tsx now consume propagated intervals instead of silently dropping back to point estimates after filtering.
+- Observation planning text now surfaces propagated flux, temperature, radius, and one-scale-height signal ranges when available.
+- Planet chart rows now prefer propagated medians/ranges for radius, mass, temperature, and flux.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: selected-planet route on production server.

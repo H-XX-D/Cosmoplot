@@ -1127,6 +1127,20 @@ function wavelengthCoverageText(science?: PlanetScienceBundle | null) {
   return `${formatNumber(min, 2)}-${formatNumber(max, 2)} um`;
 }
 
+function activePropagation(planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
+  return science?.propagation ?? planet?.propagation ?? null;
+}
+
+function intervalSummary(
+  interval: { low: number | null; median: number | null; high: number | null } | null | undefined,
+  digits: number,
+  suffix = "",
+) {
+  if (!interval) return null;
+  if (interval.low === null || interval.median === null || interval.high === null) return null;
+  return `${formatNumber(interval.low, digits)}-${formatNumber(interval.high, digits)}${suffix} (${formatNumber(interval.median, digits)}${suffix} median)`;
+}
+
 function jwstModeSummary(science?: PlanetScienceBundle | null) {
   const modes = (science?.spectrum.jwstObservations ?? [])
     .map((observation) => [observation.instrumentName, observation.filters].filter(Boolean).join(" "))
@@ -1155,9 +1169,11 @@ function buildPlannerRecommendations(system: UniverseSystem, planet: UniversePla
   const jMag = science?.stellar.photometry.jMag ?? system.stellar.photometry.jMag;
   const kMag = science?.stellar.photometry.kMag ?? system.stellar.photometry.kMag;
   const coverage = science?.atmosphere.wavelengthCoverage;
-  const signal = science?.propagation.oneScaleHeightSignalPpm.median ?? null;
+  const propagation = activePropagation(planet, science);
+  const signal = propagation?.oneScaleHeightSignalPpm.median ?? null;
+  const signalHigh = propagation?.oneScaleHeightSignalPpm.high ?? signal;
   const cloudFraction = science?.atmosphere.cloudCoverFraction ?? null;
-  const dayside = science?.temperatures.daysideK ?? planet.equilibriumK ?? null;
+  const dayside = science?.temperatures.daysideK ?? propagation?.equilibriumK.median ?? planet.equilibriumK ?? null;
 
   const needBlueCoverage = !coverage || coverage.minUm === null || coverage.minUm > 0.8;
   const needMidCoverage = !coverage || coverage.maxUm === null || coverage.maxUm < 4.2;
@@ -1187,7 +1203,7 @@ function buildPlannerRecommendations(system: UniverseSystem, planet: UniversePla
 
   if (needMidCoverage) {
     recommendations.push({
-      mode: signal !== null && signal > 60 ? "NIRSpec G395H BOTS" : "NIRSpec Prism BOTS",
+      mode: signalHigh !== null && signalHigh > 60 ? "NIRSpec G395H BOTS" : "NIRSpec Prism BOTS",
       readiness:
         jMag === null
           ? "caution"
@@ -1195,8 +1211,8 @@ function buildPlannerRecommendations(system: UniverseSystem, planet: UniversePla
             ? "caution"
             : "ready",
       rationale:
-        signal !== null && signal > 60
-          ? `Propagated one-scale-height signal near ${formatNumber(signal, 0)} ppm supports higher-resolution 2.9-5.2 um follow-up if brightness checks pass.`
+        signalHigh !== null && signalHigh > 60
+          ? `Propagated one-scale-height signal spans ${intervalSummary(propagation?.oneScaleHeightSignalPpm, 0, " ppm") ?? `${formatNumber(signal, 0)} ppm`} and supports higher-resolution 2.9-5.2 um follow-up if brightness checks pass.`
           : `Mid-IR/CO2-sensitive coverage is incomplete; a lower-resolution broad-band BOTS pass is the safer first constraint before committing to higher resolution.`,
     });
   }
@@ -1891,16 +1907,20 @@ function buildObservationPlan(system: UniverseSystem, planet: UniversePlanet | n
     return "Select a planet to move from system geometry into target-specific planning. The science-side structure is preserved here, but the new pipeline still needs brightness metadata and archive uncertainties before it can issue instrument-grade mode decisions.";
   }
 
-  const insolation = science?.radiation.fluxEarthMultiple ?? insolationEarth(system, planet);
-  const thermal = temperatureClass(planet.equilibriumK);
+  const propagation = activePropagation(planet, science);
+  const insolation = science?.radiation.fluxEarthMultiple ?? propagation?.fluxEarthMultiple.median ?? insolationEarth(system, planet);
+  const thermal = temperatureClass(propagation?.equilibriumK.median ?? planet.equilibriumK);
   const brightness = science?.stellar.photometry.jMag ?? system.stellar.photometry.jMag;
   const kBrightness = science?.stellar.photometry.kMag ?? system.stellar.photometry.kMag;
   const spectra = science?.spectrum.fileCount ?? 0;
   const coverage = wavelengthCoverageText(science);
   const modes = jwstModeSummary(science);
-  const signal = science?.propagation.oneScaleHeightSignalPpm.median;
+  const signal = propagation?.oneScaleHeightSignalPpm.median;
+  const fluxRange = intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕");
+  const tempRange = intervalSummary(propagation?.equilibriumK, 0, " K");
+  const radiusRange = intervalSummary(propagation?.radiusEarth, 2, " R⊕");
   const recommendations = buildPlannerRecommendations(system, planet, science).map(plannerRecommendationText).join(" | ");
-  return `Next observation priority: constrain atmosphere and orbit jointly. ${planet.name} currently reads as a ${thermal} target with ${insolation ? `${formatNumber(insolation, 2)} S⊕ insolation` : "unresolved insolation"}, ${brightness !== null && brightness !== undefined ? `J=${formatNumber(brightness, 2)} mag` : "unresolved J-band brightness"}, and ${kBrightness !== null && kBrightness !== undefined ? `K=${formatNumber(kBrightness, 2)} mag` : "unresolved K-band brightness"}. ${spectra ? `The joined JWST inventory already contains ${science?.spectrum.jwstObservations.length ?? 0} observation(s), ${science?.spectrum.jwstProducts.length ?? 0} product(s), ${science?.spectrum.numericSeries.length ?? 0} parsed numeric spectrum series, and ${spectra} linked spectral asset(s)` : "No exo.MAST / MAST spectral assets were returned in this pass."}${coverage ? ` spanning ${coverage}` : ""}${modes.length ? ` via ${modes.join(", ")}` : ""}. ${signal !== null ? `Propagated one-scale-height signal is ${formatNumber(signal, 0)} ppm.` : "Scale-height signal remains unresolved."} Planner recommendations: ${recommendations}. ETC/APT visibility and saturation screening are still required before any of these modes should be treated as executable observation setups.`;
+  return `Next observation priority: constrain atmosphere and orbit jointly. ${planet.name} currently reads as a ${thermal} target with ${insolation ? `${formatNumber(insolation, 2)} S⊕ insolation` : "unresolved insolation"}, ${brightness !== null && brightness !== undefined ? `J=${formatNumber(brightness, 2)} mag` : "unresolved J-band brightness"}, and ${kBrightness !== null && kBrightness !== undefined ? `K=${formatNumber(kBrightness, 2)} mag` : "unresolved K-band brightness"}. ${fluxRange ? `Propagated flux range: ${fluxRange}. ` : ""}${tempRange ? `Propagated equilibrium-temperature range: ${tempRange}. ` : ""}${radiusRange ? `Propagated radius range: ${radiusRange}. ` : ""}${spectra ? `The joined JWST inventory already contains ${science?.spectrum.jwstObservations.length ?? 0} observation(s), ${science?.spectrum.jwstProducts.length ?? 0} product(s), ${science?.spectrum.numericSeries.length ?? 0} parsed numeric spectrum series, and ${spectra} linked spectral asset(s)` : "No exo.MAST / MAST spectral assets were returned in this pass."}${coverage ? ` spanning ${coverage}` : ""}${modes.length ? ` via ${modes.join(", ")}` : ""}. ${signal !== null ? `Propagated one-scale-height signal is ${intervalSummary(propagation?.oneScaleHeightSignalPpm, 0, " ppm") ?? `${formatNumber(signal, 0)} ppm`}.` : "Scale-height signal remains unresolved."} Planner recommendations: ${recommendations}. ETC/APT visibility and saturation screening are still required before any of these modes should be treated as executable observation setups.`;
 }
 
 function analysisClaim(input: {
@@ -2250,11 +2270,16 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
     ];
   }
 
+  const propagation = activePropagation(planet, science);
+  const radiusValue = propagation?.radiusEarth.median ?? planet.radiusEarth ?? 0;
+  const massValue = propagation?.massEarth.median ?? planet.massEarth ?? 0;
+  const tempValue = science?.temperatures.daysideK ?? propagation?.equilibriumK.median ?? planet.equilibriumK ?? 0;
+  const fluxValue = science?.radiation.fluxEarthMultiple ?? propagation?.fluxEarthMultiple.median ?? planet.insolationEarth ?? 0;
   return [
-    { label: "Radius", value: Math.min(planet.radiusEarth ?? 0, 8), max: 8, note: planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "pending", hue: 192 },
-    { label: "Mass", value: Math.min(planet.massEarth ?? 0, 25), max: 25, note: planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "pending", hue: 24 },
-    { label: "Temp", value: Math.min((science?.temperatures.daysideK ?? planet.equilibriumK) ?? 0, 1600), max: 1600, note: science?.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K day` : planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "pending", hue: 334 },
-    { label: "Flux", value: Math.min((science?.radiation.fluxEarthMultiple ?? planet.insolationEarth) ?? 0, 12), max: 12, note: science?.radiation.fluxEarthMultiple ? `${formatNumber(science.radiation.fluxEarthMultiple, 2)} S⊕` : planet.insolationEarth ? `${formatNumber(planet.insolationEarth, 2)} S⊕` : "pending", hue: 214 },
+    { label: "Radius", value: Math.min(radiusValue, 8), max: 8, note: intervalSummary(propagation?.radiusEarth, 2, " R⊕") ?? (planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "pending"), hue: 192 },
+    { label: "Mass", value: Math.min(massValue, 25), max: 25, note: intervalSummary(propagation?.massEarth, 2, " M⊕") ?? (planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "pending"), hue: 24 },
+    { label: "Temp", value: Math.min(tempValue, 1600), max: 1600, note: science?.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K day` : intervalSummary(propagation?.equilibriumK, 0, " K") ?? (planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "pending"), hue: 334 },
+    { label: "Flux", value: Math.min(fluxValue, 12), max: 12, note: intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕") ?? (planet.insolationEarth ? `${formatNumber(planet.insolationEarth, 2)} S⊕` : "pending"), hue: 214 },
     ...(science
       ? [
           { label: "Field", value: Math.min(science.magnetosphere.surfaceFieldMicroTesla ?? 0, 120), max: 120, note: science.magnetosphere.surfaceFieldMicroTesla ? `${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "pending", hue: 178 },
