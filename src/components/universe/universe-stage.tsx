@@ -3424,26 +3424,26 @@ function ActiveSystemPlanets({
       lines: [
         `${planetClass(planet)} · ${temperatureClass(science?.temperatures.equilibriumK ?? planet.equilibriumK)}`,
         propagation?.radiusEarth
-          ? `Radius: ${formatNumber(planet.radiusEarth, 2)} R⊕ · ${intervalSummary(propagation.radiusEarth, 2, " R⊕") ?? "range unresolved"}`
+          ? `Radius [MC]: ${formatNumber(planet.radiusEarth, 2)} R⊕ · ${intervalSummary(propagation.radiusEarth, 2, " R⊕") ?? "range unresolved"}`
           : planet.radiusEarth
-            ? `Radius: ${formatNumber(planet.radiusEarth, 2)} R⊕`
-            : "Radius: unresolved",
+            ? `Radius [Archive]: ${formatNumber(planet.radiusEarth, 2)} R⊕`
+            : "Radius [Archive]: unresolved",
         propagation?.massEarth
-          ? `Mass: ${formatNumber(planet.massEarth, 2)} M⊕ · ${intervalSummary(propagation.massEarth, 2, " M⊕") ?? "range unresolved"}`
+          ? `Mass [MC]: ${formatNumber(planet.massEarth, 2)} M⊕ · ${intervalSummary(propagation.massEarth, 2, " M⊕") ?? "range unresolved"}`
           : planet.massEarth
-            ? `Mass: ${formatNumber(planet.massEarth, 2)} M⊕`
-            : "Mass: unresolved",
+            ? `Mass [Archive]: ${formatNumber(planet.massEarth, 2)} M⊕`
+            : "Mass [Archive]: unresolved",
         propagation?.equilibriumK
-          ? `Temperature: ${intervalSummary(propagation.equilibriumK, 0, " K") ?? "range unresolved"}`
+          ? `T_eq [MC]: ${intervalSummary(propagation.equilibriumK, 0, " K") ?? "range unresolved"}`
           : planet.equilibriumK
-            ? `Temperature: ${formatNumber(planet.equilibriumK, 0)} K`
-            : "Temperature: unresolved",
+            ? `T_eq [Archive]: ${formatNumber(planet.equilibriumK, 0)} K`
+            : "T_eq [Archive]: unresolved",
         propagation?.fluxEarthMultiple
-          ? `Flux: ${intervalSummary(propagation.fluxEarthMultiple, 2, " S⊕") ?? "range unresolved"}`
+          ? `Flux [MC]: ${intervalSummary(propagation.fluxEarthMultiple, 2, " S⊕") ?? "range unresolved"}`
           : flux !== null && flux !== undefined
-            ? `Flux: ${formatNumber(flux, 2)} S⊕`
-            : "Flux: unresolved",
-        ...(science?.retention ? [`Escape audit: ${retentionDisplayValue(science.retention)}`] : []),
+            ? `Flux [Derived]: ${formatNumber(flux, 2)} S⊕`
+            : "Flux [Derived]: unresolved",
+        ...(science?.retention ? [`Escape audit [Model]: ${retentionDisplayValue(science.retention)}`] : []),
       ],
     });
   }
@@ -3653,11 +3653,11 @@ function StageScene({
       title: system.name,
       lines: [
         ...(tags.length ? [`Tags: ${tags.join(" · ")}`] : []),
-        `${system.stellar.spectralType ?? "Unknown type"}${system.stellar.effectiveTemperatureK ? ` · ${formatNumber(system.stellar.effectiveTemperatureK, 0)} K` : ""}`,
-        `${formatNumber(distanceLy(system.distancePc), 1)} ly · ${formatNumber(system.distancePc, 2)} pc`,
-        system.stellar.radiusSolar ? `Radius: ${formatNumber(system.stellar.radiusSolar, 2)} R☉` : "Radius: unresolved",
-        magnitudeLine ?? "Magnitude: unresolved",
-        `XYZ: ${formatCartesian(system.cartesianPc)}`,
+        `Star [Archive]: ${system.stellar.spectralType ?? "Unknown type"}${system.stellar.effectiveTemperatureK ? ` · ${formatNumber(system.stellar.effectiveTemperatureK, 0)} K` : ""}`,
+        `Distance [Archive]: ${formatNumber(distanceLy(system.distancePc), 1)} ly · ${formatNumber(system.distancePc, 2)} pc`,
+        system.stellar.radiusSolar ? `Radius [Archive]: ${formatNumber(system.stellar.radiusSolar, 2)} R☉` : "Radius [Archive]: unresolved",
+        magnitudeLine ? `${magnitudeLine} [Archive]` : "Magnitude [Archive]: unresolved",
+        `XYZ [Derived]: ${formatCartesian(system.cartesianPc)}`,
         ...(system.localAnalysis?.interestingReason ? [`Local analysis: ${system.localAnalysis.interestingReason}`] : []),
         ...(system.localAnalysis?.jwstInstrumentLabels.length
           ? [`JWST: ${system.localAnalysis.jwstInstrumentLabels.slice(0, 2).join(", ")}`]
@@ -3675,9 +3675,9 @@ function StageScene({
       title: star.name,
       lines: [
         `Reference star · ${star.spectralType} · ${formatNumber(star.effectiveTemperatureK, 0)} K`,
-        `${formatNumber(distanceLy(star.distancePc), 1)} ly · ${formatNumber(star.distancePc, 2)} pc`,
-        `Radius / Luminosity: ${formatNumber(star.radiusSolar, 2)} R☉ / ${formatNumber(star.luminositySolar, 2)} L☉`,
-        `XYZ: ${formatCartesian(cartesianPc)}`,
+        `Distance [Catalog]: ${formatNumber(distanceLy(star.distancePc), 1)} ly · ${formatNumber(star.distancePc, 2)} pc`,
+        `Radius / Luminosity [Catalog]: ${formatNumber(star.radiusSolar, 2)} R☉ / ${formatNumber(star.luminositySolar, 2)} L☉`,
+        `XYZ [Derived]: ${formatCartesian(cartesianPc)}`,
       ],
     });
   }
@@ -3690,10 +3690,10 @@ function StageScene({
       title: anchor.name,
       lines: [
         `White dwarf · ${anchor.spectralType ?? "type unresolved"}${anchor.effectiveTemperatureK ? ` · ${formatNumber(anchor.effectiveTemperatureK, 0)} K` : ""}`,
-        `${formatNumber(distanceLy(anchor.distancePc), 1)} ly · ${formatNumber(anchor.distancePc, 2)} pc`,
-        anchor.massSolar ? `Mass: ${formatNumber(anchor.massSolar, 2)} M☉` : "Mass: unresolved",
-        anchor.radiusSolar ? `Radius: ${formatNumber(anchor.radiusSolar, 4)} R☉` : "Radius: unresolved",
-        anchor.gravitationalRedshiftKmS ? `v_GR: ${formatNumber(anchor.gravitationalRedshiftKmS, 1)} km/s` : "v_GR unresolved",
+        `Distance [Catalog]: ${formatNumber(distanceLy(anchor.distancePc), 1)} ly · ${formatNumber(anchor.distancePc, 2)} pc`,
+        anchor.massSolar ? `Mass [Catalog]: ${formatNumber(anchor.massSolar, 2)} M☉` : "Mass [Catalog]: unresolved",
+        anchor.radiusSolar ? `Radius [Catalog]: ${formatNumber(anchor.radiusSolar, 4)} R☉` : "Radius [Catalog]: unresolved",
+        anchor.gravitationalRedshiftKmS ? `v_GR [Catalog]: ${formatNumber(anchor.gravitationalRedshiftKmS, 1)} km/s` : "v_GR [Catalog]: unresolved",
       ],
     });
   }

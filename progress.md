@@ -149,3 +149,7 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Added explicit basis labels to the compact selection summaries in src/components/universe/universe-stage.tsx so the short status lines now distinguish archive-backed size/mass, derived flux/temperature, and propagated Monte Carlo intervals.
 - This closes another UI path where derived or propagated values could have been read as if they were all the same class of evidence.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
+
+- Extended the legacy-narrative sanitizer again in src/lib/science/local/legacy-analysis.ts to catch recurring `validated`, `Framework Validation`, `guaranteed`, and similar framework-overclaim phrasing that remained in the local documents.
+- Added explicit evidence-class labels to the active hover/readout layer in src/components/universe/universe-stage.tsx so planet, host-star, reference-star, and white-dwarf tooltips now distinguish archive/catalog values, derived quantities, and Monte Carlo intervals.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
