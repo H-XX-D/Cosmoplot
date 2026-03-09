@@ -918,6 +918,18 @@ function formatSigned(value: number | null | undefined, digits = 2) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 }
 
+function measurementBoundsText(
+  bounds: { plus: number | null; minus: number | null } | null | undefined,
+  digits: number,
+  suffix = "",
+) {
+  if (!bounds) return null;
+  const plus = bounds.plus;
+  const minus = bounds.minus;
+  if (plus === null || plus === undefined || minus === null || minus === undefined) return null;
+  return `+${formatNumber(plus, digits)} / ${formatNumber(Math.abs(minus), digits)}${suffix}`;
+}
+
 function formatCartesian(vec: UniverseSystem["cartesianPc"], digits = 2) {
   return `${formatSigned(vec.x, digits)}, ${formatSigned(vec.y, digits)}, ${formatSigned(vec.z, digits)} pc`;
 }
@@ -1550,6 +1562,7 @@ function buildSynopsis(system: UniverseSystem, planet: UniversePlanet | null, sc
 
 function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null): Metric[] {
   const local = mergedLocalAnalysis(system, planet, science);
+  const propagation = activePropagation(planet, science);
   const shared: Metric[] = [
     {
       label: "Distance",
@@ -1626,21 +1639,33 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
     {
       label: "Planet Radius",
       value: planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "Unknown",
-      note: "Observed planetary radius from the archive row.",
+      note: [
+        "Observed planetary radius from the archive row.",
+        science ? `Archive/exo.MAST uncertainty: ${measurementBoundsText(science.uncertainty.radiusEarth, 2, " R⊕") ?? "unresolved"}.` : null,
+        propagation?.radiusEarth ? `Propagated interval: ${intervalSummary(propagation.radiusEarth, 2, " R⊕") ?? "unresolved"}.` : null,
+      ].filter(Boolean).join(" "),
       kind: "observed",
       provenance: "Source: NASA Exoplanet Archive pl_rade",
     },
     {
       label: "Planet Mass",
       value: planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "Unknown",
-      note: "Observed planetary mass from the archive row.",
+      note: [
+        "Observed planetary mass from the archive row.",
+        science ? `Archive/exo.MAST uncertainty: ${measurementBoundsText(science.uncertainty.massEarth, 2, " M⊕") ?? "unresolved"}.` : null,
+        propagation?.massEarth ? `Propagated interval: ${intervalSummary(propagation.massEarth, 2, " M⊕") ?? "unresolved"}.` : null,
+      ].filter(Boolean).join(" "),
       kind: "observed",
       provenance: "Source: NASA Exoplanet Archive pl_bmasse",
     },
     {
       label: "Equilibrium Temp",
       value: planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "Unknown",
-      note: "Loaded archive equilibrium-temperature field.",
+      note: [
+        "Loaded archive equilibrium-temperature field.",
+        science ? `Archive/exo.MAST uncertainty: ${measurementBoundsText(science.uncertainty.equilibriumK, 0, " K") ?? "unresolved"}.` : null,
+        propagation?.equilibriumK ? `Propagated interval: ${intervalSummary(propagation.equilibriumK, 0, " K") ?? "unresolved"}.` : null,
+      ].filter(Boolean).join(" "),
       kind: "observed",
       provenance: "Source: NASA Exoplanet Archive pl_eqt",
     },
@@ -1654,7 +1679,11 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
     {
       label: "Semi-major Axis",
       value: planet.semiMajorAxisAu ? `${formatNumber(planet.semiMajorAxisAu, 3)} AU` : "Unknown",
-      note: "Observed orbital scale for the current catalog entry.",
+      note: [
+        "Observed orbital scale for the current catalog entry.",
+        science ? `Archive/exo.MAST uncertainty: ${measurementBoundsText(science.uncertainty.semiMajorAxisAu, 3, " AU") ?? "unresolved"}.` : null,
+        propagation?.semiMajorAxisAu ? `Propagated interval: ${intervalSummary(propagation.semiMajorAxisAu, 3, " AU") ?? "unresolved"}.` : null,
+      ].filter(Boolean).join(" "),
       kind: "observed",
       provenance: "Source: NASA Exoplanet Archive pl_orbsmax",
     },
@@ -1686,6 +1715,7 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
   const hz = habitableZoneAu(system);
   const lum = stellarLuminosity(system);
   const local = mergedLocalAnalysis(system, planet, science);
+  const propagation = activePropagation(planet, science);
 
   if (!planet) {
     return [
@@ -1736,7 +1766,9 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
     {
       label: "Bulk Density",
       value: density ? `${formatNumber(density, 2)} g/cm³` : "Insufficient mass/radius",
-      note: "Earth-scaled density estimate from observed mass and radius.",
+      note: propagation?.densityGcc
+        ? `Earth-scaled density estimate from observed mass and radius. Propagated interval: ${intervalSummary(propagation.densityGcc, 2, " g/cm³") ?? "unresolved"}.`
+        : "Earth-scaled density estimate from observed mass and radius.",
       kind: "derived",
       provenance: "Source: pl_bmasse + pl_rade",
       equation: "Eq: rho = 5.51 * (M/M⊕) / (R/R⊕)^3",
@@ -1744,9 +1776,14 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
     {
       label: "Incident Flux",
       value: insolation ? `${formatNumber(insolation, 2)} S⊕` : "Insufficient orbit/host data",
-      note: science?.radiation.fluxEarthMultiple !== null && science?.radiation.fluxEarthMultiple !== undefined
-        ? `Official internet-backed flux layer: ${formatNumber(science?.radiation.fluxWm2, 0)} W/m².`
-        : "Luminosity proxy divided by orbital distance squared.",
+      note: [
+        science?.radiation.fluxEarthMultiple !== null && science?.radiation.fluxEarthMultiple !== undefined
+          ? `Official internet-backed flux layer: ${formatNumber(science?.radiation.fluxWm2, 0)} W/m².`
+          : "Luminosity proxy divided by orbital distance squared.",
+        propagation?.fluxEarthMultiple
+          ? `Propagated interval: ${intervalSummary(propagation.fluxEarthMultiple, 2, " S⊕") ?? "unresolved"}.`
+          : null,
+      ].filter(Boolean).join(" "),
       kind: "derived",
       provenance: science?.radiation.fluxEarthMultiple !== null && science?.radiation.fluxEarthMultiple !== undefined
         ? "Source: selected-planet official enrichment bundle"

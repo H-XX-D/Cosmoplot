@@ -88,6 +88,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this provenance pass: npm run lint ✅, npm run build ✅, live selected-planet route ✅ showing the new report capsule and section annotations for K2-18 b.
 - Added uncertainty-mode guidance text to the Advanced Filters popout in src/components/universe/universe-stage.tsx so the UI explicitly explains the difference between median-only matching and propagated interval-overlap matching.
 - Validation after this UI follow-up: npm run lint ✅, npm run build ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
+- Extended uncertainty-aware UI surfacing in src/components/universe/universe-stage.tsx so the observed/derived metric cards now show archive uncertainty widths and propagated intervals for radius, mass, temperature, semi-major axis, density, and flux when available.
+- Validation after this metric-surface pass: npm run lint ✅, npm run build ✅, live route probe ✅ for K2-18 b propagation fields, Playwright browser smoke check ✅ on the production server.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,
