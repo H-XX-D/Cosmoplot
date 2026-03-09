@@ -88,3 +88,17 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
   - gas giants now split more clearly by hot-jupiter / classic gas giant / saturnian behavior.
 - Widened the public curated-spectrum parsing slice and product-level public attempts in src/lib/science/official/planet-science.ts while keeping the unsupported/private JWST-product limitation explicit.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, browser snapshot ✅, console 0 errors / 1 warning.
+- Synced the right-side 2D planet pane to the live 3D camera/view state by plumbing selected-planet longitude, latitude, and host-light direction through a mutable ref into PlanetGlobe. The 2D pane now follows the active 3D viewing angle without forcing React to rerender the full page at frame rate.
+- Updated the 2D planet lighting pass to use the live host-light Z component so visible day/night contrast reacts to the actual 3D camera-facing hemisphere instead of a fixed studio light assumption.
+- Added apparent-magnitude-aware star styling in src/components/universe/universe-stage.tsx. Distant host stars now use archive V/J/K photometry to influence visible glow and render size, while selected-system stars keep physical radius/luminosity as the main size driver and use the brightness model for stronger halo layers.
+- Added star hover detail for radius and V/J/K magnitudes so the render changes are inspectable against the science layer.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright snapshot ✅, updated viewport screenshots ✅ at output/playwright/science-deck-stars-magnitude.png and output/playwright/science-deck-wide-after-drag.png.
+
+2026-03-09
+- Added a shared physics module in src/lib/science/physics.ts for wide-field Monte Carlo propagation and escape/retention auditing.
+- Wide snapshot planets in src/lib/science/catalog/build-universe.ts now carry propagation intervals so uncertainty is available before selected-target enrichment resolves.
+- Selected-planet bundles in src/lib/science/official/planet-science.ts now include an explicit retention audit (escape velocity, Jeans parameters, irradiation stress, energy-limited loss proxy, verdict).
+- Added a direct FITS fallback path for public JWST products via scripts/extract_jwst_fits_spectrum.py and scripts/run_fits_extractor.sh, with hard timeouts so slow/unsupported products fail fast instead of hanging the route.
+- Hardened UI provenance in src/components/universe/universe-stage.tsx by attaching source/equation metadata to observed, derived, and uncertainty cards through a shared MetricCard path.
+- Strengthened the legacy atmospheric-retention wording scrub in src/lib/science/local/legacy-analysis.ts so legacy binding-energy language is explicitly reframed as retention-proxy language.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: live selected-planet route + browser snapshot on the production server.

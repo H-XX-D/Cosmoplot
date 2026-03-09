@@ -127,6 +127,30 @@ export type PropagatedInterval = {
   high: number | null;
 };
 
+export type PropagationMode = "archive-only" | "archive+fallback" | "fallback-only";
+
+export type CatalogPropagation = {
+  sampleCount: number;
+  inputMode: PropagationMode;
+  densityGcc: PropagatedInterval;
+  surfaceGravityMs2: PropagatedInterval;
+  luminositySolar: PropagatedInterval;
+  fluxEarthMultiple: PropagatedInterval;
+  scaleHeightKm: PropagatedInterval;
+  oneScaleHeightSignalPpm: PropagatedInterval;
+};
+
+export type RetentionAudit = {
+  framework: "escape-regime-audit";
+  escapeVelocityKmS: number | null;
+  jeansLambdaH2: number | null;
+  jeansLambdaN2: number | null;
+  irradiationStress: number | null;
+  energyLimitedLossProxy: number | null;
+  verdict: "retentive" | "mixed" | "vulnerable" | "unresolved";
+  notes: string[];
+};
+
 export type JwstObservation = {
   obsid: string;
   targetName: string;
@@ -238,16 +262,8 @@ export type PlanetScienceBundle = {
     numericSeries: NumericSpectrumSeries[];
   };
   atmosphere: AtmosphereEvidence;
-  propagation: {
-    sampleCount: number;
-    inputMode: "archive-only" | "archive+fallback" | "fallback-only";
-    densityGcc: PropagatedInterval;
-    surfaceGravityMs2: PropagatedInterval;
-    luminositySolar: PropagatedInterval;
-    fluxEarthMultiple: PropagatedInterval;
-    scaleHeightKm: PropagatedInterval;
-    oneScaleHeightSignalPpm: PropagatedInterval;
-  };
+  propagation: CatalogPropagation;
+  retention: RetentionAudit;
   references: Array<{
     label: string;
     url: string;
@@ -287,6 +303,7 @@ export type UniversePlanet = {
     periodDays: MeasurementBounds;
     semiMajorAxisAu: MeasurementBounds;
   };
+  propagation?: CatalogPropagation | null;
   discoveryFacility: string | null;
   discoveryYear: number | null;
   localAnalysis?: LocalAnalysisSummary | null;

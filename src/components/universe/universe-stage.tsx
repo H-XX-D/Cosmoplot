@@ -20,6 +20,7 @@ import {
   materializePlanetReference,
   renderPlanetSurface,
   resolvePlanetCalibrationAsset,
+  type PlanetGlobeLiveView,
   type PlanetGlobeProps,
   type PlanetRegime,
 } from "@/components/ui/planet-globe";
@@ -33,6 +34,8 @@ type Metric = {
   value: string;
   note: string;
   kind: MetricKind;
+  provenance?: string;
+  equation?: string;
 };
 
 type ChartRow = {
@@ -100,6 +103,7 @@ type StarRenderStyle = {
   radiusScale: number;
   glowScale: number;
   glowOpacity: number;
+  brightnessScale: number;
 };
 
 type StageHover = {
@@ -108,6 +112,10 @@ type StageHover = {
   accent: string;
   title: string;
   lines: string[];
+};
+
+type PlanetViewSyncRef = {
+  current: PlanetGlobeLiveView | null;
 };
 
 type AdvancedStageFilters = {
@@ -139,6 +147,8 @@ const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
   requireStudied: false,
   requireInteresting: false,
 };
+
+const WORLD_Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 const DEEP_SKY_CATALOG: DeepSkyObject[] = [
   { name: "Orion Nebula", kind: "emission", raDeg: 83.8208, decDeg: -5.3911, distancePc: 460, sizePc: 7.4, tint: "#46d7ff", accent: "#ff8a4d" },
@@ -726,11 +736,13 @@ function stellarStyleFromData({
   spectralType,
   luminositySolar,
   radiusSolar,
+  apparentMagnitude,
 }: {
   seedKey: string;
   spectralType: string | null;
   luminositySolar: number | null;
   radiusSolar: number | null;
+  apparentMagnitude?: number | null;
 }): StarRenderStyle {
   const bucket = spectralBucket(spectralType);
   const luminosity = clamp(Math.log10(1 + Math.max(luminositySolar ?? 0.1, 0.1)), 0, 1.5);
@@ -751,13 +763,17 @@ function stellarStyleFromData({
 
   const palette = paletteByBucket[bucket] ?? paletteByBucket.Other;
   const hotStarBoost = bucket === "O" || bucket === "B" || bucket === "A";
-  const sizeLift = clamp(0.92 + luminosity * 0.18 + Math.sqrt(radius) * 0.08 + variation * 0.06, 0.86, 1.42);
+  const brightnessScale = apparentMagnitude !== null && apparentMagnitude !== undefined
+    ? clamp(1.34 - apparentMagnitude * 0.08 + (hotStarBoost ? 0.1 : 0), 0.42, 1.6)
+    : clamp(0.72 + luminosity * 0.24 + variation * 0.08 + (hotStarBoost ? 0.14 : 0), 0.58, 1.34);
+  const sizeLift = clamp(0.9 + luminosity * 0.16 + Math.sqrt(radius) * 0.1 + brightnessScale * 0.05 + variation * 0.05, 0.84, 1.52);
 
   return {
     ...palette,
     radiusScale: sizeLift,
-    glowScale: clamp(1.55 + luminosity * 0.38 + variation * 0.16 + (hotStarBoost ? 0.18 : 0), 1.45, 2.3),
-    glowOpacity: clamp(0.1 + luminosity * 0.09 + variation * 0.04 + (hotStarBoost ? 0.05 : 0), 0.1, 0.32),
+    glowScale: clamp(1.48 + luminosity * 0.34 + brightnessScale * 0.22 + variation * 0.12 + (hotStarBoost ? 0.18 : 0), 1.4, 2.55),
+    glowOpacity: clamp(0.08 + luminosity * 0.08 + brightnessScale * 0.08 + variation * 0.03 + (hotStarBoost ? 0.05 : 0), 0.08, 0.4),
+    brightnessScale,
   };
 }
 
@@ -767,6 +783,7 @@ function stellarStyle(system: UniverseSystem): StarRenderStyle {
     spectralType: system.stellar.spectralType,
     luminositySolar: stellarLuminosity(system),
     radiusSolar: system.stellar.radiusSolar,
+    apparentMagnitude: system.stellar.photometry.vMag ?? system.stellar.photometry.jMag ?? system.stellar.photometry.kMag,
   });
 }
 
@@ -787,6 +804,7 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
     radiusScale: 0.74,
     glowScale: 1.26,
     glowOpacity: 0.16,
+    brightnessScale: 0.66,
   };
 }
 
@@ -847,7 +865,11 @@ function systemRadius(distancePc: number) {
 function selectedStarRadius(system: UniverseSystem) {
   const luminosity = clamp(Math.log10(1 + Math.max(stellarLuminosity(system) ?? 0.2, 0.2)), 0, 1.5);
   const radius = Math.max(system.stellar.radiusSolar ?? 1, 0.25);
-  return clamp(0.3 + Math.sqrt(radius) * 0.05 + luminosity * 0.04, 0.3, 0.46);
+  const apparentMagnitude = system.stellar.photometry.vMag ?? system.stellar.photometry.jMag ?? system.stellar.photometry.kMag;
+  const brightnessBoost = apparentMagnitude !== null && apparentMagnitude !== undefined
+    ? clamp((8.5 - apparentMagnitude) * 0.012, 0, 0.12)
+    : 0;
+  return clamp(0.28 + Math.sqrt(radius) * 0.072 + luminosity * 0.05 + brightnessBoost, 0.28, 0.66);
 }
 
 function planetRadius(radiusEarth: number | null) {
@@ -1334,6 +1356,33 @@ function toneClasses(kind: MetricKind) {
   }
 }
 
+function defaultMetricProvenance(kind: MetricKind) {
+  switch (kind) {
+    case "observed":
+      return "Source: NASA Exoplanet Archive / official host-planet row";
+    case "derived":
+      return "Source: derived from loaded observed fields";
+    case "inferred":
+      return "Source: model or interpretation layer using loaded archive/JWST context";
+    default:
+      return "Source: merged local EXOPLANET_ANALYSES layer";
+  }
+}
+
+function MetricCard({ metric }: { metric: Metric }) {
+  return (
+    <article className={`rounded-[1.2rem] border p-3 ${toneClasses(metric.kind)}`}>
+      <div className="text-[0.64rem] uppercase tracking-[0.22em] opacity-70">{metric.label}</div>
+      <div className="mt-2 text-base font-semibold">{metric.value}</div>
+      <p className="mt-2 text-xs leading-5 opacity-80">{metric.note}</p>
+      <div className="mt-3 space-y-1 text-[0.62rem] leading-5 opacity-70">
+        <div>{metric.provenance ?? defaultMetricProvenance(metric.kind)}</div>
+        {metric.equation ? <div>{metric.equation}</div> : null}
+      </div>
+    </article>
+  );
+}
+
 function buildSynopsis(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {
   const lum = stellarLuminosity(system);
   const compactness = systemCompactness(system);
@@ -1407,6 +1456,7 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
           : "Unknown",
         note: "Archive stellar photometry carried forward for planning constraints.",
         kind: "observed",
+        provenance: "Source: NASA Exoplanet Archive photometry columns sy_vmag/sy_jmag/sy_kmag",
       },
       {
         label: "Planet Count",
@@ -1422,6 +1472,7 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
               ? `Legacy bundle instruments: ${local.jwstInstrumentLabels.slice(0, 3).join(", ")}.`
               : "Legacy EXOPLANET_ANALYSES bundle merged for this system.",
             kind: "source" as const,
+            provenance: "Source: local EXOPLANET_ANALYSES registry",
           }]
         : []),
     ];
@@ -1434,30 +1485,35 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
       value: planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "Unknown",
       note: "Observed planetary radius from the archive row.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive pl_rade",
     },
     {
       label: "Planet Mass",
       value: planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "Unknown",
       note: "Observed planetary mass from the archive row.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive pl_bmasse",
     },
     {
       label: "Equilibrium Temp",
       value: planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "Unknown",
       note: "Loaded archive equilibrium-temperature field.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive pl_eqt",
     },
     {
       label: "Eccentricity",
       value: planet.eccentricity !== null && planet.eccentricity !== undefined ? formatNumber(planet.eccentricity, 3) : "Unknown",
       note: "Archive orbital eccentricity where reported.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive pl_orbeccen",
     },
     {
       label: "Semi-major Axis",
       value: planet.semiMajorAxisAu ? `${formatNumber(planet.semiMajorAxisAu, 3)} AU` : "Unknown",
       note: "Observed orbital scale for the current catalog entry.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive pl_orbsmax",
     },
     {
       label: "Host J / K",
@@ -1468,6 +1524,7 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
           : "Unknown",
       note: "Host brightness constraints for transit/instrument planning.",
       kind: "observed",
+      provenance: "Source: NASA Exoplanet Archive host photometry columns",
     },
     ...(local
       ? [{
@@ -1475,6 +1532,7 @@ function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | n
           value: local.habitability ?? "No habitability note",
           note: "Pulled from the original EXOPLANET_ANALYSES bundle and kept separate from the official catalog row.",
           kind: "source" as const,
+          provenance: "Source: local EXOPLANET_ANALYSES narrative bundle",
         }]
       : []),
   ];
@@ -1493,24 +1551,31 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
         value: `${formatSigned(xyz.x, 2)}, ${formatSigned(xyz.y, 2)}, ${formatSigned(xyz.z, 2)} pc`,
         note: "Derived from RA, Dec, and distance in the current equatorial frame.",
         kind: "derived",
+        provenance: "Source: archive RA/Dec/distance fields",
+        equation: "Eq: Cartesian transform from spherical coordinates",
       },
       {
         label: "Luminosity Proxy",
         value: lum ? `${formatNumber(lum, 2)} L☉` : "Insufficient host data",
         note: "Stefan-Boltzmann scaling from host radius and effective temperature.",
         kind: "derived",
+        provenance: "Source: host radius + effective temperature",
+        equation: "Eq: L/L☉ = R² (T/5772 K)^4",
       },
       {
         label: "Habitable Zone",
         value: hz ? `${formatNumber(hz.inner, 2)} - ${formatNumber(hz.outer, 2)} AU` : "Insufficient host data",
         note: "Simple luminosity-scaled approximation for a first-pass system context.",
         kind: "inferred",
+        provenance: "Source: derived luminosity proxy",
+        equation: "Eq: a_HZ ∝ sqrt(L/L☉)",
       },
       {
         label: "System Architecture",
         value: systemCompactness(system) ? `${formatNumber(systemCompactness(system), 2)} AU mean orbit` : "Sparse orbital data",
         note: "Mean orbital scale for planets with reported semi-major axis.",
         kind: "inferred",
+        provenance: "Source: planet semi-major-axis fields in current snapshot",
       },
     ];
   }
@@ -1530,6 +1595,8 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
       value: density ? `${formatNumber(density, 2)} g/cm³` : "Insufficient mass/radius",
       note: "Earth-scaled density estimate from observed mass and radius.",
       kind: "derived",
+      provenance: "Source: pl_bmasse + pl_rade",
+      equation: "Eq: rho = 5.51 * (M/M⊕) / (R/R⊕)^3",
     },
     {
       label: "Incident Flux",
@@ -1538,18 +1605,25 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
         ? `Official internet-backed flux layer: ${formatNumber(science?.radiation.fluxWm2, 0)} W/m².`
         : "Luminosity proxy divided by orbital distance squared.",
       kind: "derived",
+      provenance: science?.radiation.fluxEarthMultiple !== null && science?.radiation.fluxEarthMultiple !== undefined
+        ? "Source: selected-planet official enrichment bundle"
+        : "Source: host luminosity proxy + semi-major axis",
+      equation: "Eq: S/S⊕ = (L/L☉) / a²",
     },
     {
       label: "Orbital Velocity",
       value: speed ? `${formatNumber(speed, 1)} km/s` : "Insufficient orbit/host data",
       note: "Keplerian first-order estimate from stellar mass and semi-major axis.",
       kind: "derived",
+      provenance: "Source: stellar mass + semi-major axis",
+      equation: "Eq: v ≈ 29.78 * sqrt(M★/a)",
     },
     {
       label: "Regime",
       value: `${planetClass(planet)} | ${temperatureClass(planet.equilibriumK)}`,
       note: `${hzText}.`,
       kind: "inferred",
+      provenance: "Source: planet radius/mass/temperature regime interpretation",
     },
     {
       label: "Magnetosphere",
@@ -1560,6 +1634,8 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
         ? `Radiation-pressure-adjusted proxy. Magnetopause ${formatNumber(science.magnetosphere.magnetopauseRadii, 1)} Rp; shielding ${science.magnetosphere.protection}.`
         : "Loads from the per-planet enrichment route once the official pull completes.",
       kind: "inferred",
+      provenance: science ? "Source: selected-planet magnetosphere audit" : "Source: pending per-planet enrichment route",
+      equation: "Eq: dynamo/stellar-wind proxy + escape-regime audit",
     },
   ];
 
@@ -1569,12 +1645,26 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
       value: wavelengthCoverageText(science) ?? "Metadata only",
       note: `${science.spectrum.jwstObservations.length} observation(s), ${science.spectrum.jwstProducts.length} product(s), ${science.spectrum.curatedTransmissionFiles.length} curated transmission file(s), ${science.spectrum.numericSeries.length} parsed numeric spectrum series.`,
       kind: "observed",
+      provenance: "Source: exo.MAST + MAST JWST observation/product inventory",
     });
     metrics.push({
       label: "Atmosphere Evidence",
       value: chemistrySummary(science) ?? "No molecule tags yet",
       note: science.atmosphere.cloudInterpretation,
       kind: "inferred",
+      provenance: "Source: curated transmission spectra + JWST mode/coverage metadata + local chemistry tags",
+      equation: "Eq: transmission amplitude/slope heuristic vs one-scale-height expectation",
+    });
+  }
+
+  if (science?.retention) {
+    metrics.push({
+      label: "Escape / Retention Audit",
+      value: science.retention.verdict,
+      note: science.retention.notes[0] ?? "Escape-regime reinterpretation of the legacy retention language.",
+      kind: "inferred",
+      provenance: "Source: selected-planet escape-regime audit",
+      equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
     });
   }
 
@@ -1588,6 +1678,7 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
         ? `Legacy magnetopause estimate ${formatNumber(local.magnetopauseRadii, 1)} Rp.`
         : "Original EXOPLANET_ANALYSES interpretation layer.",
       kind: "source",
+      provenance: "Source: local EXOPLANET_ANALYSES magnetosphere layer",
     });
   }
 
@@ -1602,6 +1693,7 @@ function buildUncertaintyMetrics(system: UniverseSystem, planet: UniversePlanet 
         value: "Catalog-grade",
         note: "The rewrite now carries archive photometry and uncertainty fields. Planet-selected internet enrichment fills the deeper bundle.",
         kind: "source",
+        provenance: "Source: archive snapshot + selected-target enrichment route",
       },
     ];
   }
@@ -1613,30 +1705,65 @@ function buildUncertaintyMetrics(system: UniverseSystem, planet: UniversePlanet 
         value: `${formatNumber(science.uncertainty.radiusEarth.plus, 2)} / ${formatNumber(science.uncertainty.massEarth.plus, 2)}`,
         note: "Positive-side archive or exo.MAST error bars for radius and mass.",
         kind: "source",
+        provenance: "Source: archive/exo.MAST measurement uncertainties",
       },
       {
         label: "Teq / Orbit",
         value: `${formatNumber(science.uncertainty.equilibriumK.plus, 0)} K / ${formatNumber(science.uncertainty.semiMajorAxisAu.plus, 3)} AU`,
         note: `Official uncertainty widths now feed a ${science.propagation.sampleCount}-sample Monte Carlo pass (${science.propagation.inputMode}).`,
         kind: "source",
+        provenance: "Source: archive/exo.MAST uncertainties",
       },
       {
         label: "Stellar inputs",
         value: `${formatNumber(science.uncertainty.stellarTemperatureK.plus, 0)} K / ${formatNumber(science.uncertainty.stellarRadiusSolar.plus, 3)} R☉`,
         note: "Host-star uncertainty carried from archive/exo.MAST into the selected-planet bundle.",
         kind: "source",
+        provenance: "Source: archive/exo.MAST stellar uncertainties",
       },
       {
         label: "Density / Gravity",
         value: `${formatNumber(science.propagation.densityGcc.median, 2)} g/cc / ${formatNumber(science.propagation.surfaceGravityMs2.median, 1)} m/s²`,
         note: `${formatNumber(science.propagation.densityGcc.low, 2)}-${formatNumber(science.propagation.densityGcc.high, 2)} g/cc and ${formatNumber(science.propagation.surfaceGravityMs2.low, 1)}-${formatNumber(science.propagation.surfaceGravityMs2.high, 1)} m/s² across the propagated interval.`,
         kind: "derived",
+        provenance: "Source: Monte Carlo propagation over archive/exo.MAST uncertainties",
+        equation: "Eq: rho(M,R), g(M,R)",
       },
       {
         label: "Flux / Scale Height",
         value: `${formatNumber(science.propagation.fluxEarthMultiple.median, 2)} S⊕ / ${formatNumber(science.propagation.scaleHeightKm.median, 0)} km`,
         note: `${formatNumber(science.propagation.fluxEarthMultiple.low, 2)}-${formatNumber(science.propagation.fluxEarthMultiple.high, 2)} S⊕ flux and ${formatNumber(science.propagation.oneScaleHeightSignalPpm.median, 0)} ppm one-scale-height signal.`,
         kind: "derived",
+        provenance: "Source: Monte Carlo propagation over stellar + orbital inputs",
+        equation: "Eq: S/S⊕ = L/a², H = kT/(μg), signal ≈ 2HRp/Rs²",
+      },
+    ];
+  }
+
+  if (planet?.propagation) {
+    return [
+      {
+        label: "Wide-field Propagation",
+        value: `${planet.propagation.sampleCount} samples`,
+        note: `Snapshot-level Monte Carlo propagation (${planet.propagation.inputMode}) runs even before selected-target enrichment resolves.`,
+        kind: "source",
+        provenance: "Source: archive snapshot uncertainties",
+      },
+      {
+        label: "Density / Gravity",
+        value: `${formatNumber(planet.propagation.densityGcc.median, 2)} g/cc / ${formatNumber(planet.propagation.surfaceGravityMs2.median, 1)} m/s²`,
+        note: `${formatNumber(planet.propagation.densityGcc.low, 2)}-${formatNumber(planet.propagation.densityGcc.high, 2)} g/cc and ${formatNumber(planet.propagation.surfaceGravityMs2.low, 1)}-${formatNumber(planet.propagation.surfaceGravityMs2.high, 1)} m/s².`,
+        kind: "derived",
+        provenance: "Source: wide-snapshot propagation",
+        equation: "Eq: rho(M,R), g(M,R)",
+      },
+      {
+        label: "Flux / Scale Height",
+        value: `${formatNumber(planet.propagation.fluxEarthMultiple.median, 2)} S⊕ / ${formatNumber(planet.propagation.scaleHeightKm.median, 0)} km`,
+        note: `${formatNumber(planet.propagation.fluxEarthMultiple.low, 2)}-${formatNumber(planet.propagation.fluxEarthMultiple.high, 2)} S⊕ and ${formatNumber(planet.propagation.oneScaleHeightSignalPpm.median, 0)} ppm one-scale-height signal.`,
+        kind: "derived",
+        provenance: "Source: wide-snapshot propagation",
+        equation: "Eq: S/S⊕ = L/a², H = kT/(μg)",
       },
     ];
   }
@@ -1764,6 +1891,7 @@ function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, sc
                 `- Atmosphere evidence [I]: ${chemistry ?? "No molecule tags yet"}.`,
                 `- Cloud / haze interpretation [I]: ${science.atmosphere.cloudInterpretation}`,
                 `- Propagated density / gravity [D]: ${formatNumber(science.propagation.densityGcc.median, 2)} g/cm³ / ${formatNumber(science.propagation.surfaceGravityMs2.median, 1)} m/s² from ${science.propagation.sampleCount} Monte Carlo samples (${science.propagation.inputMode}).`,
+                `- Escape / retention audit [I]: ${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}; Jeans λ(N2) ${science.retention.jeansLambdaN2 ? formatNumber(science.retention.jeansLambdaN2, 1) : "unresolved"}; irradiation stress ${science.retention.irradiationStress ? `${formatNumber(science.retention.irradiationStress, 2)} S⊕` : "unresolved"}.`,
               ]
             : []),
         ]
@@ -2207,17 +2335,17 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
         <sphereGeometry args={[radius, 168, 168]} />
         <shaderMaterial ref={starMaterialRef} vertexShader={STAR_VERTEX_SHADER} fragmentShader={STAR_FRAGMENT_SHADER} uniforms={starUniforms} />
       </mesh>
-      <mesh scale={1.18}>
+      <mesh scale={1.08 + style.brightnessScale * 0.16}>
         <sphereGeometry args={[radius, 136, 136]} />
         <meshBasicMaterial
           color={coreColor}
           transparent
-          opacity={0.12}
+          opacity={clamp(0.08 + style.brightnessScale * 0.08, 0.08, 0.22)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={1.24}>
+      <mesh scale={1.18 + style.brightnessScale * 0.12}>
         <sphereGeometry args={[radius, 132, 132]} />
         <shaderMaterial
           ref={coronaMaterialRef}
@@ -2255,11 +2383,11 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
       materialRef.current.uniforms.uTime.value = clock.elapsedTime;
     }
     if (starMeshRef.current) {
-      const pulse = 1 + Math.sin(clock.elapsedTime * 1.4 + radius * 12) * 0.012;
+      const pulse = 1 + Math.sin(clock.elapsedTime * 1.4 + radius * 12) * (0.008 + style.brightnessScale * 0.004);
       starMeshRef.current.scale.setScalar(pulse);
     }
     if (haloMaterialRef.current) {
-      haloMaterialRef.current.opacity = style.glowOpacity * (0.88 + Math.sin(clock.elapsedTime * 1.8 + radius * 10) * 0.12);
+      haloMaterialRef.current.opacity = style.glowOpacity * (0.92 + Math.sin(clock.elapsedTime * 1.8 + radius * 10) * 0.08);
     }
   });
 
@@ -2272,6 +2400,16 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
       <mesh ref={starMeshRef}>
         <sphereGeometry args={[radius, 14, 14]} />
         <shaderMaterial ref={materialRef} vertexShader={STAR_VERTEX_SHADER} fragmentShader={DISTANT_STAR_FRAGMENT_SHADER} uniforms={uniforms} />
+      </mesh>
+      <mesh scale={1.04 + style.brightnessScale * 0.18}>
+        <sphereGeometry args={[radius, 12, 12]} />
+        <meshBasicMaterial
+          color={coreColor}
+          transparent
+          opacity={clamp(0.04 + style.brightnessScale * 0.06, 0.04, 0.16)}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
       </mesh>
       <mesh scale={style.glowScale}>
         <sphereGeometry args={[radius, 12, 12]} />
@@ -2554,6 +2692,7 @@ function ActiveSystemPlanets({
   selectedPlanetScience,
   onSelectPlanet,
   onFlyToPlanet,
+  planetViewSyncRef,
   simulationDays,
   orbitSpeedMultiplier,
   zoomFactor,
@@ -2565,6 +2704,7 @@ function ActiveSystemPlanets({
   selectedPlanetScience?: PlanetScienceBundle | null;
   onSelectPlanet: (planet: UniversePlanet) => void;
   onFlyToPlanet: (target: THREE.Vector3, radius: number) => void;
+  planetViewSyncRef?: PlanetViewSyncRef;
   simulationDays: number;
   orbitSpeedMultiplier: number;
   zoomFactor: number;
@@ -2576,14 +2716,35 @@ function ActiveSystemPlanets({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const followOffsetRef = useRef(new THREE.Vector3(1.8, 0.9, 1.8));
   const previousZoomFactorRef = useRef(zoomFactor);
+  const worldTargetRef = useRef(new THREE.Vector3());
+  const starWorldRef = useRef(new THREE.Vector3());
+  const viewDirRef = useRef(new THREE.Vector3());
+  const localViewDirRef = useRef(new THREE.Vector3());
+  const incomingLightRef = useRef(new THREE.Vector3());
+  const screenRightRef = useRef(new THREE.Vector3());
+  const screenUpRef = useRef(new THREE.Vector3());
+  const selectedVisualModel = useMemo(
+    () => (selectedPlanet ? planetVisualModel(system, selectedPlanet, selectedPlanetScience) : null),
+    [system, selectedPlanet, selectedPlanetScience],
+  );
 
   useEffect(() => {
     return () => {
       if (pendingPlanetClickRef.current !== null) {
         window.clearTimeout(pendingPlanetClickRef.current);
       }
+      if (planetViewSyncRef) {
+        planetViewSyncRef.current = null;
+      }
     };
-  }, []);
+  }, [planetViewSyncRef]);
+
+  useEffect(() => {
+    if (!planetViewSyncRef) return;
+    if (!selectedPlanet) {
+      planetViewSyncRef.current = null;
+    }
+  }, [planetViewSyncRef, selectedPlanet]);
 
   useEffect(() => {
     if (!followLocked || !selectedPlanet || !controlsRef.current || !cameraRef.current) return;
@@ -2651,6 +2812,74 @@ function ActiveSystemPlanets({
       if (!group) continue;
       const local = activeSystemLocalPosition(planet, index, timeDays);
       group.position.copy(local);
+    }
+
+    if (planetViewSyncRef) {
+      if (selectedPlanet && selectedVisualModel) {
+        const targetGroup = planetRefs.current[selectedPlanet.id];
+        if (targetGroup) {
+          const worldTarget = worldTargetRef.current;
+          const starWorld = starWorldRef.current;
+          const viewDir = viewDirRef.current;
+          const localViewDir = localViewDirRef.current;
+          const incomingLight = incomingLightRef.current;
+          const screenRight = screenRightRef.current;
+          const screenUp = screenUpRef.current;
+
+          targetGroup.getWorldPosition(worldTarget);
+          if (targetGroup.parent) {
+            targetGroup.parent.getWorldPosition(starWorld);
+          } else {
+            starWorld.set(0, 0, 0);
+          }
+
+          viewDir.copy(camera.position).sub(worldTarget);
+          if (viewDir.lengthSq() > 0.000001) {
+            viewDir.normalize();
+          } else {
+            viewDir.set(0, 0, 1);
+          }
+
+          incomingLight.copy(worldTarget).sub(starWorld);
+          if (incomingLight.lengthSq() > 0.000001) {
+            incomingLight.normalize();
+          } else {
+            incomingLight.set(-0.72, -0.22, -0.4).normalize();
+          }
+
+          screenRight.copy(camera.up).cross(viewDir);
+          if (screenRight.lengthSq() < 0.000001) {
+            screenRight.set(1, 0, 0);
+          } else {
+            screenRight.normalize();
+          }
+          screenUp.copy(viewDir).cross(screenRight);
+          if (screenUp.lengthSq() < 0.000001) {
+            screenUp.set(0, 1, 0);
+          } else {
+            screenUp.normalize();
+          }
+
+          const rotationSeconds = Math.max(selectedVisualModel.renderProps.rotationSeconds ?? 30, 1);
+          const spinAngle = selectedVisualModel.renderProps.tidalLock
+            ? 0
+            : (clock.elapsedTime / rotationSeconds) * Math.PI * 2;
+          localViewDir.copy(viewDir).applyAxisAngle(WORLD_Y_AXIS, -spinAngle);
+
+          const longitude = ((0.5 + Math.atan2(localViewDir.x, localViewDir.z) / (Math.PI * 2)) % 1 + 1) % 1;
+          const latitude = clamp(0.5 - Math.asin(clamp(localViewDir.y, -1, 1)) / Math.PI, 0, 1);
+
+          planetViewSyncRef.current = {
+            longitude,
+            latitude,
+            lightDirectionX: clamp(incomingLight.dot(screenRight), -1, 1),
+            lightDirectionY: clamp(incomingLight.dot(screenUp), -1, 1),
+            lightDirectionZ: clamp(-incomingLight.dot(viewDir), -1, 1),
+          };
+        }
+      } else {
+        planetViewSyncRef.current = null;
+      }
     }
 
     if (followLocked && selectedPlanet) {
@@ -2727,6 +2956,7 @@ function StageScene({
   selectedSystem,
   selectedPlanet,
   selectedPlanetScience,
+  planetViewSyncRef,
   simulationDays,
   orbitSpeedMultiplier,
   zoomFactor,
@@ -2742,6 +2972,7 @@ function StageScene({
   selectedSystem: UniverseSystem | null;
   selectedPlanet: UniversePlanet | null;
   selectedPlanetScience?: PlanetScienceBundle | null;
+  planetViewSyncRef?: PlanetViewSyncRef;
   simulationDays: number;
   orbitSpeedMultiplier: number;
   zoomFactor: number;
@@ -2852,6 +3083,10 @@ function StageScene({
 
   function updateStarHover(event: ThreeEvent<PointerEvent>, system: UniverseSystem, accent: string) {
     const tags = systemInterestLabels(system);
+    const magnitudeLine =
+      system.stellar.photometry.vMag !== null || system.stellar.photometry.jMag !== null || system.stellar.photometry.kMag !== null
+        ? `Mag V/J/K: ${formatNumber(system.stellar.photometry.vMag, 2)} / ${formatNumber(system.stellar.photometry.jMag, 2)} / ${formatNumber(system.stellar.photometry.kMag, 2)}`
+        : null;
     onHoverChange({
       x: event.nativeEvent.offsetX,
       y: event.nativeEvent.offsetY,
@@ -2861,6 +3096,8 @@ function StageScene({
         ...(tags.length ? [`Tags: ${tags.join(" · ")}`] : []),
         `${system.stellar.spectralType ?? "Unknown type"}${system.stellar.effectiveTemperatureK ? ` · ${formatNumber(system.stellar.effectiveTemperatureK, 0)} K` : ""}`,
         `${formatNumber(distanceLy(system.distancePc), 1)} ly · ${formatNumber(system.distancePc, 2)} pc`,
+        system.stellar.radiusSolar ? `Radius: ${formatNumber(system.stellar.radiusSolar, 2)} R☉` : "Radius: unresolved",
+        magnitudeLine ?? "Magnitude: unresolved",
         `XYZ: ${formatCartesian(system.cartesianPc)}`,
         ...(system.localAnalysis?.interestingReason ? [`Local analysis: ${system.localAnalysis.interestingReason}`] : []),
         ...(system.localAnalysis?.jwstInstrumentLabels.length
@@ -2880,6 +3117,7 @@ function StageScene({
       lines: [
         `Reference star · ${star.spectralType} · ${formatNumber(star.effectiveTemperatureK, 0)} K`,
         `${formatNumber(distanceLy(star.distancePc), 1)} ly · ${formatNumber(star.distancePc, 2)} pc`,
+        `Radius / Luminosity: ${formatNumber(star.radiusSolar, 2)} R☉ / ${formatNumber(star.luminositySolar, 2)} L☉`,
         `XYZ: ${formatCartesian(cartesianPc)}`,
       ],
     });
@@ -3258,6 +3496,7 @@ function StageScene({
             selectedPlanetScience={selectedPlanetScience}
             onSelectPlanet={onSelectPlanet}
             onFlyToPlanet={startFlightToPlanet}
+            planetViewSyncRef={planetViewSyncRef}
             simulationDays={simulationDays}
             orbitSpeedMultiplier={orbitSpeedMultiplier}
             zoomFactor={zoomFactor}
@@ -3276,12 +3515,14 @@ function VisualFocus({
   science,
   showMagnetosphere,
   onToggleMagnetosphere,
+  planetViewSyncRef,
 }: {
   system: UniverseSystem;
   planet: UniversePlanet | null;
   science?: PlanetScienceBundle | null;
   showMagnetosphere: boolean;
   onToggleMagnetosphere: () => void;
+  planetViewSyncRef?: PlanetViewSyncRef;
 }) {
   const palette = paletteForSelection(system, planet, science);
   const orbits = system.planets.slice(0, 4);
@@ -3360,7 +3601,12 @@ function VisualFocus({
                       className="w-full max-w-[25rem] origin-center transition-transform duration-200"
                       style={{ transform: `scale(${visualZoom * 0.9})` }}
                     >
-                      <PlanetGlobe {...renderProps} showMagnetosphere={showMagnetosphere} className="!min-h-[24rem]" />
+                      <PlanetGlobe
+                        {...renderProps}
+                        liveViewRef={planetViewSyncRef}
+                        showMagnetosphere={showMagnetosphere}
+                        className="!min-h-[24rem]"
+                      />
                     </div>
                   </div>
                   <div className="absolute inset-x-0 bottom-5 flex justify-center">
@@ -3436,6 +3682,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
   const [planetScience, setPlanetScience] = useState<PlanetScienceBundle | null>(null);
   const [planetScienceResolvedKey, setPlanetScienceResolvedKey] = useState<string | null>(null);
   const [stageHover, setStageHover] = useState<StageHover | null>(null);
+  const planetViewSyncRef = useRef<PlanetGlobeLiveView | null>(null);
 
   const filteredSystems = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -3468,6 +3715,10 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     if (!planetScience || !selectedPlanet) return null;
     return scienceKey(planetScience.planetName) === scienceKey(selectedPlanet.name) ? planetScience : null;
   }, [planetScience, selectedPlanet]);
+
+  useEffect(() => {
+    planetViewSyncRef.current = null;
+  }, [selectedSystem?.id, selectedPlanet?.id]);
   const selectedPlanetKey = selectedPlanet ? scienceKey(selectedPlanet.name) : null;
   const planetScienceLoading = !!selectedPlanetKey && planetScienceResolvedKey !== selectedPlanetKey;
 
@@ -3739,6 +3990,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   selectedSystem={selectedSystem}
                   selectedPlanet={selectedPlanet}
                   selectedPlanetScience={selectedPlanetScience}
+                  planetViewSyncRef={planetViewSyncRef}
                   simulationDays={simulationDays}
                   orbitSpeedMultiplier={orbitSpeedMultiplier}
                   zoomFactor={zoomFactor}
@@ -3915,6 +4167,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
               science={selectedPlanetScience}
               showMagnetosphere={showMagnetosphere}
               onToggleMagnetosphere={() => setShowMagnetosphere((value) => !value)}
+              planetViewSyncRef={planetViewSyncRef}
             />
           ) : null}
 
@@ -3924,11 +4177,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {observedMetrics.map((metric) => (
-                <article key={metric.label} className={`rounded-[1.2rem] border p-3 ${toneClasses(metric.kind)}`}>
-                  <div className="text-[0.64rem] uppercase tracking-[0.22em] opacity-70">{metric.label}</div>
-                  <div className="mt-2 text-base font-semibold">{metric.value}</div>
-                  <p className="mt-2 text-xs leading-5 opacity-80">{metric.note}</p>
-                </article>
+                <MetricCard key={metric.label} metric={metric} />
               ))}
             </div>
           </section>
@@ -3939,11 +4188,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {derivedMetrics.map((metric) => (
-                <article key={metric.label} className={`rounded-[1.2rem] border p-3 ${toneClasses(metric.kind)}`}>
-                  <div className="text-[0.64rem] uppercase tracking-[0.22em] opacity-70">{metric.label}</div>
-                  <div className="mt-2 text-base font-semibold">{metric.value}</div>
-                  <p className="mt-2 text-xs leading-5 opacity-80">{metric.note}</p>
-                </article>
+                <MetricCard key={metric.label} metric={metric} />
               ))}
             </div>
           </section>
@@ -3952,11 +4197,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
             <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Formal Uncertainty Propagation</div>
             <div className="mt-4 grid gap-3">
               {uncertaintyMetrics.map((metric) => (
-                <article key={metric.label} className={`rounded-[1.2rem] border p-3 ${toneClasses(metric.kind)}`}>
-                  <div className="text-[0.64rem] uppercase tracking-[0.22em] opacity-70">{metric.label}</div>
-                  <div className="mt-2 text-base font-semibold">{metric.value}</div>
-                  <p className="mt-2 text-xs leading-5 opacity-80">{metric.note}</p>
-                </article>
+                <MetricCard key={metric.label} metric={metric} />
               ))}
             </div>
           </section>

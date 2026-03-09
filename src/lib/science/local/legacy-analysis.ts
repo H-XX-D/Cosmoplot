@@ -564,7 +564,10 @@ function sanitizeLegacyNarrative(text: string) {
     .replace(/-{40,}\s*SECTION\s+\d+:\s+RAW JSON SNAPSHOT\s+\[O(?:\/I)?\][\s\S]*?(?=(?:-{40,}\s*SECTION\s+\d+:)|$)/gi, "")
     .replace(/\bBinding Energy Framework\b/g, "Legacy Retention Framework")
     .replace(/\bbinding energy\b/gi, "retention-energy proxy")
-    .replace(/\bE_B\/E_th\b/g, "retention proxy ratio");
+    .replace(/\batmospheric binding\b/gi, "atmospheric retention proxy")
+    .replace(/\bbinding ratio\b/gi, "retention proxy ratio")
+    .replace(/\bE_B\/E_th\b/g, "retention proxy ratio")
+    .replace(/\bbound atmosphere\b/gi, "retained-atmosphere outcome proxy");
 }
 
 function localSourceDescriptor(accessedAt: string): SourceDescriptor {
@@ -627,7 +630,8 @@ export async function getLegacyPlanetBundle(planetName: string, systemName?: str
     narrative: contents.length ? contents.join("\n\n---\n\n") : null,
     caveats: [
       "Local analysis is merged from the original EXOPLANET_ANALYSES bundle.",
-      "Atmospheric retention passages inherited from the legacy analysis should be interpreted as retention / escape proxies pending a full escape-physics audit.",
+      "Atmospheric retention passages inherited from the legacy analysis are reinterpreted as escape-regime proxies, not direct atmospheric outcomes.",
+      "Use Jeans escape, escape velocity, irradiative stress, and magnetosphere context together rather than reading legacy retention-energy language literally.",
     ],
   } satisfies LocalAnalysisBundle;
 }

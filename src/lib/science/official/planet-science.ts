@@ -1,3 +1,7 @@
+import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { promisify } from "node:util";
 import { readThroughJsonCache } from "@/lib/cache/file-cache";
 import {
   getLegacyLocalSource,
@@ -5,6 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
+import { deriveRetentionAudit } from "@/lib/science/physics";
 import { measurementBounds } from "@/lib/utils";
 import type {
   AtmosphereEvidence,
@@ -30,6 +35,11 @@ const M_EARTH = 5.972e24;
 const R_EARTH = 6.371e6;
 const R_SUN = 6.957e8;
 const AMU = 1.6605390666e-27;
+const execFileAsync = promisify(execFile);
+const FITS_EXTRACTOR_SCRIPT = path.join(process.cwd(), "scripts", "extract_jwst_fits_spectrum.py");
+const FITS_EXTRACTOR_RUNNER = path.join(process.cwd(), "scripts", "run_fits_extractor.sh");
+const REMOTE_FETCH_TIMEOUT_MS = 12000;
+const FITS_EXTRACT_TIMEOUT_MS = 15000;
 
 type ExoMastProperty = Record<string, unknown>;
 type MastApiRow = Record<string, unknown>;
@@ -251,6 +261,19 @@ function extractReferences(properties: ExoMastProperty) {
   return Array.from(refs.values()).slice(0, 20);
 }
 
+async function fetchWithTimeout(input: string, init: RequestInit & { next?: { revalidate?: number } } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function buildSourceDescriptor(id: string, name: string, url: string, accessedAt: string, cache: "hit" | "miss"): SourceDescriptor {
   return {
     id,
@@ -260,6 +283,11 @@ function buildSourceDescriptor(id: string, name: string, url: string, accessedAt
     accessedAt,
     cache,
   };
+}
+
+function buildMastDownloadUrl(dataUri: string | null, filename: string) {
+  const uri = asString(dataUri) ?? `mast:JWST/product/${filename}`;
+  return `https://mast.stsci.edu/api/v0.1/Download/file?uri=${encodeURIComponent(uri)}`;
 }
 
 function mergeUniqueTags(current: AtmosphereEvidenceTag[], extra: AtmosphereEvidenceTag[]) {
@@ -298,7 +326,7 @@ async function fetchExoMastProperties(planetName: string) {
   const cacheKey = `exomast-properties-${slug(planetName)}`;
   const result = await readThroughJsonCache(cacheKey, 1000 * 60 * 60 * 12, async () => {
     const url = `${EXOMAST_BASE}/exoplanets/${encodeURIComponent(planetName)}/properties`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         "user-agent": "Cosmoplot/next-rewrite",
       },
@@ -328,7 +356,7 @@ async function fetchExoMastSpectraFileList(planetName: string) {
   const cacheKey = `exomast-spectra-filelist-${slug(planetName)}`;
   const result = await readThroughJsonCache(cacheKey, 1000 * 60 * 60 * 12, async () => {
     const url = `${EXOMAST_BASE}/spectra/${encodeURIComponent(planetName)}/filelist/`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         "user-agent": "Cosmoplot/next-rewrite",
       },
@@ -365,7 +393,7 @@ async function fetchExoMastCuratedSpectrumText(planetName: string, filename: str
   const cacheKey = `exomast-spectrum-file-${slug(planetName)}-${slug(filename)}`;
   const result = await readThroughJsonCache(cacheKey, 1000 * 60 * 60 * 24, async () => {
     const url = `${EXOMAST_BASE}/spectra/${encodeURIComponent(planetName)}/file/${encodeURIComponent(filename)}`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         "user-agent": "Cosmoplot/next-rewrite",
       },
@@ -401,7 +429,7 @@ async function fetchMastJson(service: string, params: Record<string, unknown>, p
     timeout: 30,
   };
 
-  const response = await fetch(MAST_API, {
+  const response = await fetchWithTimeout(MAST_API, {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
@@ -540,14 +568,14 @@ async function fetchMastSpectralDbSeries(filename: string) {
   const cacheKey = `mast-spectral-series-${slug(filename)}`;
   const result = await readThroughJsonCache(cacheKey, 1000 * 60 * 60 * 24, async () => {
     const [retrieveResponse, derivedResponse] = await Promise.all([
-      fetch(`https://mast.stsci.edu/spectra/api/v0.1/retrieve?filename=${encodeURIComponent(filename)}`, {
+      fetchWithTimeout(`https://mast.stsci.edu/spectra/api/v0.1/retrieve?filename=${encodeURIComponent(filename)}`, {
         headers: {
           "user-agent": "Cosmoplot/next-rewrite",
           accept: "application/json",
         },
         next: { revalidate: 60 * 60 * 24 },
       }),
-      fetch(`https://mast.stsci.edu/spectra/api/v0.1/retrieve/derived?filename=${encodeURIComponent(filename)}`, {
+      fetchWithTimeout(`https://mast.stsci.edu/spectra/api/v0.1/retrieve/derived?filename=${encodeURIComponent(filename)}`, {
         headers: {
           "user-agent": "Cosmoplot/next-rewrite",
           accept: "application/json",
@@ -583,6 +611,66 @@ async function fetchMastSpectralDbSeries(filename: string) {
       `mast-spectraldb-${slug(filename)}`,
       "MAST JWST Spectral DB",
       `https://mast.stsci.edu/spectra/api/v0.1/retrieve?filename=${encodeURIComponent(filename)}`,
+      result.createdAt,
+      result.cache,
+    ),
+  };
+}
+
+async function fetchMastDirectFitsSeries(product: JwstProduct) {
+  if (!existsSync(FITS_EXTRACTOR_SCRIPT) || !existsSync(FITS_EXTRACTOR_RUNNER)) return null;
+
+  const downloadUrl = buildMastDownloadUrl(product.dataUri, product.productFilename);
+  const cacheKey = `mast-direct-fits-${slug(product.productFilename)}`;
+  const result = await readThroughJsonCache(cacheKey, 1000 * 60 * 60 * 24, async () => {
+    try {
+      const { stdout } = await execFileAsync(
+        FITS_EXTRACTOR_RUNNER,
+        [downloadUrl],
+        {
+          cwd: process.cwd(),
+          env: process.env,
+          maxBuffer: 32 * 1024 * 1024,
+          timeout: FITS_EXTRACT_TIMEOUT_MS,
+          killSignal: "SIGKILL",
+        },
+      );
+      return JSON.parse(stdout) as {
+        ok?: boolean;
+        series?: {
+          label?: string | null;
+          wavelengthUm?: number[];
+          values?: number[];
+          uncertainties?: number[];
+          valueUnit?: string | null;
+        } | null;
+      };
+    } catch {
+      return { ok: false, series: null };
+    }
+  });
+
+  const payload = result.payload;
+  if (!payload?.ok || !payload.series) return null;
+  const valueUnit = asString(payload.series.valueUnit)?.toLowerCase() ?? "";
+  const valueKind = valueUnit.includes("ppm") ? "transit_depth_ppm" : "flux_jy";
+  const series = buildNumericSpectrumSeries({
+    label: payload.series.label ?? "JWST direct FITS spectrum",
+    filename: product.productFilename,
+    source: "mast-product",
+    valueKind,
+    wavelengthUm: payload.series.wavelengthUm ?? [],
+    values: payload.series.values ?? [],
+    uncertainties: payload.series.uncertainties ?? [],
+  });
+
+  if (!series) return null;
+  return {
+    series,
+    source: buildSourceDescriptor(
+      `mast-direct-fits-${slug(product.productFilename)}`,
+      "MAST JWST Direct FITS",
+      downloadUrl,
       result.createdAt,
       result.cache,
     ),
@@ -1179,6 +1267,15 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
       scaleHeightKm: { low: 8.5, median: 8.5, high: 8.5 },
       oneScaleHeightSignalPpm: { low: 0, median: 0, high: 0 },
     },
+    retention: deriveRetentionAudit({
+      massEarth: 1,
+      radiusEarth: 1,
+      densityGcc: 5.51,
+      equilibriumK: 255,
+      semiMajorAxisAu: 1,
+      fluxEarthMultiple: 1,
+      stellarRadiusSolar: 1,
+    }),
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1252,11 +1349,15 @@ export async function fetchPlanetScienceBundle(planetName: string) {
   ]);
 
   const { products, source: productsSource } = await fetchMastProducts(observations.map((observation) => observation.obsid));
-  const numericProductCandidates = products.filter(isNumericSpectrumProduct).slice(0, 12);
+  const numericProductCandidates = products.filter(isNumericSpectrumProduct).slice(0, 6);
   const mastNumericSeriesResults = await Promise.all(
     numericProductCandidates.map(async (product) => {
-      const resolved = await fetchMastSpectralDbSeries(product.productFilename);
-      return resolved ? { product, ...resolved } : null;
+      const spectralDbResolved = await fetchMastSpectralDbSeries(product.productFilename);
+      if (spectralDbResolved) {
+        return { product, ...spectralDbResolved };
+      }
+      const directFitsResolved = await fetchMastDirectFitsSeries(product);
+      return directFitsResolved ? { product, ...directFitsResolved } : null;
     }),
   );
 
@@ -1397,6 +1498,15 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     stellarMassSolar,
     uncertainty,
   });
+  const retention = deriveRetentionAudit({
+    massEarth,
+    radiusEarth,
+    densityGcc,
+    equilibriumK,
+    semiMajorAxisAu,
+    fluxEarthMultiple: radiation.fluxEarthMultiple,
+    stellarRadiusSolar,
+  });
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1449,6 +1559,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     },
     atmosphere,
     propagation,
+    retention,
     references: mergedReferences,
     sources: [
       archiveSource,

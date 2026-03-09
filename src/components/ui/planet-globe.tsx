@@ -51,6 +51,15 @@ export type PlanetGlobeProps = {
   lightDirectionX?: number;
   lightDirectionY?: number;
   lightDirectionZ?: number;
+  liveViewRef?: React.RefObject<PlanetGlobeLiveView | null>;
+};
+
+export type PlanetGlobeLiveView = {
+  longitude: number;
+  latitude: number;
+  lightDirectionX: number;
+  lightDirectionY: number;
+  lightDirectionZ: number;
 };
 
 export const EARTH_REFERENCE_SRC = "/assets/reference/earth-globe.jpeg";
@@ -2640,11 +2649,16 @@ function drawPlanet(
   ctx.arc(size / 2, size / 2, size * 0.48, 0, Math.PI * 2);
   ctx.clip();
 
-  const normalizedLongitude = props.viewLongitude !== undefined
-    ? ((props.viewLongitude % 1) + 1) % 1
+  const liveView = props.liveViewRef?.current;
+  const normalizedLongitude = liveView?.longitude !== undefined
+    ? ((liveView.longitude % 1) + 1) % 1
+    : props.viewLongitude !== undefined
+      ? ((props.viewLongitude % 1) + 1) % 1
     : null;
-  const normalizedLatitude = props.viewLatitude !== undefined
-    ? clamp(props.viewLatitude, 0, 1)
+  const normalizedLatitude = liveView?.latitude !== undefined
+    ? clamp(liveView.latitude, 0, 1)
+    : props.viewLatitude !== undefined
+      ? clamp(props.viewLatitude, 0, 1)
     : 0.5;
   const verticalShift = (0.5 - normalizedLatitude) * size * 0.12;
 
@@ -2689,17 +2703,20 @@ function drawPlanet(
     }
   }
 
-  const lightX = props.lightDirectionX ?? -0.72;
-  const lightY = props.lightDirectionY ?? -0.26;
+  const lightX = clamp(liveView?.lightDirectionX ?? props.lightDirectionX ?? -0.72, -1, 1);
+  const lightY = clamp(liveView?.lightDirectionY ?? props.lightDirectionY ?? -0.26, -1, 1);
+  const lightZ = clamp(liveView?.lightDirectionZ ?? props.lightDirectionZ ?? 0.4, -1, 1);
+  const daysideFactor = clamp((lightZ + 1) * 0.5, 0, 1);
+  const nightsideFactor = 1 - daysideFactor;
   const startX = size * (0.5 - lightX * 0.44);
   const startY = size * (0.5 - lightY * 0.34);
   const endX = size * (0.5 + lightX * 0.44);
   const endY = size * (0.5 + lightY * 0.34);
   const lightOverlay = ctx.createLinearGradient(startX, startY, endX, endY);
-  lightOverlay.addColorStop(0, hsla({ ...props.starColor, l: 92, s: clamp(props.starColor.s - 10, 20, 96) }, props.regime === "lava" ? 0.16 : 0.2));
-  lightOverlay.addColorStop(0.24, hsla({ ...props.planetColor, l: clamp(props.planetColor.l + 18, 24, 90) }, 0.08));
-  lightOverlay.addColorStop(0.56, "rgba(0,0,0,0.02)");
-  lightOverlay.addColorStop(1, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 26, 6, 48) }, 0.34));
+  lightOverlay.addColorStop(0, hsla({ ...props.starColor, l: clamp(84 + daysideFactor * 10, 78, 96), s: clamp(props.starColor.s - 8 + daysideFactor * 12, 24, 98) }, lerp(props.regime === "lava" ? 0.12 : 0.08, props.regime === "lava" ? 0.24 : 0.28, daysideFactor)));
+  lightOverlay.addColorStop(0.24, hsla({ ...props.planetColor, l: clamp(props.planetColor.l + 8 + daysideFactor * 18, 18, 92), s: clamp(props.planetColor.s + daysideFactor * 10, 12, 100) }, lerp(0.03, 0.12, daysideFactor)));
+  lightOverlay.addColorStop(0.56, `rgba(0,0,0,${lerp(0.04, 0.01, daysideFactor).toFixed(3)})`);
+  lightOverlay.addColorStop(1, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 22 - nightsideFactor * 18, 4, 44), s: clamp(props.accentColor.s + nightsideFactor * 6, 12, 100) }, lerp(0.22, 0.52, nightsideFactor)));
   ctx.fillStyle = lightOverlay;
   ctx.fillRect(0, 0, size, size);
 

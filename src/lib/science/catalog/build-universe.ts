@@ -9,6 +9,7 @@ import {
 } from "@/lib/science/local/legacy-analysis";
 import { getWhiteDwarfCatalog } from "@/lib/science/local/white-dwarfs";
 import { fetchArchivePlanetsByNames, fetchNearbyArchivePlanets } from "@/lib/science/official/exoplanet-archive";
+import { propagateCatalogPlanet } from "@/lib/science/physics";
 import { measurementBounds } from "@/lib/utils";
 import type {
   ArchivePlanetRow,
@@ -399,6 +400,26 @@ export async function getUniverseSnapshot(params?: {
         periodDays: measurementBounds(row.pl_orbpererr1, row.pl_orbpererr2),
         semiMajorAxisAu: measurementBounds(row.pl_orbsmaxerr1, row.pl_orbsmaxerr2),
       },
+      propagation: propagateCatalogPlanet({
+        planetName: row.pl_name,
+        radiusEarth: row.pl_rade ?? localPlanet?.physical?.radiusEarth ?? null,
+        massEarth: row.pl_bmasse ?? localPlanet?.physical?.massEarth ?? null,
+        equilibriumK: row.pl_eqt ?? localPlanet?.temperatures?.equilibriumK ?? null,
+        semiMajorAxisAu: row.pl_orbsmax ?? localPlanet?.orbital?.semiMajorAxisAu ?? null,
+        stellarTemperatureK: row.st_teff ?? localSystem?.star?.temperatureK ?? null,
+        stellarRadiusSolar: row.st_rad ?? localSystem?.star?.radiusSolar ?? null,
+        stellarMassSolar: row.st_mass ?? localSystem?.star?.massSolar ?? null,
+        uncertainty: {
+          radiusEarth: measurementBounds(row.pl_radeerr1, row.pl_radeerr2),
+          massEarth: measurementBounds(row.pl_bmasseerr1, row.pl_bmasseerr2),
+          equilibriumK: measurementBounds(row.pl_eqterr1, row.pl_eqterr2),
+          semiMajorAxisAu: measurementBounds(row.pl_orbsmaxerr1, row.pl_orbsmaxerr2),
+          stellarTemperatureK: measurementBounds(row.st_tefferr1, row.st_tefferr2),
+          stellarRadiusSolar: measurementBounds(row.st_raderr1, row.st_raderr2),
+          stellarMassSolar: measurementBounds(row.st_masserr1, row.st_masserr2),
+        },
+        sampleCount: 320,
+      }),
       discoveryFacility: row.disc_facility,
       discoveryYear: row.disc_year,
       localAnalysis: localPlanetSummary,
