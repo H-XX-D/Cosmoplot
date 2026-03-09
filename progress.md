@@ -96,6 +96,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this selection-summary pass: npm run lint ✅, npm run build ✅, Playwright browser smoke check ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Added compact provenance badges and source notes to the selection summary layer in src/components/universe/universe-stage.tsx. The top-level selection report, active-target tile, and `Planets in focus` list now expose whether a target is currently backed by archive rows, internet enrichment, JWST evidence, Monte Carlo propagation, and/or the local analysis layer.
 - Validation after this provenance-summary pass: npm run lint ✅, npm run build ✅, Playwright browser smoke check ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
+- Extended the legacy narrative scrub in src/lib/science/local/legacy-analysis.ts to soften recurring overclaims around definitive proof, guaranteed shielding, strongly-bound/secure-atmosphere language, tidal locking certainty, and lifetime statements. This preserves the original report structure while making the displayed text better match the current escape-regime framing.
+- Validation after this wording pass: npm run lint ✅, npm run build ✅, live selected-planet route ✅ for TOI-674 b showing the softened retention/tidal-lock wording, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,

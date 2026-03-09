@@ -581,8 +581,21 @@ function sanitizeLegacyNarrative(text: string) {
     .replace(/\bbinding energy\b/gi, "retention-energy proxy")
     .replace(/\batmospheric binding\b/gi, "atmospheric retention proxy")
     .replace(/\bbinding ratio\b/gi, "retention proxy ratio")
+    .replace(/\bretention-energy proxy Ratio\b/g, "retention proxy ratio")
     .replace(/\bE_B\/E_th\b/g, "retention proxy ratio")
     .replace(/\bbound atmosphere\b/gi, "retained-atmosphere outcome proxy")
+    .replace(/\bdefinitive proof\b/gi, "strong model-dependent support")
+    .replace(/\bdefinitively detect\b/gi, "strongly constrain")
+    .replace(/\bconfirmed water clouds\b/gi, "water-cloud interpretation candidate")
+    .replace(/\bconfirmed organic tholins\b/gi, "organic-haze interpretation candidate")
+    .replace(/\bsecure atmosphere\b/gi, "retention-favored regime")
+    .replace(/\bstrongly bound\b/gi, "retention-favored in the current proxy framework")
+    .replace(/\bmaintain this atmosphere\b/gi, "remain in a retention-favored regime")
+    .replace(/\bwill survive\b/gi, "is modeled to remain retained")
+    .replace(/\bcertainly tidally locked\b/gi, "very likely tidally locked under tidal-timescale assumptions")
+    .replace(/\bfor the entire main-sequence lifetime\b/gi, "under current-loss assumptions across the main-sequence lifetime")
+    .replace(/\bfor entire main-sequence lifetime\b/gi, "under current-loss assumptions across the main-sequence lifetime")
+    .replace(/\bfor the remaining main-sequence lifetime\b/gi, "under current-loss assumptions across the remaining main-sequence lifetime")
     .replace(/^(SECTION\s+\d+:\s+.+)$/gm, annotateSectionHeading);
 }
 
