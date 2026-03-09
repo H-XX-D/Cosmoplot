@@ -9,7 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { deriveRetentionAudit } from "@/lib/science/physics";
+import { deriveRetentionAudit, propagateCatalogPlanet } from "@/lib/science/physics";
 import { measurementBounds } from "@/lib/utils";
 import type {
   AtmosphereEvidence,
@@ -20,7 +20,6 @@ import type {
   PlanetMagnetosphere,
   PlanetPhotometry,
   PlanetScienceBundle,
-  PropagatedInterval,
   SourceDescriptor,
 } from "@/lib/science/types";
 
@@ -40,6 +39,7 @@ const FITS_EXTRACTOR_SCRIPT = path.join(process.cwd(), "scripts", "extract_jwst_
 const FITS_EXTRACTOR_RUNNER = path.join(process.cwd(), "scripts", "run_fits_extractor.sh");
 const REMOTE_FETCH_TIMEOUT_MS = 12000;
 const FITS_EXTRACT_TIMEOUT_MS = 15000;
+const MAST_API_TOKEN = process.env.MAST_API_TOKEN ?? process.env.MAST_TOKEN ?? null;
 
 type ExoMastProperty = Record<string, unknown>;
 type MastApiRow = Record<string, unknown>;
@@ -265,8 +265,13 @@ async function fetchWithTimeout(input: string, init: RequestInit & { next?: { re
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
   try {
+    const headers = new Headers(init.headers ?? {});
+    if (MAST_API_TOKEN && /mast\.stsci\.edu|archive\.stsci\.edu/i.test(input)) {
+      headers.set("Authorization", `token ${MAST_API_TOKEN}`);
+    }
     return await fetch(input, {
       ...init,
+      headers,
       signal: controller.signal,
     });
   } finally {
@@ -735,72 +740,6 @@ function median(values: number[]) {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 }
 
-function percentile(values: number[], fraction: number) {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const index = (sorted.length - 1) * fraction;
-  const lower = Math.floor(index);
-  const upper = Math.ceil(index);
-  if (lower === upper) return sorted[lower];
-  const mix = index - lower;
-  return sorted[lower] * (1 - mix) + sorted[upper] * mix;
-}
-
-function summarizeInterval(samples: Array<number | null>): PropagatedInterval {
-  const usable = samples.filter((value): value is number => value !== null && Number.isFinite(value));
-  return {
-    low: percentile(usable, 0.16),
-    median: percentile(usable, 0.5),
-    high: percentile(usable, 0.84),
-  };
-}
-
-function averageMagnitudeBounds(bounds: { plus: number | null; minus: number | null }) {
-  const candidates = [bounds.plus, bounds.minus]
-    .map((value) => (value === null || value === undefined ? null : Math.abs(value)))
-    .filter((value): value is number => value !== null && Number.isFinite(value));
-  if (!candidates.length) return null;
-  return candidates.reduce((sum, value) => sum + value, 0) / candidates.length;
-}
-
-function createSeededRandom(seedText: string) {
-  let seed = 1779033703 ^ seedText.length;
-  for (let index = 0; index < seedText.length; index += 1) {
-    seed = Math.imul(seed ^ seedText.charCodeAt(index), 3432918353);
-    seed = (seed << 13) | (seed >>> 19);
-  }
-  return () => {
-    seed = Math.imul(seed ^ (seed >>> 16), 2246822507);
-    seed = Math.imul(seed ^ (seed >>> 13), 3266489909);
-    const value = (seed ^= seed >>> 16) >>> 0;
-    return value / 4294967296;
-  };
-}
-
-function sampleStandardNormal(random: () => number) {
-  const u = Math.max(random(), 1e-12);
-  const v = Math.max(random(), 1e-12);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
-
-function sampleMeasurement(input: {
-  value: number | null;
-  plus: number | null;
-  minus: number | null;
-  fallbackFraction: number;
-  fallbackAbsolute: number;
-  random: () => number;
-}) {
-  if (input.value === null || input.value === undefined || !Number.isFinite(input.value)) return { value: null, usedFallback: false };
-  const archiveSigma = averageMagnitudeBounds({ plus: input.plus, minus: input.minus });
-  const fallbackSigma = Math.max(Math.abs(input.value) * input.fallbackFraction, input.fallbackAbsolute);
-  const sigma = archiveSigma ?? fallbackSigma;
-  return {
-    value: input.value + sampleStandardNormal(input.random) * sigma,
-    usedFallback: archiveSigma === null,
-  };
-}
-
 function buildNumericSpectrumSeries(input: {
   label: string;
   filename: string;
@@ -1064,127 +1003,7 @@ function propagatePlanetScience(input: {
   stellarMassSolar: number | null;
   uncertainty: PlanetScienceBundle["uncertainty"];
 }) {
-  const random = createSeededRandom(input.planetName);
-  const sampleCount = 1200;
-  const densitySamples: Array<number | null> = [];
-  const gravitySamples: Array<number | null> = [];
-  const luminositySamples: Array<number | null> = [];
-  const fluxSamples: Array<number | null> = [];
-  const scaleHeightSamples: Array<number | null> = [];
-  const scaleSignalSamples: Array<number | null> = [];
-  let fallbackCount = 0;
-
-  for (let index = 0; index < sampleCount; index += 1) {
-    const radius = sampleMeasurement({
-      value: input.radiusEarth,
-      plus: input.uncertainty.radiusEarth.plus,
-      minus: input.uncertainty.radiusEarth.minus,
-      fallbackFraction: 0.04,
-      fallbackAbsolute: 0.03,
-      random,
-    });
-    const mass = sampleMeasurement({
-      value: input.massEarth,
-      plus: input.uncertainty.massEarth.plus,
-      minus: input.uncertainty.massEarth.minus,
-      fallbackFraction: 0.08,
-      fallbackAbsolute: 0.08,
-      random,
-    });
-    const equilibrium = sampleMeasurement({
-      value: input.equilibriumK,
-      plus: input.uncertainty.equilibriumK.plus,
-      minus: input.uncertainty.equilibriumK.minus,
-      fallbackFraction: 0.05,
-      fallbackAbsolute: 8,
-      random,
-    });
-    const semiMajorAxis = sampleMeasurement({
-      value: input.semiMajorAxisAu,
-      plus: input.uncertainty.semiMajorAxisAu.plus,
-      minus: input.uncertainty.semiMajorAxisAu.minus,
-      fallbackFraction: 0.02,
-      fallbackAbsolute: 0.002,
-      random,
-    });
-    const stellarTemperature = sampleMeasurement({
-      value: input.stellarTemperatureK,
-      plus: input.uncertainty.stellarTemperatureK.plus,
-      minus: input.uncertainty.stellarTemperatureK.minus,
-      fallbackFraction: 0.02,
-      fallbackAbsolute: 40,
-      random,
-    });
-    const stellarRadius = sampleMeasurement({
-      value: input.stellarRadiusSolar,
-      plus: input.uncertainty.stellarRadiusSolar.plus,
-      minus: input.uncertainty.stellarRadiusSolar.minus,
-      fallbackFraction: 0.03,
-      fallbackAbsolute: 0.01,
-      random,
-    });
-    const stellarMass = sampleMeasurement({
-      value: input.stellarMassSolar,
-      plus: input.uncertainty.stellarMassSolar.plus,
-      minus: input.uncertainty.stellarMassSolar.minus,
-      fallbackFraction: 0.04,
-      fallbackAbsolute: 0.02,
-      random,
-    });
-
-    fallbackCount += [
-      radius.usedFallback,
-      mass.usedFallback,
-      equilibrium.usedFallback,
-      semiMajorAxis.usedFallback,
-      stellarTemperature.usedFallback,
-      stellarRadius.usedFallback,
-      stellarMass.usedFallback,
-    ].filter(Boolean).length;
-
-    const density = deriveDensityGcc(mass.value, radius.value);
-    const gravity = deriveSurfaceGravityMs2(mass.value, radius.value);
-    const luminosity = deriveLuminositySolar(null, stellarRadius.value, stellarTemperature.value);
-    const radiation = deriveRadiationFlux(luminosity, semiMajorAxis.value, null);
-    const meanMolecularWeight = estimateMeanMolecularWeightKg(mass.value, density, equilibrium.value);
-    const scaleHeightKm =
-      gravity && equilibrium.value
-        ? (KB * equilibrium.value / (meanMolecularWeight * gravity)) / 1000
-        : null;
-    const signal = oneScaleHeightSignalPpm({
-      massEarth: mass.value,
-      radiusEarth: radius.value,
-      stellarRadiusSolar: stellarRadius.value,
-      equilibriumK: equilibrium.value,
-      densityGcc: density,
-    });
-
-    densitySamples.push(density);
-    gravitySamples.push(gravity);
-    luminositySamples.push(luminosity);
-    fluxSamples.push(radiation.fluxEarthMultiple);
-    scaleHeightSamples.push(scaleHeightKm);
-    scaleSignalSamples.push(signal);
-  }
-
-  const intervalCount = sampleCount * 7;
-  const inputMode =
-    fallbackCount === 0
-      ? "archive-only"
-      : fallbackCount === intervalCount
-        ? "fallback-only"
-        : "archive+fallback";
-
-  return {
-    sampleCount,
-    inputMode,
-    densityGcc: summarizeInterval(densitySamples),
-    surfaceGravityMs2: summarizeInterval(gravitySamples),
-    luminositySolar: summarizeInterval(luminositySamples),
-    fluxEarthMultiple: summarizeInterval(fluxSamples),
-    scaleHeightKm: summarizeInterval(scaleHeightSamples),
-    oneScaleHeightSignalPpm: summarizeInterval(scaleSignalSamples),
-  } satisfies PlanetScienceBundle["propagation"];
+  return propagateCatalogPlanet(input);
 }
 
 const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "sources">> = {
@@ -1260,6 +1079,10 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
     propagation: {
       sampleCount: 0,
       inputMode: "fallback-only",
+      radiusEarth: { low: 1, median: 1, high: 1 },
+      massEarth: { low: 1, median: 1, high: 1 },
+      equilibriumK: { low: 255, median: 255, high: 255 },
+      semiMajorAxisAu: { low: 1, median: 1, high: 1 },
       densityGcc: { low: 5.51, median: 5.51, high: 5.51 },
       surfaceGravityMs2: { low: 9.81, median: 9.81, high: 9.81 },
       luminositySolar: { low: 1, median: 1, high: 1 },

@@ -1001,6 +1001,40 @@ function planetGravityForFilter(planet: UniversePlanet, uncertaintyMode: Advance
   };
 }
 
+function planetTemperatureForFilter(planet: UniversePlanet, uncertaintyMode: AdvancedStageFilters["uncertaintyMode"]) {
+  if (uncertaintyMode === "propagated" && planet.propagation) {
+    return {
+      low: planet.propagation.equilibriumK.low,
+      median: planet.propagation.equilibriumK.median,
+      high: planet.propagation.equilibriumK.high,
+      hasInterval: true,
+    };
+  }
+  return {
+    low: planet.equilibriumK,
+    median: planet.equilibriumK,
+    high: planet.equilibriumK,
+    hasInterval: false,
+  };
+}
+
+function planetRadiusForFilter(planet: UniversePlanet, uncertaintyMode: AdvancedStageFilters["uncertaintyMode"]) {
+  if (uncertaintyMode === "propagated" && planet.propagation) {
+    return {
+      low: planet.propagation.radiusEarth.low,
+      median: planet.propagation.radiusEarth.median,
+      high: planet.propagation.radiusEarth.high,
+      hasInterval: true,
+    };
+  }
+  return {
+    low: planet.radiusEarth,
+    median: planet.radiusEarth,
+    high: planet.radiusEarth,
+    hasInterval: false,
+  };
+}
+
 function systemMatchesAdvancedFilters(system: UniverseSystem, filters: AdvancedStageFilters) {
   const studied = Boolean(system.localAnalysis?.studied || system.planets.some((planet) => planet.localAnalysis?.studied));
   const interesting = Boolean(system.localAnalysis?.interesting || system.planets.some((planet) => planet.localAnalysis?.interesting));
@@ -1013,15 +1047,21 @@ function systemMatchesAdvancedFilters(system: UniverseSystem, filters: AdvancedS
   return system.planets.some((planet) => {
     const flux = planetFluxForFilter(system, planet, filters.uncertaintyMode);
     const gravity = planetGravityForFilter(planet, filters.uncertaintyMode);
+    const temperature = planetTemperatureForFilter(planet, filters.uncertaintyMode);
+    const radius = planetRadiusForFilter(planet, filters.uncertaintyMode);
     return (
       (flux.hasInterval
         ? matchesIntervalRange(flux.low, flux.high, filters.minFlux, filters.maxFlux, DEFAULT_ADVANCED_STAGE_FILTERS.minFlux, DEFAULT_ADVANCED_STAGE_FILTERS.maxFlux)
         : matchesNumericRange(flux.median, filters.minFlux, filters.maxFlux, DEFAULT_ADVANCED_STAGE_FILTERS.minFlux, DEFAULT_ADVANCED_STAGE_FILTERS.maxFlux)) &&
-      matchesNumericRange(planet.equilibriumK, filters.minTemp, filters.maxTemp, DEFAULT_ADVANCED_STAGE_FILTERS.minTemp, DEFAULT_ADVANCED_STAGE_FILTERS.maxTemp) &&
+      (temperature.hasInterval
+        ? matchesIntervalRange(temperature.low, temperature.high, filters.minTemp, filters.maxTemp, DEFAULT_ADVANCED_STAGE_FILTERS.minTemp, DEFAULT_ADVANCED_STAGE_FILTERS.maxTemp)
+        : matchesNumericRange(temperature.median, filters.minTemp, filters.maxTemp, DEFAULT_ADVANCED_STAGE_FILTERS.minTemp, DEFAULT_ADVANCED_STAGE_FILTERS.maxTemp)) &&
       (gravity.hasInterval
         ? matchesIntervalRange(gravity.low, gravity.high, filters.minGravity, filters.maxGravity, DEFAULT_ADVANCED_STAGE_FILTERS.minGravity, DEFAULT_ADVANCED_STAGE_FILTERS.maxGravity)
         : matchesNumericRange(gravity.median, filters.minGravity, filters.maxGravity, DEFAULT_ADVANCED_STAGE_FILTERS.minGravity, DEFAULT_ADVANCED_STAGE_FILTERS.maxGravity)) &&
-      matchesNumericRange(planet.radiusEarth, filters.minRadius, filters.maxRadius, DEFAULT_ADVANCED_STAGE_FILTERS.minRadius, DEFAULT_ADVANCED_STAGE_FILTERS.maxRadius)
+      (radius.hasInterval
+        ? matchesIntervalRange(radius.low, radius.high, filters.minRadius, filters.maxRadius, DEFAULT_ADVANCED_STAGE_FILTERS.minRadius, DEFAULT_ADVANCED_STAGE_FILTERS.maxRadius)
+        : matchesNumericRange(radius.median, filters.minRadius, filters.maxRadius, DEFAULT_ADVANCED_STAGE_FILTERS.minRadius, DEFAULT_ADVANCED_STAGE_FILTERS.maxRadius))
     );
   });
 }

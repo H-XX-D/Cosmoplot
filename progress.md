@@ -107,3 +107,9 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Added structured claim-level provenance formatting to the generated analysis text so the long-form panel now attaches source/equation context inline with the derived claims.
 - Added a structured-claim basis block ahead of legacy local narratives so preserved verbose reports sit next to auditable current-bundle claims instead of standing alone.
 - Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: Advanced Filters popout + analysis panel on the production server.
+
+- Added optional MAST token support to the JWST ingestion path via Authorization headers in both Node fetches and the FITS extractor helper; public behavior is unchanged when no token is set.
+- Expanded shared propagation intervals to include radius, mass, equilibrium temperature, and semi-major axis so snapshot and selected-target propagation carry a fuller uncertainty envelope.
+- Unified selected-target propagation onto the shared physics module so wide-field and selected-target uncertainty semantics stay aligned.
+- Advanced Filters propagated mode now applies interval-overlap matching for temperature and radius in addition to flux and gravity.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: selected-planet route + universe snapshot propagation shape on production server.

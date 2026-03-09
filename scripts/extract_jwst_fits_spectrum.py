@@ -3,6 +3,7 @@
 import io
 import json
 import math
+import os
 import sys
 import urllib.request
 from typing import Any
@@ -129,7 +130,12 @@ def main() -> int:
 
     url = sys.argv[1]
     try:
-        with urllib.request.urlopen(url, timeout=60) as response:
+        headers = {}
+        mast_token = os.environ.get("MAST_API_TOKEN") or os.environ.get("MAST_TOKEN")
+        if mast_token:
+            headers["Authorization"] = f"token {mast_token}"
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=60) as response:
             payload = response.read()
         with fits.open(io.BytesIO(payload), memmap=False) as hdul:
             series = extract_series(hdul)

@@ -164,6 +164,10 @@ function summarizeInterval(samples: Array<number | null>) {
 export function propagateCatalogPlanet(input: PropagateInput): CatalogPropagation {
   const random = createSeededRandom(input.planetName);
   const sampleCount = input.sampleCount ?? 1200;
+  const radiusSamples: Array<number | null> = [];
+  const massSamples: Array<number | null> = [];
+  const equilibriumSamples: Array<number | null> = [];
+  const semiMajorAxisSamples: Array<number | null> = [];
   const densitySamples: Array<number | null> = [];
   const gravitySamples: Array<number | null> = [];
   const luminositySamples: Array<number | null> = [];
@@ -258,6 +262,10 @@ export function propagateCatalogPlanet(input: PropagateInput): CatalogPropagatio
     });
 
     void stellarMass;
+    radiusSamples.push(radius.value);
+    massSamples.push(mass.value);
+    equilibriumSamples.push(equilibrium.value);
+    semiMajorAxisSamples.push(semiMajorAxis.value);
     densitySamples.push(density);
     gravitySamples.push(gravity);
     luminositySamples.push(luminosity);
@@ -277,6 +285,10 @@ export function propagateCatalogPlanet(input: PropagateInput): CatalogPropagatio
   return {
     sampleCount,
     inputMode,
+    radiusEarth: summarizeInterval(radiusSamples),
+    massEarth: summarizeInterval(massSamples),
+    equilibriumK: summarizeInterval(equilibriumSamples),
+    semiMajorAxisAu: summarizeInterval(semiMajorAxisSamples),
     densityGcc: summarizeInterval(densitySamples),
     surfaceGravityMs2: summarizeInterval(gravitySamples),
     luminositySolar: summarizeInterval(luminositySamples),

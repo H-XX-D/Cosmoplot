@@ -132,6 +132,10 @@ export type PropagationMode = "archive-only" | "archive+fallback" | "fallback-on
 export type CatalogPropagation = {
   sampleCount: number;
   inputMode: PropagationMode;
+  radiusEarth: PropagatedInterval;
+  massEarth: PropagatedInterval;
+  equilibriumK: PropagatedInterval;
+  semiMajorAxisAu: PropagatedInterval;
   densityGcc: PropagatedInterval;
   surfaceGravityMs2: PropagatedInterval;
   luminositySolar: PropagatedInterval;
