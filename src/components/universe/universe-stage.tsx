@@ -1202,7 +1202,10 @@ function compactPlanetFluxTemp(system: UniverseSystem, planet: UniversePlanet, s
     : planet.equilibriumK
       ? `${formatNumber(planet.equilibriumK, 0)} K`
       : null;
-  return [fluxText ? `Flux ${fluxText}` : null, tempText ? `Temp ${tempText}` : null].filter(Boolean).join(" · ");
+  return [
+    fluxText ? `Flux ${propagation?.fluxEarthMultiple ? "[MC]" : "[Derived]"} ${fluxText}` : null,
+    tempText ? `T_eq ${propagation?.equilibriumK ? "[MC]" : "[Archive]"} ${tempText}` : null,
+  ].filter(Boolean).join(" · ");
 }
 
 function compactPlanetMassRadius(planet: UniversePlanet, science?: PlanetScienceBundle | null) {
@@ -1217,7 +1220,10 @@ function compactPlanetMassRadius(planet: UniversePlanet, science?: PlanetScience
     : planet.massEarth
       ? `${formatNumber(planet.massEarth, 2)} M⊕`
       : null;
-  return [radiusText ? `R ${radiusText}` : null, massText ? `M ${massText}` : null].filter(Boolean).join(" · ");
+  return [
+    radiusText ? `R ${propagation?.radiusEarth ? "[MC]" : "[Archive]"} ${radiusText}` : null,
+    massText ? `M ${propagation?.massEarth ? "[MC]" : "[Archive]"} ${massText}` : null,
+  ].filter(Boolean).join(" · ");
 }
 
 function compactSourceBadges(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null) {

@@ -141,3 +141,11 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 
 - Science chart bars in src/components/universe/universe-stage.tsx now render propagated interval bands plus a median marker instead of only a single filled value.
 - Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: browser screenshot on the production server.
+
+- Expanded the legacy-narrative sanitizer in src/lib/science/local/legacy-analysis.ts to soften recurring overclaims such as “confirmed by JWST observations,” “all predictions confirmed,” “validation of theory,” “guaranteed,” “proves,” and “thin atmosphere confirmed by data.”
+- The preserved long-form reports now read more consistently as model-contingent interpretations rather than direct observational truth when those legacy phrases appear.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: selected-planet routes on the production server.
+
+- Added explicit basis labels to the compact selection summaries in src/components/universe/universe-stage.tsx so the short status lines now distinguish archive-backed size/mass, derived flux/temperature, and propagated Monte Carlo intervals.
+- This closes another UI path where derived or propagated values could have been read as if they were all the same class of evidence.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
