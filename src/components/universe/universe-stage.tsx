@@ -4297,6 +4297,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                           <option value="median">Median values only</option>
                           <option value="propagated">Use propagated intervals</option>
                         </select>
+                        <div className="text-xs leading-relaxed text-slate-400/82">
+                          {advancedFilters.uncertaintyMode === "propagated"
+                            ? "Range filters now use overlap against the propagated interval, so a planet stays in view when its uncertainty band crosses the selected window."
+                            : "Range filters use single median values only, which is stricter but ignores propagated uncertainty."}
+                        </div>
                       </label>
                       {[
                         ["Min Flux", "minFlux", advancedFilters.minFlux],

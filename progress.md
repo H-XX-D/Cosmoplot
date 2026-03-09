@@ -86,6 +86,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this follow-up: npm run lint ✅, npm run build ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Added deeper provenance into the preserved legacy long-form text in src/lib/science/local/legacy-analysis.ts. Each legacy report now starts with a report-level provenance capsule, and each `SECTION n:` heading is annotated as source-bound, standards/constants, derived-physics, or interpretation-heavy based on its heading.
 - Validation after this provenance pass: npm run lint ✅, npm run build ✅, live selected-planet route ✅ showing the new report capsule and section annotations for K2-18 b.
+- Added uncertainty-mode guidance text to the Advanced Filters popout in src/components/universe/universe-stage.tsx so the UI explicitly explains the difference between median-only matching and propagated interval-overlap matching.
+- Validation after this UI follow-up: npm run lint ✅, npm run build ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,
