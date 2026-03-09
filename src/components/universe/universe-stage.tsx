@@ -44,6 +44,8 @@ type ChartRow = {
   max: number;
   note: string;
   hue: number;
+  intervalLow?: number | null;
+  intervalHigh?: number | null;
 };
 
 type Palette = {
@@ -2276,10 +2278,42 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
   const tempValue = science?.temperatures.daysideK ?? propagation?.equilibriumK.median ?? planet.equilibriumK ?? 0;
   const fluxValue = science?.radiation.fluxEarthMultiple ?? propagation?.fluxEarthMultiple.median ?? planet.insolationEarth ?? 0;
   return [
-    { label: "Radius", value: Math.min(radiusValue, 8), max: 8, note: intervalSummary(propagation?.radiusEarth, 2, " R⊕") ?? (planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "pending"), hue: 192 },
-    { label: "Mass", value: Math.min(massValue, 25), max: 25, note: intervalSummary(propagation?.massEarth, 2, " M⊕") ?? (planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "pending"), hue: 24 },
-    { label: "Temp", value: Math.min(tempValue, 1600), max: 1600, note: science?.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K day` : intervalSummary(propagation?.equilibriumK, 0, " K") ?? (planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "pending"), hue: 334 },
-    { label: "Flux", value: Math.min(fluxValue, 12), max: 12, note: intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕") ?? (planet.insolationEarth ? `${formatNumber(planet.insolationEarth, 2)} S⊕` : "pending"), hue: 214 },
+    {
+      label: "Radius",
+      value: Math.min(radiusValue, 8),
+      max: 8,
+      note: intervalSummary(propagation?.radiusEarth, 2, " R⊕") ?? (planet.radiusEarth ? `${formatNumber(planet.radiusEarth, 2)} R⊕` : "pending"),
+      hue: 192,
+      intervalLow: propagation?.radiusEarth.low ?? null,
+      intervalHigh: propagation?.radiusEarth.high ?? null,
+    },
+    {
+      label: "Mass",
+      value: Math.min(massValue, 25),
+      max: 25,
+      note: intervalSummary(propagation?.massEarth, 2, " M⊕") ?? (planet.massEarth ? `${formatNumber(planet.massEarth, 2)} M⊕` : "pending"),
+      hue: 24,
+      intervalLow: propagation?.massEarth.low ?? null,
+      intervalHigh: propagation?.massEarth.high ?? null,
+    },
+    {
+      label: "Temp",
+      value: Math.min(tempValue, 1600),
+      max: 1600,
+      note: science?.temperatures.daysideK ? `${formatNumber(science.temperatures.daysideK, 0)} K day` : intervalSummary(propagation?.equilibriumK, 0, " K") ?? (planet.equilibriumK ? `${formatNumber(planet.equilibriumK, 0)} K` : "pending"),
+      hue: 334,
+      intervalLow: propagation?.equilibriumK.low ?? null,
+      intervalHigh: propagation?.equilibriumK.high ?? null,
+    },
+    {
+      label: "Flux",
+      value: Math.min(fluxValue, 12),
+      max: 12,
+      note: intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕") ?? (planet.insolationEarth ? `${formatNumber(planet.insolationEarth, 2)} S⊕` : "pending"),
+      hue: 214,
+      intervalLow: propagation?.fluxEarthMultiple.low ?? null,
+      intervalHigh: propagation?.fluxEarthMultiple.high ?? null,
+    },
     ...(science
       ? [
           { label: "Field", value: Math.min(science.magnetosphere.surfaceFieldMicroTesla ?? 0, 120), max: 120, note: science.magnetosphere.surfaceFieldMicroTesla ? `${formatNumber(science.magnetosphere.surfaceFieldMicroTesla, 1)} microT` : "pending", hue: 178 },
@@ -2308,6 +2342,11 @@ function buildChartRows(system: UniverseSystem, planet: UniversePlanet | null, s
 function metricPercentage(value: number, max: number) {
   if (!max || Number.isNaN(value) || value <= 0) return 4;
   return Math.max(4, Math.min(100, (value / max) * 100));
+}
+
+function metricPosition(value: number | null | undefined, max: number) {
+  if (!max || value === null || value === undefined || Number.isNaN(value) || value <= 0) return 0;
+  return Math.max(0, Math.min(100, (value / max) * 100));
 }
 
 function hashFraction(input: string) {
@@ -4604,13 +4643,28 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                     <div className="text-sm font-medium text-white">{row.label}</div>
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{row.note}</div>
                   </div>
-                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/[0.05]">
+                  <div className="relative mt-3 h-3 overflow-hidden rounded-full bg-white/[0.05]">
+                    {row.intervalLow !== null && row.intervalLow !== undefined && row.intervalHigh !== null && row.intervalHigh !== undefined ? (
+                      <div
+                        className="absolute inset-y-0 rounded-full border border-white/16"
+                        style={{
+                          left: `${metricPosition(row.intervalLow, row.max)}%`,
+                          width: `${Math.max(1, metricPosition(row.intervalHigh, row.max) - metricPosition(row.intervalLow, row.max))}%`,
+                          background: `linear-gradient(90deg, hsla(${row.hue}, 90%, 60%, 0.15), hsla(${row.hue}, 95%, 70%, 0.3))`,
+                          boxShadow: `0 0 10px hsla(${row.hue}, 95%, 70%, 0.16)`,
+                        }}
+                      />
+                    ) : null}
                     <div
-                      className="h-full rounded-full"
+                      className="absolute inset-y-0 left-0 rounded-full"
                       style={{
                         width: `${metricPercentage(row.value, row.max)}%`,
                         background: `linear-gradient(90deg, hsla(${row.hue}, 90%, 55%, 0.35), hsla(${row.hue}, 95%, 66%, 0.92))`,
                       }}
+                    />
+                    <div
+                      className="absolute inset-y-[-1px] w-[2px] rounded-full bg-white/90"
+                      style={{ left: `calc(${metricPosition(row.value, row.max)}% - 1px)` }}
                     />
                   </div>
                 </div>

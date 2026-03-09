@@ -118,3 +118,6 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Observation planning text now surfaces propagated flux, temperature, radius, and one-scale-height signal ranges when available.
 - Planet chart rows now prefer propagated medians/ranges for radius, mass, temperature, and flux.
 - Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: selected-planet route on production server.
+
+- Science chart bars in src/components/universe/universe-stage.tsx now render propagated interval bands plus a median marker instead of only a single filled value.
+- Validation after this pass: npm run lint ✅, npm run build ✅. Runtime validation target: browser screenshot on the production server.
