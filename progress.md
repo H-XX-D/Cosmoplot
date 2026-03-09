@@ -82,6 +82,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Updated src/components/universe/universe-stage.tsx so the metric cards and structured analysis text display the new regime/process/confidence language. The UI now surfaces the caveat that magnetic fields are not treated as a simple protection switch and that light-species loss can coexist with heavier-atmosphere retention.
 - Tightened legacy caveats in src/lib/science/local/legacy-analysis.ts so inherited “binding energy” language is framed more explicitly as proxy interpretation, not a direct atmosphere measurement.
 - Validation after this pass: npm run lint ✅, npm run build ✅, live API spot checks ✅ for WASP-39 b (`hydrodynamic-loss-risk`) and K2-18 b (`volatile-rich-retentive`), Playwright browser load/screenshot ✅ on the production server.
+- Follow-up pass: updated the top-level synopsis text in src/components/universe/universe-stage.tsx so the visible narrative now includes the escape-regime audit plus propagated flux/temperature ranges. The stronger science model is no longer hidden only in the metric stack and lower analysis blocks.
+- Validation after this follow-up: npm run lint ✅, npm run build ✅, production server restarted on http://127.0.0.1:3000/#science-deck.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,
