@@ -151,6 +151,19 @@ export type RetentionAudit = {
   jeansLambdaN2: number | null;
   irradiationStress: number | null;
   energyLimitedLossProxy: number | null;
+  regime:
+    | "volatile-rich-retentive"
+    | "secondary-atmosphere-retentive"
+    | "thermal-escape-transition"
+    | "hydrodynamic-loss-risk"
+    | "unresolved";
+  dominantLossProcess:
+    | "jeans-screened"
+    | "secondary-atmosphere-window"
+    | "irradiation-driven-loss"
+    | "hydrodynamic-escape-risk"
+    | "unresolved";
+  confidence: "low" | "medium" | "high";
   verdict: "retentive" | "mixed" | "vulnerable" | "unresolved";
   notes: string[];
 };

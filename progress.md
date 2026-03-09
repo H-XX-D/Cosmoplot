@@ -78,6 +78,10 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 2026-03-09
 - Expanded deep-sky kinds in src/components/universe/universe-stage.tsx to include galaxies and pulsars. Added Andromeda, Triangulum, the Large/Small Magellanic Clouds, Vela Pulsar, Geminga, and PSR B1257+12 with Sun-centered coordinates, hover/fly-to behavior, and persistent labels for galaxies/pulsars.
 - Extended deep-sky procedural rendering so galaxy and pulsar anchors have their own visual treatment instead of reusing nebula logic. Galaxies now render as brighter spiral/irregular luminous structures; pulsars render as compact blue-white starbursts.
+- Replaced the old binary retention readout with a richer escape-regime audit in src/lib/science/physics.ts and src/lib/science/types.ts. The audit now distinguishes volatile-rich retention, heavier secondary-atmosphere retention, transition regimes, and hydrodynamic/irradiation-driven loss risk instead of flattening everything to a single verdict.
+- Updated src/components/universe/universe-stage.tsx so the metric cards and structured analysis text display the new regime/process/confidence language. The UI now surfaces the caveat that magnetic fields are not treated as a simple protection switch and that light-species loss can coexist with heavier-atmosphere retention.
+- Tightened legacy caveats in src/lib/science/local/legacy-analysis.ts so inherited “binding energy” language is framed more explicitly as proxy interpretation, not a direct atmosphere measurement.
+- Validation after this pass: npm run lint ✅, npm run build ✅, live API spot checks ✅ for WASP-39 b (`hydrodynamic-loss-risk`) and K2-18 b (`volatile-rich-retentive`), Playwright browser load/screenshot ✅ on the production server.
 - Increased default display scale for galaxies/pulsars so they are legible in the exploration view.
 - Hardened the planet generators in src/components/ui/planet-globe.tsx:
   - airless worlds now get stronger crater/ejecta/fracture structure and less blue-contaminated terrain,

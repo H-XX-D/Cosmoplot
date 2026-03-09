@@ -25,7 +25,7 @@ import {
   type PlanetRegime,
 } from "@/components/ui/planet-globe";
 import { clamp, hsla, lerp } from "@/lib/utils";
-import type { PlanetScienceBundle, UniversePlanet, UniverseSnapshot, UniverseSystem, WhiteDwarfAnchor } from "@/lib/science/types";
+import type { PlanetScienceBundle, RetentionAudit, UniversePlanet, UniverseSnapshot, UniverseSystem, WhiteDwarfAnchor } from "@/lib/science/types";
 
 type MetricKind = "observed" | "inferred" | "derived" | "source";
 
@@ -887,6 +887,30 @@ function systemOrbitRadius(index: number, semiMajorAxisAu: number | null) {
 function formatNumber(value: number | null | undefined, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return "Unknown";
   return value.toFixed(digits);
+}
+
+function titleCaseSlug(text: string) {
+  return text
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function retentionDisplayValue(retention: RetentionAudit) {
+  const label = titleCaseSlug(retention.regime);
+  return retention.confidence === "low" ? label : `${label} (${retention.confidence})`;
+}
+
+function retentionDisplayDetail(retention: RetentionAudit) {
+  const parts = [
+    `verdict ${retention.verdict}`,
+    `process ${titleCaseSlug(retention.dominantLossProcess)}`,
+    retention.escapeVelocityKmS ? `v_escape ${formatNumber(retention.escapeVelocityKmS, 1)} km/s` : null,
+    retention.jeansLambdaH2 ? `Jeans λ(H2) ${formatNumber(retention.jeansLambdaH2, 1)}` : null,
+    retention.jeansLambdaN2 ? `Jeans λ(N2) ${formatNumber(retention.jeansLambdaN2, 1)}` : null,
+    retention.irradiationStress ? `irradiation ${formatNumber(retention.irradiationStress, 2)} S⊕` : null,
+  ].filter(Boolean);
+  return parts.join("; ");
 }
 
 function formatSigned(value: number | null | undefined, digits = 2) {
@@ -1776,8 +1800,8 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
   if (science?.retention) {
     metrics.push({
       label: "Escape / Retention Audit",
-      value: science.retention.verdict,
-      note: science.retention.notes[0] ?? "Escape-regime reinterpretation of the legacy retention language.",
+      value: retentionDisplayValue(science.retention),
+      note: `${retentionDisplayDetail(science.retention)}. ${science.retention.notes[0] ?? "Escape-regime reinterpretation of the legacy retention language."}`,
       kind: "inferred",
       provenance: "Source: selected-planet escape-regime audit",
       equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
@@ -1978,7 +2002,7 @@ function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, sc
             analysisClaim({
               label: "Escape / retention audit",
               classification: "I",
-              value: `${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}`,
+              value: `${retentionDisplayValue(science.retention)}; ${retentionDisplayDetail(science.retention)}`,
               source: "selected-planet escape-regime audit",
               equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
             }),
@@ -2226,7 +2250,7 @@ function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, sc
                 analysisClaim({
                   label: "Escape / retention audit",
                   classification: "I",
-                  value: `${science.retention.verdict}; v_escape ${science.retention.escapeVelocityKmS ? `${formatNumber(science.retention.escapeVelocityKmS, 1)} km/s` : "unresolved"}; Jeans λ(H2) ${science.retention.jeansLambdaH2 ? formatNumber(science.retention.jeansLambdaH2, 1) : "unresolved"}; Jeans λ(N2) ${science.retention.jeansLambdaN2 ? formatNumber(science.retention.jeansLambdaN2, 1) : "unresolved"}; irradiation stress ${science.retention.irradiationStress ? `${formatNumber(science.retention.irradiationStress, 2)} S⊕` : "unresolved"}`,
+                  value: `${retentionDisplayValue(science.retention)}; ${retentionDisplayDetail(science.retention)}`,
                   source: "selected-planet escape-regime audit",
                   equation: "Eq: Jeans parameter + irradiation stress + energy-limited loss proxy",
                 }),

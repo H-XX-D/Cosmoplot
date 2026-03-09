@@ -329,21 +329,83 @@ export function deriveRetentionAudit(input: {
       ? input.fluxEarthMultiple * Math.pow(input.radiusEarth, 3) / Math.max(input.massEarth, 0.1)
       : null;
 
+  let regime: RetentionAudit["regime"] = "unresolved";
+  let dominantLossProcess: RetentionAudit["dominantLossProcess"] = "unresolved";
+  let confidence: RetentionAudit["confidence"] = "low";
   let verdict: RetentionAudit["verdict"] = "unresolved";
   if (jeansLambdaH2 !== null && jeansLambdaN2 !== null) {
-    if (jeansLambdaH2 >= 18 && jeansLambdaN2 >= 100 && (irradiationStress ?? 1) < 10) {
-      verdict = "retentive";
-    } else if (jeansLambdaH2 < 10 || (irradiationStress ?? 0) > 120 || (energyLimitedLossProxy ?? 0) > 50) {
+    const strongHydrodynamicRisk =
+      jeansLambdaH2 < 10
+      || (irradiationStress ?? 0) > 120
+      || (energyLimitedLossProxy ?? 0) > 80;
+    const transitionRisk =
+      jeansLambdaH2 < 20
+      || (irradiationStress ?? 0) > 20
+      || (energyLimitedLossProxy ?? 0) > 20;
+    const secondaryAtmosphereWindow =
+      jeansLambdaN2 >= 80
+      && (escapeVelocityKmS ?? 0) >= 8
+      && (irradiationStress ?? 0) < 40;
+
+    if (strongHydrodynamicRisk) {
+      regime = "hydrodynamic-loss-risk";
+      dominantLossProcess =
+        (irradiationStress ?? 0) > 120 || (energyLimitedLossProxy ?? 0) > 80
+          ? "irradiation-driven-loss"
+          : "hydrodynamic-escape-risk";
       verdict = "vulnerable";
-    } else {
+      confidence =
+        [
+          jeansLambdaH2 < 10,
+          (irradiationStress ?? 0) > 120,
+          (energyLimitedLossProxy ?? 0) > 80,
+        ].filter(Boolean).length >= 2
+          ? "high"
+          : "medium";
+    } else if (secondaryAtmosphereWindow && jeansLambdaH2 < 20) {
+      regime = "secondary-atmosphere-retentive";
+      dominantLossProcess = "secondary-atmosphere-window";
       verdict = "mixed";
+      confidence = "medium";
+    } else if (transitionRisk) {
+      regime = "thermal-escape-transition";
+      dominantLossProcess =
+        (irradiationStress ?? 0) > 20 || (energyLimitedLossProxy ?? 0) > 20
+          ? "irradiation-driven-loss"
+          : "hydrodynamic-escape-risk";
+      verdict = "mixed";
+      confidence = "medium";
+    } else if (jeansLambdaH2 >= 20 && jeansLambdaN2 >= 100) {
+      regime = jeansLambdaH2 >= 30 && (irradiationStress ?? 1) < 8
+        ? "volatile-rich-retentive"
+        : "secondary-atmosphere-retentive";
+      dominantLossProcess = regime === "volatile-rich-retentive"
+        ? "jeans-screened"
+        : "secondary-atmosphere-window";
+      verdict = "retentive";
+      confidence = regime === "volatile-rich-retentive" ? "high" : "medium";
+    } else {
+      regime = "thermal-escape-transition";
+      dominantLossProcess = "hydrodynamic-escape-risk";
+      verdict = "mixed";
+      confidence = "low";
     }
   }
 
   const notes = [
-    "Legacy atmospheric-retention statements are reinterpreted here as escape-regime proxies, not direct atmospheric outcomes.",
-    "Jeans parameter and irradiation stress are used as the primary audit axes; magnetic shielding and chemistry still modulate the final outcome.",
+    "This is an escape-regime screen, not a direct measurement of whether an atmosphere exists today.",
+    "Hydrogen-rich envelope retention and heavier secondary-atmosphere retention are separated here; a world can lose H/He yet still retain or rebuild heavier gases.",
+    "Magnetic shielding is not treated as a binary protection switch; stellar-wind coupling and open-field outflow can still permit escape under strong driving.",
   ];
+  if (regime === "hydrodynamic-loss-risk") {
+    notes.push("Current loading places the planet in a hydrodynamic or irradiation-driven loss-risk regime for light volatiles.");
+  } else if (regime === "thermal-escape-transition") {
+    notes.push("Current loading places the planet in a transition regime where light-species loss is plausible and conclusions depend strongly on chemistry, age, and stellar history.");
+  } else if (regime === "secondary-atmosphere-retentive") {
+    notes.push("Current loading favors retention of heavier secondary-atmosphere species even if a primordial H/He envelope would be less secure.");
+  } else if (regime === "volatile-rich-retentive") {
+    notes.push("Current loading is consistent with a comparatively retentive regime for both light and heavy species, subject to stellar history not modeled here.");
+  }
   if (scaleHeightKm !== null) {
     notes.push(`Representative scale height is ${scaleHeightKm.toFixed(0)} km at the loaded equilibrium temperature.`);
   }
@@ -358,6 +420,9 @@ export function deriveRetentionAudit(input: {
     jeansLambdaN2,
     irradiationStress,
     energyLimitedLossProxy,
+    regime,
+    dominantLossProcess,
+    confidence,
     verdict,
     notes,
   };

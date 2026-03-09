@@ -632,6 +632,7 @@ export async function getLegacyPlanetBundle(planetName: string, systemName?: str
       "Local analysis is merged from the original EXOPLANET_ANALYSES bundle.",
       "Atmospheric retention passages inherited from the legacy analysis are reinterpreted as escape-regime proxies, not direct atmospheric outcomes.",
       "Use Jeans escape, escape velocity, irradiative stress, and magnetosphere context together rather than reading legacy retention-energy language literally.",
+      "Magnetic-field language is retained only as context; shielding is not treated as a guaranteed on/off control over atmospheric escape.",
     ],
   } satisfies LocalAnalysisBundle;
 }
