@@ -107,6 +107,7 @@ type StarRenderStyle = {
   glowScale: number;
   glowOpacity: number;
   brightnessScale: number;
+  morphologyBias: number;
 };
 
 type StageHover = {
@@ -218,6 +219,7 @@ const STAR_FRAGMENT_SHADER = `
   varying vec3 vNormal;
 
   uniform float uTime;
+  uniform float uMorphology;
   uniform vec3 uCoreColor;
   uniform vec3 uRimColor;
 
@@ -291,38 +293,52 @@ const STAR_FRAGMENT_SHADER = `
     float charWeb = smoothstep(0.56, 0.92, fbm(vUv * 154.0 - flow * 6.4 - vec2(uTime * 0.16, -uTime * 0.11)));
     float orangeArcs = smoothstep(0.52, 0.9, fbm(vUv * 128.0 + flow * 4.6 + vec2(uTime * 0.2, uTime * 0.08)));
     float blackPits = smoothstep(0.72, 0.98, fbm(vUv * 212.0 - flow * 7.0 + vec2(-uTime * 0.18, uTime * 0.12)));
+    float coolBias = clamp(uMorphology, 0.0, 1.0);
+    float hotBias = 1.0 - coolBias;
 
     float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
     float limb = pow(1.0 - facing, 1.62);
     float centerHotspot = pow(max(0.0, 1.0 - radius), 4.4);
+    spotMask *= mix(0.48, 1.08, coolBias);
+    spotClusters *= mix(0.58, 1.18, coolBias);
+    spotPits *= mix(0.54, 1.22, coolBias);
+    blackPits *= mix(0.38, 1.16, coolBias);
+    charWeb *= mix(0.46, 1.08, coolBias);
+    faculae *= mix(1.18, 0.86, coolBias);
+    plasmaVeins *= mix(1.14, 0.84, coolBias);
+    hotVein *= mix(1.08, 0.9, coolBias);
     float faculaMask = faculae * (0.28 + limb * 0.92);
     float umbra = spotMask * (0.6 + spotPits * 0.42 + spotRidges * 0.14);
     float penumbra = spotClusters * 0.24 + umbra * 0.28;
-    vec3 hotCore = mix(uCoreColor, vec3(1.0, 0.985, 0.9), 0.7);
-    vec3 warmCore = mix(uCoreColor, vec3(1.0, 0.86, 0.5), 0.48);
-    vec3 flareCore = mix(uCoreColor, vec3(1.0, 0.94, 0.74), 0.62);
-    vec3 orangeBurn = mix(uRimColor, vec3(1.0, 0.56, 0.22), 0.72);
-    vec3 emberOrange = mix(vec3(1.0, 0.66, 0.26), vec3(0.95, 0.42, 0.12), ridgeField * 0.5);
+    vec3 hotCore = mix(uCoreColor, mix(vec3(1.0, 0.985, 0.9), vec3(0.96, 0.985, 1.0), hotBias * 0.88), 0.46);
+    vec3 warmCore = mix(uCoreColor, mix(vec3(1.0, 0.84, 0.46), vec3(0.94, 0.97, 1.0), hotBias * 0.82), 0.28);
+    vec3 flareCore = mix(uCoreColor, mix(vec3(1.0, 0.93, 0.72), vec3(0.88, 0.95, 1.0), hotBias * 0.84), 0.34);
+    vec3 orangeBurn = mix(uRimColor, mix(vec3(1.0, 0.56, 0.22), vec3(0.76, 0.86, 1.0), hotBias * 0.82), 0.34);
+    vec3 emberOrange = mix(
+      mix(vec3(1.0, 0.66, 0.26), vec3(0.95, 0.42, 0.12), ridgeField * 0.5),
+      mix(vec3(0.88, 0.94, 1.0), vec3(0.72, 0.84, 1.0), ridgeField * 0.42),
+      hotBias * 0.78
+    );
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.1, 0.0, 1.0));
-    color *= 0.82 + convection * 0.16 + granulation * 0.28 + subGranulation * 0.26 + emberCells * 0.2;
+    color *= 0.88 + convection * 0.14 + granulation * mix(0.16, 0.28, coolBias) + subGranulation * mix(0.1, 0.22, coolBias) + emberCells * 0.08;
     color *= 1.0 - umbra * (0.66 + mottling * 0.4) - penumbra * 0.22;
-    color = mix(color, blendMultiply(color, vec3(0.8, 0.68, 0.54) - shadowWeb * 0.22 - ridgeField * 0.08), 0.58);
-    color = mix(color, blendSubtract(color, vec3(shadowWeb * 0.18 + charWeb * 0.22 + blackPits * 0.2)), 0.46);
-    color = mix(color, blendColorBurn(color, vec3(0.8 - shadowWeb * 0.38 - spotClusters * 0.18 - spotPits * 0.1 - blackPits * 0.12)), 0.54 + umbra * 0.3);
-    color = mix(color, blendColorDodge(color, vec3(hotVein * 0.5 + plasmaVeins * 0.42 + granulation * 0.24 + emberCells * 0.28)), 0.66);
-    color = mix(color, blendColorBurn(color, vec3(0.88 - shadowWeb * 0.16 - ridgeField * 0.08 - charWeb * 0.06)), 0.22 + mottling * 0.14);
-    color = mix(color, blendColorDodge(color, vec3(subGranulation * 0.34 + hotVein * 0.26 + ridgeField * 0.14 + faculaMask * 0.34)), 0.46 + granulation * 0.12);
+    color = mix(color, blendMultiply(color, vec3(0.82, 0.72, 0.62) - shadowWeb * 0.16 - ridgeField * 0.06), mix(0.18, 0.3, coolBias));
+    color = mix(color, blendSubtract(color, vec3(shadowWeb * 0.12 + charWeb * 0.18 + blackPits * 0.18)), mix(0.14, 0.26, coolBias));
+    color = mix(color, blendColorBurn(color, vec3(0.84 - shadowWeb * 0.3 - spotClusters * 0.14 - spotPits * 0.08 - blackPits * 0.1)), 0.3 + umbra * mix(0.12, 0.22, coolBias));
+    color = mix(color, blendColorDodge(color, vec3(hotVein * 0.34 + plasmaVeins * 0.28 + granulation * 0.14 + emberCells * 0.14)), 0.34);
+    color = mix(color, blendColorBurn(color, vec3(0.9 - shadowWeb * 0.12 - ridgeField * 0.06 - charWeb * 0.05)), 0.14 + mottling * mix(0.04, 0.1, coolBias));
+    color = mix(color, blendColorDodge(color, vec3(subGranulation * 0.2 + hotVein * 0.16 + ridgeField * 0.1 + faculaMask * mix(0.24, 0.14, coolBias))), 0.16 + granulation * 0.06);
     color = mix(color, blendColorBurn(color, orangeBurn), orangeCells * 0.12 + orangeArcs * 0.08 + ridgeField * 0.08);
-    color = mix(color, blendColorDodge(color, emberOrange), orangeCells * 0.34 + orangeArcs * 0.18 + faculaMask * 0.18 + emberCells * 0.12);
-    color = mix(color, blendColorDodge(color, hotCore), 0.58 * centerHotspot);
-    color = mix(color, blendColorDodge(color, warmCore), 0.34 * centerHotspot + 0.16 * hotVein + faculaMask * 0.16);
-    color = mix(color, blendColorDodge(color, flareCore), faculaMask * 0.34 + plasmaVeins * 0.12);
-    color = mix(color, blendColorBurn(color, vec3(0.78 - limb * 0.26 - shadowWeb * 0.12)), 0.34 + limb * 0.26);
-    color *= 1.16 + ridgeField * 0.16 + faculaMask * 0.12;
-    color += hotCore * centerHotspot * 0.2 + warmCore * faculaMask * 0.14 + flareCore * plasmaVeins * 0.08 + emberOrange * orangeCells * 0.12;
+    color = mix(color, blendColorDodge(color, emberOrange), orangeCells * mix(0.1, 0.18, coolBias) + orangeArcs * 0.08 + faculaMask * 0.08 + emberCells * 0.04);
+    color = mix(color, blendColorDodge(color, hotCore), 0.17 * centerHotspot);
+    color = mix(color, blendColorDodge(color, warmCore), 0.08 * centerHotspot + 0.04 * hotVein + faculaMask * 0.05);
+    color = mix(color, blendColorDodge(color, flareCore), faculaMask * mix(0.08, 0.05, coolBias) + plasmaVeins * 0.025);
+    color = mix(color, blendColorBurn(color, vec3(0.8 - limb * 0.2 - shadowWeb * 0.1)), 0.22 + limb * 0.18);
+    color *= 0.99 + ridgeField * 0.05 + faculaMask * 0.03;
+    color += hotCore * centerHotspot * 0.045 + warmCore * faculaMask * 0.028 + flareCore * plasmaVeins * 0.014 + emberOrange * orangeCells * 0.024;
 
-    float glow = pow(max(0.0, 1.0 - abs(vUv.y - 0.5) * 4.8), 3.0) * 0.04 * (0.55 + 0.45 * sin(uTime * 1.8));
+    float glow = pow(max(0.0, 1.0 - abs(vUv.y - 0.5) * 4.8), 3.0) * 0.014 * (0.55 + 0.45 * sin(uTime * 1.8));
     gl_FragColor = vec4(color + glow, 1.0);
   }
 `;
@@ -332,6 +348,7 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
   varying vec3 vNormal;
 
   uniform float uTime;
+  uniform float uMorphology;
   uniform vec3 uCoreColor;
   uniform vec3 uRimColor;
 
@@ -376,22 +393,31 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
     float limb = pow(1.0 - facing, 1.5);
     float coreHotspot = pow(max(0.0, 1.0 - distance(vUv, vec2(0.5)) * 2.0), 4.2);
-    vec3 emberTone = mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4);
-    vec3 burnTone = mix(uRimColor, vec3(1.0, 0.5, 0.18), 0.38);
+    float coolBias = clamp(uMorphology, 0.0, 1.0);
+    float hotBias = 1.0 - coolBias;
+    pits *= mix(0.52, 1.12, coolBias);
+    shadow *= mix(0.56, 1.06, coolBias);
+    orangeVeins *= mix(1.04, 0.82, coolBias);
+    vec3 emberTone = mix(
+      mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4),
+      mix(vec3(0.9, 0.95, 1.0), vec3(0.74, 0.84, 1.0), pits * 0.3),
+      hotBias * 0.82
+    );
+    vec3 burnTone = mix(uRimColor, mix(vec3(1.0, 0.5, 0.18), vec3(0.76, 0.86, 1.0), hotBias * 0.82), 0.24);
     float pulse = 0.92 + 0.08 * sin(uTime * 2.2 + vUv.x * 18.0 + vUv.y * 11.0);
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.96 + (1.0 - granulation) * 0.08, 0.0, 1.0));
-    color *= 0.8 + granulation * 0.2;
-    color = mix(color, blendMultiply(color, vec3(0.74, 0.58, 0.42)), 0.38);
-    color = mix(color, blendSubtract(color, vec3(pits * 0.16 + shadow * 0.12)), 0.36);
-    color = mix(color, blendColorBurn(color, burnTone), ember * 0.1 + pits * 0.08);
-    color = mix(color, blendColorDodge(color, vec3(0.34 + granulation * 0.38 + pits * 0.24)), 0.82);
-    color = mix(color, blendColorDodge(color, vec3(0.22 + (1.0 - limb) * 0.22 + sparkle * 0.12)), 0.44);
-    color = mix(color, blendColorDodge(color, emberTone), ember * 0.32 + orangeVeins * 0.12);
+    color *= 0.88 + granulation * mix(0.1, 0.18, coolBias);
+    color = mix(color, blendMultiply(color, vec3(0.78, 0.66, 0.54)), mix(0.12, 0.24, coolBias));
+    color = mix(color, blendSubtract(color, vec3(pits * 0.12 + shadow * 0.1)), mix(0.12, 0.22, coolBias));
+    color = mix(color, blendColorBurn(color, burnTone), ember * 0.06 + pits * 0.08);
+    color = mix(color, blendColorDodge(color, vec3(0.18 + granulation * 0.22 + pits * 0.08)), 0.34);
+    color = mix(color, blendColorDodge(color, vec3(0.12 + (1.0 - limb) * 0.12 + sparkle * 0.08)), 0.14);
+    color = mix(color, blendColorDodge(color, emberTone), ember * 0.1 + orangeVeins * 0.06);
     color *= 1.0 - pits * 0.24;
-    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.46 + sparkle * 0.12)), 0.64);
-    color += uCoreColor * coreHotspot * 0.28;
-    color *= (1.08 - limb * 0.03) * pulse;
+    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.2 + sparkle * 0.08)), 0.18);
+    color += uCoreColor * coreHotspot * 0.1;
+    color *= (1.03 - limb * 0.02) * pulse;
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -792,6 +818,17 @@ function stellarStyleFromData({
   const luminosity = clamp(Math.log10(1 + Math.max(luminositySolar ?? 0.1, 0.1)), 0, 1.5);
   const radius = Math.max(radiusSolar ?? 1, 0.25);
   const variation = hashUnit(seedKey);
+  const morphologyByBucket: Record<string, number> = {
+    O: 0.14,
+    B: 0.2,
+    A: 0.28,
+    F: 0.38,
+    G: 0.52,
+    K: 0.72,
+    M: 0.9,
+    Other: 0.5,
+    Unspecified: 0.5,
+  };
 
   const paletteByBucket: Record<string, Pick<StarRenderStyle, "core" | "rim" | "corona" | "halo">> = {
     O: { core: "#eef7ff", rim: "#5f99ff", corona: "#8fc0ff", halo: "#edf7ff" },
@@ -829,8 +866,9 @@ function stellarStyleFromData({
     halo,
     radiusScale: sizeLift,
     glowScale: clamp(1.42 + luminosity * 0.32 + brightnessScale * 0.18 + variation * 0.08 + (hotStarBoost ? 0.14 : 0), 1.34, 2.38),
-    glowOpacity: clamp(0.08 + luminosity * 0.06 + brightnessScale * 0.06 + variation * 0.02 + (hotStarBoost ? 0.04 : 0), 0.08, 0.34),
+    glowOpacity: clamp(0.07 + luminosity * 0.05 + brightnessScale * 0.04 + variation * 0.015 + (hotStarBoost ? 0.03 : 0), 0.07, 0.24),
     brightnessScale,
+    morphologyBias: morphologyByBucket[bucket] ?? morphologyByBucket.Other,
   };
 }
 
@@ -862,8 +900,9 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
     halo: "#ffffff",
     radiusScale: 0.74,
     glowScale: 1.26,
-    glowOpacity: 0.16,
+    glowOpacity: 0.12,
     brightnessScale: 0.66,
+    morphologyBias: 0.22,
   };
 }
 
@@ -2872,10 +2911,11 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
   const starUniforms = useMemo(
     () => ({
       uTime: { value: 0 },
+      uMorphology: { value: style.morphologyBias },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
     }),
-    [coreColor, rimColor],
+    [coreColor, rimColor, style.morphologyBias],
   );
   const coronaUniforms = useMemo(
     () => ({
@@ -2900,17 +2940,17 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
         <sphereGeometry args={[radius, 168, 168]} />
         <shaderMaterial ref={starMaterialRef} vertexShader={STAR_VERTEX_SHADER} fragmentShader={STAR_FRAGMENT_SHADER} uniforms={starUniforms} />
       </mesh>
-      <mesh scale={1.08 + style.brightnessScale * 0.16}>
+      <mesh scale={1.03 + style.brightnessScale * 0.06}>
         <sphereGeometry args={[radius, 136, 136]} />
         <meshBasicMaterial
           color={coreColor}
           transparent
-          opacity={clamp(0.08 + style.brightnessScale * 0.08, 0.08, 0.22)}
+          opacity={clamp(0.02 + style.brightnessScale * 0.03, 0.02, 0.08)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={1.18 + style.brightnessScale * 0.12}>
+      <mesh scale={1.1 + style.brightnessScale * 0.05}>
         <sphereGeometry args={[radius, 132, 132]} />
         <shaderMaterial
           ref={coronaMaterialRef}
@@ -2918,6 +2958,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
           fragmentShader={CORONA_FRAGMENT_SHADER}
           uniforms={coronaUniforms}
           transparent
+          opacity={0.52}
           depthWrite={false}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
@@ -2937,10 +2978,11 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
+      uMorphology: { value: style.morphologyBias },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
     }),
-    [coreColor, rimColor],
+    [coreColor, rimColor, style.morphologyBias],
   );
 
   useFrame(({ clock }) => {
@@ -2952,7 +2994,7 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
       starMeshRef.current.scale.setScalar(pulse);
     }
     if (haloMaterialRef.current) {
-      haloMaterialRef.current.opacity = style.glowOpacity * (0.92 + Math.sin(clock.elapsedTime * 1.8 + radius * 10) * 0.08);
+      haloMaterialRef.current.opacity = style.glowOpacity * (0.95 + Math.sin(clock.elapsedTime * 1.8 + radius * 10) * 0.05);
     }
   });
 
@@ -2966,12 +3008,12 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
         <sphereGeometry args={[radius, 14, 14]} />
         <shaderMaterial ref={materialRef} vertexShader={STAR_VERTEX_SHADER} fragmentShader={DISTANT_STAR_FRAGMENT_SHADER} uniforms={uniforms} />
       </mesh>
-      <mesh scale={1.04 + style.brightnessScale * 0.18}>
+      <mesh scale={1.02 + style.brightnessScale * 0.12}>
         <sphereGeometry args={[radius, 12, 12]} />
         <meshBasicMaterial
           color={coreColor}
           transparent
-          opacity={clamp(0.04 + style.brightnessScale * 0.06, 0.04, 0.16)}
+          opacity={clamp(0.02 + style.brightnessScale * 0.04, 0.02, 0.1)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />

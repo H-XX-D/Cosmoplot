@@ -158,3 +158,6 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Strengthened star sizing so physical stellar radius drives visible scale more strongly, while apparent magnitude mainly affects glow/visibility rather than overwhelming size.
 - Added per-object pulsar spin periods to the deep-sky pulsar catalog and now pulse those anchors from their own periods, with hover readouts in milliseconds and hertz.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright smoke screenshot ✅ at .playwright-cli/page-2026-03-10T00-59-32-223Z.png.
+- Reduced selected-star blowout in src/components/universe/universe-stage.tsx by cutting the active-system dodge stack, additive core shell, and corona opacity/scale while keeping the distant field-star look intact.
+- Added low-risk star morphology biasing by spectral bucket so hot stars stay smoother/brighter and cool stars keep stronger mottling/spot structure without re-breaking the color pipeline.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright viewport screenshot ✅ at .playwright-cli/page-2026-03-10T01-10-41-583Z.png.
