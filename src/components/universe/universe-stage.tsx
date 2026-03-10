@@ -305,16 +305,16 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.08, 0.0, 1.0));
     color *= 0.9 + convection * 0.07 + granulation * mix(0.08, 0.16, coolBias) + subGranulation * mix(0.04, 0.12, coolBias);
-    color = mix(color, blendMultiply(color, textureTone - shadow * 0.1 - ridge * 0.04), mix(0.08, 0.18, coolBias));
-    color = mix(color, blendMultiply(color, vec3(0.88, 0.82, 0.74) - subGranulation * 0.06), mix(0.03, 0.1, coolBias));
+    color = mix(color, blendMultiply(color, textureTone - shadow * 0.1 - ridge * 0.04), mix(0.04, 0.1, coolBias));
+    color = mix(color, blendMultiply(color, vec3(0.88, 0.82, 0.74) - subGranulation * 0.06), mix(0.01, 0.05, coolBias));
     color = mix(color, blendSubtract(color, vec3(pits * 0.12 + microPits * 0.1 + shadow * 0.08)), mix(0.12, 0.26, coolBias));
-    color = mix(color, blendColorBurn(color, burnTone), ember * 0.07 + pits * 0.11 + microPits * 0.09);
-    color = mix(color, blendColorBurn(color, vec3(0.88 - shadow * 0.16 - ridge * 0.1 - pits * 0.08 - microPits * 0.06)), mix(0.12, 0.24, coolBias));
-    color = mix(color, blendColorDodge(color, vec3(0.1 + faculae * 0.2 + sparkle * 0.08)), 0.17);
-    color = mix(color, blendColorDodge(color, emberTone), ember * 0.08 + orangeVeins * 0.06);
+    color = mix(color, blendColorBurn(color, burnTone), ember * 0.09 + pits * 0.13 + microPits * 0.11);
+    color = mix(color, blendColorBurn(color, vec3(0.86 - shadow * 0.18 - ridge * 0.12 - pits * 0.09 - microPits * 0.08)), mix(0.16, 0.3, coolBias));
+    color = mix(color, blendColorDodge(color, vec3(0.12 + faculae * 0.24 + sparkle * 0.1)), 0.22);
+    color = mix(color, blendColorDodge(color, emberTone), ember * 0.1 + orangeVeins * 0.08);
     color *= 1.0 - pits * 0.16 - microPits * 0.12;
-    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.14 + sparkle * 0.06 + faculae * 0.08)), 0.12);
-    color += uCoreColor * coreHotspot * 0.06 + emberTone * orangeVeins * 0.03;
+    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.17 + sparkle * 0.07 + faculae * 0.1)), 0.16);
+    color += uCoreColor * coreHotspot * 0.075 + emberTone * orangeVeins * 0.04;
     color *= (1.01 - limb * 0.02) * pulse;
 
     gl_FragColor = vec4(color, 1.0);
