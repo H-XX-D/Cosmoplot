@@ -167,3 +167,5 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
 - Reworked the shared star surface shader toward higher detail with layered fbm convection/granulation, stronger multiply/burn structure, and a softer dodge stack so color survives while texture detail reads more clearly in both selected and field stars.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
+- Rebalanced the shared star surface shader away from heavy multiply toward stronger burn/dodge layering while keeping the softened post-blowout baseline intact.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright viewport screenshot ✅ at .playwright-cli/page-2026-03-10T03-49-32-851Z.png.
