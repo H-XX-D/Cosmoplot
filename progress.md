@@ -161,3 +161,7 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Reduced selected-star blowout in src/components/universe/universe-stage.tsx by cutting the active-system dodge stack, additive core shell, and corona opacity/scale while keeping the distant field-star look intact.
 - Added low-risk star morphology biasing by spectral bucket so hot stars stay smoother/brighter and cool stars keep stronger mottling/spot structure without re-breaking the color pipeline.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright viewport screenshot ✅ at .playwright-cli/page-2026-03-10T01-10-41-583Z.png.
+- Swapped the selected-star body onto the calmer distant-star surface shader and reduced its additive shell/corona so active-system stars stop blowing out while the field-star look stays intact.
+- Tidally locked planets now hard-reset visual spin to zero in the active 3D system view instead of just skipping further rotation updates.
+- Orbit visualization now uses ellipse geometry and Kepler-style position solving when archive eccentricity is available, while low-eccentricity worlds keep the circular ring path for readability.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.

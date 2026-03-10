@@ -154,6 +154,7 @@ const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
   uncertaintyMode: "median",
 };
 
+const WORLD_X_AXIS = new THREE.Vector3(1, 0, 0);
 const WORLD_Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 const DEEP_SKY_CATALOG: DeepSkyObject[] = [
@@ -211,135 +212,6 @@ const STAR_VERTEX_SHADER = `
     vUv = uv;
     vNormal = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const STAR_FRAGMENT_SHADER = `
-  varying vec2 vUv;
-  varying vec3 vNormal;
-
-  uniform float uTime;
-  uniform float uMorphology;
-  uniform vec3 uCoreColor;
-  uniform vec3 uRimColor;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-  }
-
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    mat2 rot = mat2(1.6, 1.2, -1.2, 1.6);
-    for (int i = 0; i < 5; i++) {
-      value += amplitude * noise(p);
-      p = rot * p * 1.95;
-      amplitude *= 0.52;
-    }
-    return value;
-  }
-
-  vec3 blendMultiply(vec3 base, vec3 blend) {
-    return base * blend;
-  }
-
-  vec3 blendColorDodge(vec3 base, vec3 blend) {
-    return min(base / max(vec3(0.001), vec3(1.0) - blend), vec3(1.4));
-  }
-
-  vec3 blendColorBurn(vec3 base, vec3 blend) {
-    return max(vec3(0.0), vec3(1.0) - ((vec3(1.0) - base) / max(vec3(0.001), blend)));
-  }
-
-  vec3 blendSubtract(vec3 base, vec3 blend) {
-    return max(base - blend, vec3(0.0));
-  }
-
-  void main() {
-    vec2 centeredUv = vUv - 0.5;
-    float radius = length(centeredUv) * 2.0;
-    vec2 flow = vec2(
-      fbm(vUv * 31.0 + vec2(uTime * 0.15, -uTime * 0.1)),
-      fbm(vUv * 46.0 + vec2(-uTime * 0.08, uTime * 0.11))
-    );
-    float convection = fbm(vUv * 24.0 + flow * 1.6 + vec2(uTime * 0.09, -uTime * 0.05));
-    float granulation = fbm(vUv * 88.0 + flow * 3.4 + uTime * 0.26);
-    float mottling = fbm(vUv * 39.0 - flow * 2.4 - uTime * 0.09);
-    float subGranulation = fbm(vUv * 142.0 + flow * 4.8 + vec2(uTime * 0.31, -uTime * 0.2));
-    float plasmaVeins = fbm(vUv * 182.0 + flow * 5.9 - vec2(uTime * 0.21, uTime * 0.13));
-    float emberCells = fbm(vUv * 226.0 + flow * 7.4 + vec2(uTime * 0.36, uTime * 0.16));
-    float ridgeField = pow(abs(fbm(vUv * 104.0 - flow * 3.8 + vec2(uTime * 0.14, -uTime * 0.09)) - 0.5) * 2.0, 1.34);
-    float faculae = smoothstep(0.52, 0.86, fbm(vUv * 64.0 + flow * 2.7 + vec2(uTime * 0.11, -uTime * 0.06)));
-    float spotField = fbm(vUv * 18.0 - uTime * 0.05 + flow * 1.1);
-    float spotMask = smoothstep(0.62, 0.92, spotField);
-    spotMask *= smoothstep(1.02, 0.28, radius);
-    float spotClusters = smoothstep(0.58, 0.9, fbm(vUv * 33.0 + flow * 1.9 + vec2(uTime * 0.04, -uTime * 0.03)));
-    float spotPits = smoothstep(0.72, 0.96, fbm(vUv * 118.0 + flow * 2.6));
-    float hotVein = fbm(vUv * 116.0 + flow * 4.1 + vec2(uTime * 0.22, -uTime * 0.17));
-    float shadowWeb = fbm(vUv * 60.0 - flow * 3.0 - vec2(uTime * 0.1, uTime * 0.05));
-    float orangeCells = smoothstep(0.46, 0.9, fbm(vUv * 76.0 + flow * 3.6 + vec2(uTime * 0.18, -uTime * 0.12)));
-    float spotRidges = smoothstep(0.54, 0.88, fbm(vUv * 94.0 - flow * 2.2 + vec2(-uTime * 0.08, uTime * 0.04)));
-    float charWeb = smoothstep(0.56, 0.92, fbm(vUv * 154.0 - flow * 6.4 - vec2(uTime * 0.16, -uTime * 0.11)));
-    float orangeArcs = smoothstep(0.52, 0.9, fbm(vUv * 128.0 + flow * 4.6 + vec2(uTime * 0.2, uTime * 0.08)));
-    float blackPits = smoothstep(0.72, 0.98, fbm(vUv * 212.0 - flow * 7.0 + vec2(-uTime * 0.18, uTime * 0.12)));
-    float coolBias = clamp(uMorphology, 0.0, 1.0);
-    float hotBias = 1.0 - coolBias;
-
-    float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
-    float limb = pow(1.0 - facing, 1.62);
-    float centerHotspot = pow(max(0.0, 1.0 - radius), 4.4);
-    spotMask *= mix(0.48, 1.08, coolBias);
-    spotClusters *= mix(0.58, 1.18, coolBias);
-    spotPits *= mix(0.54, 1.22, coolBias);
-    blackPits *= mix(0.38, 1.16, coolBias);
-    charWeb *= mix(0.46, 1.08, coolBias);
-    faculae *= mix(1.18, 0.86, coolBias);
-    plasmaVeins *= mix(1.14, 0.84, coolBias);
-    hotVein *= mix(1.08, 0.9, coolBias);
-    float faculaMask = faculae * (0.28 + limb * 0.92);
-    float umbra = spotMask * (0.6 + spotPits * 0.42 + spotRidges * 0.14);
-    float penumbra = spotClusters * 0.24 + umbra * 0.28;
-    vec3 hotCore = mix(uCoreColor, mix(vec3(1.0, 0.985, 0.9), vec3(0.96, 0.985, 1.0), hotBias * 0.88), 0.46);
-    vec3 warmCore = mix(uCoreColor, mix(vec3(1.0, 0.84, 0.46), vec3(0.94, 0.97, 1.0), hotBias * 0.82), 0.28);
-    vec3 flareCore = mix(uCoreColor, mix(vec3(1.0, 0.93, 0.72), vec3(0.88, 0.95, 1.0), hotBias * 0.84), 0.34);
-    vec3 orangeBurn = mix(uRimColor, mix(vec3(1.0, 0.56, 0.22), vec3(0.76, 0.86, 1.0), hotBias * 0.82), 0.34);
-    vec3 emberOrange = mix(
-      mix(vec3(1.0, 0.66, 0.26), vec3(0.95, 0.42, 0.12), ridgeField * 0.5),
-      mix(vec3(0.88, 0.94, 1.0), vec3(0.72, 0.84, 1.0), ridgeField * 0.42),
-      hotBias * 0.78
-    );
-
-    vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.1, 0.0, 1.0));
-    color *= 0.88 + convection * 0.14 + granulation * mix(0.16, 0.28, coolBias) + subGranulation * mix(0.1, 0.22, coolBias) + emberCells * 0.08;
-    color *= 1.0 - umbra * (0.66 + mottling * 0.4) - penumbra * 0.22;
-    color = mix(color, blendMultiply(color, vec3(0.82, 0.72, 0.62) - shadowWeb * 0.16 - ridgeField * 0.06), mix(0.18, 0.3, coolBias));
-    color = mix(color, blendSubtract(color, vec3(shadowWeb * 0.12 + charWeb * 0.18 + blackPits * 0.18)), mix(0.14, 0.26, coolBias));
-    color = mix(color, blendColorBurn(color, vec3(0.84 - shadowWeb * 0.3 - spotClusters * 0.14 - spotPits * 0.08 - blackPits * 0.1)), 0.3 + umbra * mix(0.12, 0.22, coolBias));
-    color = mix(color, blendColorDodge(color, vec3(hotVein * 0.34 + plasmaVeins * 0.28 + granulation * 0.14 + emberCells * 0.14)), 0.34);
-    color = mix(color, blendColorBurn(color, vec3(0.9 - shadowWeb * 0.12 - ridgeField * 0.06 - charWeb * 0.05)), 0.14 + mottling * mix(0.04, 0.1, coolBias));
-    color = mix(color, blendColorDodge(color, vec3(subGranulation * 0.2 + hotVein * 0.16 + ridgeField * 0.1 + faculaMask * mix(0.24, 0.14, coolBias))), 0.16 + granulation * 0.06);
-    color = mix(color, blendColorBurn(color, orangeBurn), orangeCells * 0.12 + orangeArcs * 0.08 + ridgeField * 0.08);
-    color = mix(color, blendColorDodge(color, emberOrange), orangeCells * mix(0.1, 0.18, coolBias) + orangeArcs * 0.08 + faculaMask * 0.08 + emberCells * 0.04);
-    color = mix(color, blendColorDodge(color, hotCore), 0.17 * centerHotspot);
-    color = mix(color, blendColorDodge(color, warmCore), 0.08 * centerHotspot + 0.04 * hotVein + faculaMask * 0.05);
-    color = mix(color, blendColorDodge(color, flareCore), faculaMask * mix(0.08, 0.05, coolBias) + plasmaVeins * 0.025);
-    color = mix(color, blendColorBurn(color, vec3(0.8 - limb * 0.2 - shadowWeb * 0.1)), 0.22 + limb * 0.18);
-    color *= 0.99 + ridgeField * 0.05 + faculaMask * 0.03;
-    color += hotCore * centerHotspot * 0.045 + warmCore * faculaMask * 0.028 + flareCore * plasmaVeins * 0.014 + emberOrange * orangeCells * 0.024;
-
-    float glow = pow(max(0.0, 1.0 - abs(vUv.y - 0.5) * 4.8), 3.0) * 0.014 * (0.55 + 0.45 * sin(uTime * 1.8));
-    gl_FragColor = vec4(color + glow, 1.0);
   }
 `;
 
@@ -2585,20 +2457,66 @@ function orbitInclination(planet: UniversePlanet, index: number) {
   return (hashFraction(`${planet.id}:${index}:inc`) - 0.5) * 0.38;
 }
 
+function orbitOrientation(planet: UniversePlanet, index: number) {
+  return hashFraction(`${planet.id}:${index}:omega`) * Math.PI * 2;
+}
+
+function orbitEccentricity(planet: UniversePlanet) {
+  return clamp(planet.eccentricity ?? 0, 0, 0.82);
+}
+
+function orbitPlaneTilt(planet: UniversePlanet, index: number) {
+  const fallback = orbitInclination(planet, index);
+  if (planet.inclinationDeg === null || planet.inclinationDeg === undefined) return fallback;
+  const deviation = clamp((planet.inclinationDeg - 90) * (Math.PI / 180), -0.75, 0.75);
+  return clamp(deviation * 0.8 + fallback * 0.35, -0.62, 0.62);
+}
+
+function solveEccentricAnomaly(meanAnomaly: number, eccentricity: number) {
+  let eccentricAnomaly = meanAnomaly;
+  for (let iteration = 0; iteration < 6; iteration += 1) {
+    const delta = (eccentricAnomaly - eccentricity * Math.sin(eccentricAnomaly) - meanAnomaly)
+      / Math.max(1 - eccentricity * Math.cos(eccentricAnomaly), 0.0001);
+    eccentricAnomaly -= delta;
+    if (Math.abs(delta) < 0.000001) break;
+  }
+  return eccentricAnomaly;
+}
+
 function orbitAngleForPlanet(planet: UniversePlanet, index: number, timeDays: number) {
   const period = Math.max(planet.orbitalPeriodDays ?? 80 + index * 25, 0.4);
   return initialOrbitPhase(planet, index) + (timeDays / period) * Math.PI * 2;
 }
 
-function activeSystemLocalPosition(planet: UniversePlanet, index: number, timeDays: number) {
-  const orbitRadius = systemOrbitRadius(index, planet.semiMajorAxisAu);
-  const angle = orbitAngleForPlanet(planet, index, timeDays);
-  const tilt = orbitInclination(planet, index);
-  return new THREE.Vector3(
-    Math.cos(angle) * orbitRadius,
-    Math.sin(angle * 1.35 + tilt) * orbitRadius * 0.08,
-    Math.sin(angle) * orbitRadius,
+function orbitPointForEccentricAnomaly(planet: UniversePlanet, index: number, eccentricAnomaly: number) {
+  const semiMajorRadius = systemOrbitRadius(index, planet.semiMajorAxisAu);
+  const eccentricity = orbitEccentricity(planet);
+  const semiMinorRadius = semiMajorRadius * Math.sqrt(Math.max(1 - eccentricity * eccentricity, 0.0001));
+  const tilt = orbitPlaneTilt(planet, index);
+  const orientation = orbitOrientation(planet, index);
+  const point = new THREE.Vector3(
+    semiMajorRadius * (Math.cos(eccentricAnomaly) - eccentricity),
+    0,
+    semiMinorRadius * Math.sin(eccentricAnomaly),
   );
+  point.applyAxisAngle(WORLD_X_AXIS, tilt);
+  point.applyAxisAngle(WORLD_Y_AXIS, orientation);
+  return point;
+}
+
+function activeSystemLocalPosition(planet: UniversePlanet, index: number, timeDays: number) {
+  const meanAnomaly = orbitAngleForPlanet(planet, index, timeDays);
+  const eccentricAnomaly = solveEccentricAnomaly(meanAnomaly, orbitEccentricity(planet));
+  return orbitPointForEccentricAnomaly(planet, index, eccentricAnomaly);
+}
+
+function orbitTrackPoints(planet: UniversePlanet, index: number, segments = 180) {
+  const points: THREE.Vector3[] = [];
+  for (let step = 0; step < segments; step += 1) {
+    const eccentricAnomaly = (step / segments) * Math.PI * 2;
+    points.push(orbitPointForEccentricAnomaly(planet, index, eccentricAnomaly));
+  }
+  return points;
 }
 
 function previewAppearance(system: UniverseSystem, planet: UniversePlanet, science?: PlanetScienceBundle | null): PlanetPreviewAppearance {
@@ -2938,19 +2856,24 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
     <>
       <mesh>
         <sphereGeometry args={[radius, 168, 168]} />
-        <shaderMaterial ref={starMaterialRef} vertexShader={STAR_VERTEX_SHADER} fragmentShader={STAR_FRAGMENT_SHADER} uniforms={starUniforms} />
+        <shaderMaterial
+          ref={starMaterialRef}
+          vertexShader={STAR_VERTEX_SHADER}
+          fragmentShader={DISTANT_STAR_FRAGMENT_SHADER}
+          uniforms={starUniforms}
+        />
       </mesh>
-      <mesh scale={1.03 + style.brightnessScale * 0.06}>
+      <mesh scale={1.015 + style.brightnessScale * 0.035}>
         <sphereGeometry args={[radius, 136, 136]} />
         <meshBasicMaterial
           color={coreColor}
           transparent
-          opacity={clamp(0.02 + style.brightnessScale * 0.03, 0.02, 0.08)}
+          opacity={clamp(0.012 + style.brightnessScale * 0.02, 0.012, 0.045)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={1.1 + style.brightnessScale * 0.05}>
+      <mesh scale={1.065 + style.brightnessScale * 0.035}>
         <sphereGeometry args={[radius, 132, 132]} />
         <shaderMaterial
           ref={coronaMaterialRef}
@@ -2958,13 +2881,44 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
           fragmentShader={CORONA_FRAGMENT_SHADER}
           uniforms={coronaUniforms}
           transparent
-          opacity={0.52}
+          opacity={0.32}
           depthWrite={false}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
     </>
+  );
+}
+
+function OrbitTrack({
+  planet,
+  index,
+  active,
+}: {
+  planet: UniversePlanet;
+  index: number;
+  active: boolean;
+}) {
+  const eccentricity = orbitEccentricity(planet);
+  const geometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(orbitTrackPoints(planet, index)), [planet, index]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  if (eccentricity > 0.015) {
+    return (
+      <lineLoop geometry={geometry}>
+        <lineBasicMaterial color={active ? "#8fd5ff" : "#365978"} transparent opacity={active ? 0.92 : 0.5} />
+      </lineLoop>
+    );
+  }
+
+  const orbitRadius = systemOrbitRadius(index, planet.semiMajorAxisAu);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[orbitRadius - 0.004, orbitRadius + 0.004, 120]} />
+      <meshBasicMaterial color={active ? "#8fd5ff" : "#365978"} transparent opacity={active ? 0.92 : 0.5} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -3288,8 +3242,12 @@ function AnimatedPlanetSurface({
   }, [referenceAsset]);
 
   useFrame(({ clock }) => {
-    if (meshRef.current && !renderProps.tidalLock) {
-      meshRef.current.rotation.y = (clock.elapsedTime / Math.max(renderProps.rotationSeconds ?? 30, 1)) * Math.PI * 2;
+    if (meshRef.current) {
+      if (renderProps.tidalLock) {
+        meshRef.current.rotation.y = 0;
+      } else {
+        meshRef.current.rotation.y = (clock.elapsedTime / Math.max(renderProps.rotationSeconds ?? 30, 1)) * Math.PI * 2;
+      }
     }
 
     const canvas = textureState?.canvas;
@@ -3579,17 +3537,13 @@ function ActiveSystemPlanets({
   return (
     <>
       {system.planets.slice(0, 10).map((planet, index) => {
-        const orbitRadius = systemOrbitRadius(index, planet.semiMajorAxisAu);
         const active = selectedPlanet?.id === planet.id;
         const visualModel = planetVisualModel(system, planet, active ? selectedPlanetScience : null);
         const radius = planetRadius(planet.radiusEarth);
 
         return (
           <group key={planet.id}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[orbitRadius - 0.004, orbitRadius + 0.004, 120]} />
-              <meshBasicMaterial color={active ? "#8fd5ff" : "#365978"} transparent opacity={active ? 0.92 : 0.5} side={THREE.DoubleSide} />
-            </mesh>
+            <OrbitTrack planet={planet} index={index} active={active} />
             <group
               ref={(node) => {
                 planetRefs.current[planet.id] = node;
