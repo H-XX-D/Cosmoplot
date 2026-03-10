@@ -279,6 +279,10 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     float sparkle = noise(vUv * 34.0 + flow * 2.6 + vec2(13.4 - uTime * 0.09, uTime * 0.05));
     float pits = smoothstep(0.6, 0.9, fbm(vUv * 16.0 + flow * 1.8 + vec2(7.2 + uTime * 0.03, -uTime * 0.02)));
     float microPits = smoothstep(0.68, 0.95, fbm(vUv * 74.0 + flow * 4.1 + vec2(-uTime * 0.06, uTime * 0.04)));
+    float spotSeed = fbm(vUv * 5.6 + flow * 0.7 + vec2(41.0, -17.0));
+    float spotScatter = fbm(vUv * 9.4 - flow * 1.1 + vec2(-23.0, 58.0));
+    float spotClusterMask = smoothstep(0.72, 0.9, spotSeed) * smoothstep(0.48, 0.82, spotScatter);
+    float spotVoid = smoothstep(0.62, 0.94, fbm(vUv * 3.2 + vec2(91.0, -73.0)));
     float ember = smoothstep(0.52, 0.9, fbm(vUv * 22.0 + flow * 2.1 + vec2(17.6 + uTime * 0.06, -uTime * 0.03)));
     float shadow = smoothstep(0.56, 0.92, fbm(vUv * 40.0 + flow * 3.2 + vec2(9.8 - uTime * 0.04, uTime * 0.02)));
     float ridge = pow(abs(fbm(vUv * 46.0 - flow * 3.0 + vec2(uTime * 0.07, -uTime * 0.05)) - 0.5) * 2.0, 1.18);
@@ -290,9 +294,10 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     float coolBias = clamp(uMorphology, 0.0, 1.0);
     float hotBias = 1.0 - coolBias;
     float warmth = clamp(uWarmth, 0.0, 1.0);
-    pits *= mix(0.52, 1.12, coolBias);
-    shadow *= mix(0.56, 1.06, coolBias);
-    microPits *= mix(0.46, 1.18, coolBias);
+    float spotPresence = clamp(spotClusterMask * (1.0 - spotVoid * 0.58), 0.0, 1.0);
+    pits *= mix(0.28, 1.08, coolBias) * spotPresence;
+    shadow *= mix(0.56, 1.06, coolBias) * mix(0.42, 1.0, spotPresence);
+    microPits *= mix(0.22, 1.16, coolBias) * spotPresence;
     ridge *= mix(0.78, 1.08, coolBias);
     faculae *= mix(1.16, 0.82, coolBias);
     orangeVeins *= mix(1.04, 0.82, coolBias) * warmth;
@@ -328,10 +333,10 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     color = mix(color, blendSubtract(color, vec3(pits * 0.12 + microPits * 0.1 + shadow * 0.08)), mix(0.12, 0.26, coolBias));
     color = mix(color, blendColorBurn(color, burnTone), ember * 0.09 + pits * 0.13 + microPits * 0.11);
     color = mix(color, blendColorBurn(color, vec3(0.86 - shadow * 0.18 - ridge * 0.12 - pits * 0.09 - microPits * 0.08)), mix(0.16, 0.3, coolBias));
-    color = mix(color, blendColorDodge(color, vec3(0.12 + faculae * 0.24 + sparkle * 0.1)), 0.22);
-    color = mix(color, blendColorDodge(color, emberTone), ember * 0.1 + orangeVeins * 0.08);
+    color = mix(color, blendColorDodge(color, vec3(0.15 + faculae * 0.3 + sparkle * 0.125)), 0.275);
+    color = mix(color, blendColorDodge(color, emberTone), ember * 0.125 + orangeVeins * 0.1);
     color *= 1.0 - pits * 0.16 - microPits * 0.12;
-    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.17 + sparkle * 0.07 + faculae * 0.1)), 0.16);
+    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.2125 + sparkle * 0.0875 + faculae * 0.125)), 0.2);
     color += uCoreColor * coreHotspot * 0.075 + emberTone * orangeVeins * 0.04;
     color *= (1.01 - limb * 0.02) * pulse;
 
@@ -2874,7 +2879,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
     () => ({
       uTime: { value: 0 },
       uMorphology: { value: style.morphologyBias },
-      uWarmth: { value: 0.28 },
+      uWarmth: { value: clamp(style.morphologyBias * 0.18, 0.02, 0.18) },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
     }),
