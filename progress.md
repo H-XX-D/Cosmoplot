@@ -165,3 +165,5 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Tidally locked planets now hard-reset visual spin to zero in the active 3D system view instead of just skipping further rotation updates.
 - Orbit visualization now uses ellipse geometry and Kepler-style position solving when archive eccentricity is available, while low-eccentricity worlds keep the circular ring path for readability.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
+- Reworked the shared star surface shader toward higher detail with layered fbm convection/granulation, stronger multiply/burn structure, and a softer dodge stack so color survives while texture detail reads more clearly in both selected and field stars.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.

@@ -239,6 +239,18 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    mat2 rot = mat2(1.7, 1.2, -1.2, 1.7);
+    for (int i = 0; i < 4; i++) {
+      value += amplitude * noise(p);
+      p = rot * p * 1.92;
+      amplitude *= 0.54;
+    }
+    return value;
+  }
+
   vec3 blendMultiply(vec3 base, vec3 blend) {
     return base * blend;
   }
@@ -256,19 +268,31 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
   }
 
   void main() {
-    float granulation = noise(vUv * 18.0 + vec2(uTime * 0.08, -uTime * 0.05));
-    float pits = smoothstep(0.58, 0.88, noise(vUv * 12.0 + vec2(7.2 + uTime * 0.03, -uTime * 0.02)));
-    float sparkle = noise(vUv * 34.0 + vec2(13.4 - uTime * 0.09, uTime * 0.05));
-    float ember = smoothstep(0.5, 0.9, noise(vUv * 26.0 + vec2(17.6 + uTime * 0.06, -uTime * 0.03)));
-    float shadow = smoothstep(0.54, 0.9, noise(vUv * 44.0 + vec2(9.8 - uTime * 0.04, uTime * 0.02)));
-    float orangeVeins = smoothstep(0.52, 0.92, noise(vUv * 58.0 + vec2(4.6 + uTime * 0.05, uTime * 0.03)));
+    vec2 flow = vec2(
+      fbm(vUv * 14.0 + vec2(uTime * 0.05, -uTime * 0.03)),
+      fbm(vUv * 22.0 + vec2(-uTime * 0.04, uTime * 0.025))
+    );
+    float convection = fbm(vUv * 12.0 + flow * 1.4 + vec2(uTime * 0.05, -uTime * 0.03));
+    float granulation = fbm(vUv * 26.0 + flow * 2.2 + vec2(uTime * 0.08, -uTime * 0.05));
+    float subGranulation = fbm(vUv * 58.0 + flow * 3.6 + vec2(uTime * 0.11, -uTime * 0.08));
+    float sparkle = noise(vUv * 34.0 + flow * 2.6 + vec2(13.4 - uTime * 0.09, uTime * 0.05));
+    float pits = smoothstep(0.6, 0.9, fbm(vUv * 16.0 + flow * 1.8 + vec2(7.2 + uTime * 0.03, -uTime * 0.02)));
+    float microPits = smoothstep(0.68, 0.95, fbm(vUv * 74.0 + flow * 4.1 + vec2(-uTime * 0.06, uTime * 0.04)));
+    float ember = smoothstep(0.52, 0.9, fbm(vUv * 22.0 + flow * 2.1 + vec2(17.6 + uTime * 0.06, -uTime * 0.03)));
+    float shadow = smoothstep(0.56, 0.92, fbm(vUv * 40.0 + flow * 3.2 + vec2(9.8 - uTime * 0.04, uTime * 0.02)));
+    float ridge = pow(abs(fbm(vUv * 46.0 - flow * 3.0 + vec2(uTime * 0.07, -uTime * 0.05)) - 0.5) * 2.0, 1.18);
+    float faculae = smoothstep(0.56, 0.9, fbm(vUv * 52.0 + flow * 2.8 + vec2(uTime * 0.08, -uTime * 0.04)));
+    float orangeVeins = smoothstep(0.52, 0.92, fbm(vUv * 82.0 + flow * 4.8 + vec2(4.6 + uTime * 0.05, uTime * 0.03)));
     float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
-    float limb = pow(1.0 - facing, 1.5);
+    float limb = pow(1.0 - facing, 1.58);
     float coreHotspot = pow(max(0.0, 1.0 - distance(vUv, vec2(0.5)) * 2.0), 4.2);
     float coolBias = clamp(uMorphology, 0.0, 1.0);
     float hotBias = 1.0 - coolBias;
     pits *= mix(0.52, 1.12, coolBias);
     shadow *= mix(0.56, 1.06, coolBias);
+    microPits *= mix(0.46, 1.18, coolBias);
+    ridge *= mix(0.78, 1.08, coolBias);
+    faculae *= mix(1.16, 0.82, coolBias);
     orangeVeins *= mix(1.04, 0.82, coolBias);
     vec3 emberTone = mix(
       mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4),
@@ -276,20 +300,22 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
       hotBias * 0.82
     );
     vec3 burnTone = mix(uRimColor, mix(vec3(1.0, 0.5, 0.18), vec3(0.76, 0.86, 1.0), hotBias * 0.82), 0.24);
+    vec3 textureTone = mix(vec3(0.76, 0.62, 0.5), vec3(0.82, 0.88, 1.0), hotBias * 0.9);
     float pulse = 0.92 + 0.08 * sin(uTime * 2.2 + vUv.x * 18.0 + vUv.y * 11.0);
 
-    vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.96 + (1.0 - granulation) * 0.08, 0.0, 1.0));
-    color *= 0.88 + granulation * mix(0.1, 0.18, coolBias);
-    color = mix(color, blendMultiply(color, vec3(0.78, 0.66, 0.54)), mix(0.12, 0.24, coolBias));
-    color = mix(color, blendSubtract(color, vec3(pits * 0.12 + shadow * 0.1)), mix(0.12, 0.22, coolBias));
-    color = mix(color, blendColorBurn(color, burnTone), ember * 0.06 + pits * 0.08);
-    color = mix(color, blendColorDodge(color, vec3(0.18 + granulation * 0.22 + pits * 0.08)), 0.34);
-    color = mix(color, blendColorDodge(color, vec3(0.12 + (1.0 - limb) * 0.12 + sparkle * 0.08)), 0.14);
-    color = mix(color, blendColorDodge(color, emberTone), ember * 0.1 + orangeVeins * 0.06);
-    color *= 1.0 - pits * 0.24;
-    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.2 + sparkle * 0.08)), 0.18);
-    color += uCoreColor * coreHotspot * 0.1;
-    color *= (1.03 - limb * 0.02) * pulse;
+    vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.08, 0.0, 1.0));
+    color *= 0.9 + convection * 0.07 + granulation * mix(0.08, 0.16, coolBias) + subGranulation * mix(0.04, 0.12, coolBias);
+    color = mix(color, blendMultiply(color, textureTone - shadow * 0.1 - ridge * 0.04), mix(0.18, 0.34, coolBias));
+    color = mix(color, blendMultiply(color, vec3(0.88, 0.82, 0.74) - subGranulation * 0.06), mix(0.08, 0.18, coolBias));
+    color = mix(color, blendSubtract(color, vec3(pits * 0.12 + microPits * 0.1 + shadow * 0.08)), mix(0.12, 0.26, coolBias));
+    color = mix(color, blendColorBurn(color, burnTone), ember * 0.05 + pits * 0.08 + microPits * 0.06);
+    color = mix(color, blendColorBurn(color, vec3(0.9 - shadow * 0.12 - ridge * 0.08 - pits * 0.06)), mix(0.08, 0.18, coolBias));
+    color = mix(color, blendColorDodge(color, vec3(0.08 + faculae * 0.16 + sparkle * 0.06)), 0.12);
+    color = mix(color, blendColorDodge(color, emberTone), ember * 0.06 + orangeVeins * 0.04);
+    color *= 1.0 - pits * 0.16 - microPits * 0.12;
+    color = mix(color, blendColorDodge(color, vec3(coreHotspot * 0.12 + sparkle * 0.05 + faculae * 0.06)), 0.09);
+    color += uCoreColor * coreHotspot * 0.05 + emberTone * orangeVeins * 0.025;
+    color *= (1.01 - limb * 0.02) * pulse;
 
     gl_FragColor = vec4(color, 1.0);
   }
