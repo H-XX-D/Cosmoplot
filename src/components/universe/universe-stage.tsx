@@ -84,6 +84,7 @@ type DeepSkyObject = {
   sizePc: number;
   tint: string;
   accent: string;
+  pulsePeriodSeconds?: number;
 };
 
 type ReferenceStar = {
@@ -170,9 +171,9 @@ const DEEP_SKY_CATALOG: DeepSkyObject[] = [
   { name: "Triangulum Galaxy", kind: "galaxy", raDeg: 23.4621, decDeg: 30.6599, distancePc: 857000, sizePc: 30000, tint: "#69cfff", accent: "#ffd89d" },
   { name: "Large Magellanic Cloud", kind: "galaxy", raDeg: 80.8942, decDeg: -69.7561, distancePc: 49970, sizePc: 9000, tint: "#78d2ff", accent: "#fff0bf" },
   { name: "Small Magellanic Cloud", kind: "galaxy", raDeg: 13.1866, decDeg: -72.8286, distancePc: 61700, sizePc: 7000, tint: "#8cd8ff", accent: "#fff2c2" },
-  { name: "Vela Pulsar", kind: "pulsar", raDeg: 128.8369, decDeg: -45.1764, distancePc: 287, sizePc: 0.8, tint: "#8ac8ff", accent: "#d9f0ff" },
-  { name: "Geminga", kind: "pulsar", raDeg: 98.4756, decDeg: 17.7703, distancePc: 250, sizePc: 0.7, tint: "#87beff", accent: "#f0f8ff" },
-  { name: "PSR B1257+12", kind: "pulsar", raDeg: 194.546, decDeg: 12.682, distancePc: 710, sizePc: 0.7, tint: "#90c2ff", accent: "#edf6ff" },
+  { name: "Vela Pulsar", kind: "pulsar", raDeg: 128.8369, decDeg: -45.1764, distancePc: 287, sizePc: 0.8, tint: "#8ac8ff", accent: "#d9f0ff", pulsePeriodSeconds: 0.0893 },
+  { name: "Geminga", kind: "pulsar", raDeg: 98.4756, decDeg: 17.7703, distancePc: 250, sizePc: 0.7, tint: "#87beff", accent: "#f0f8ff", pulsePeriodSeconds: 0.237 },
+  { name: "PSR B1257+12", kind: "pulsar", raDeg: 194.546, decDeg: 12.682, distancePc: 710, sizePc: 0.7, tint: "#90c2ff", accent: "#edf6ff", pulsePeriodSeconds: 0.00622 },
 ];
 
 const REFERENCE_STAR_CATALOG: ReferenceStar[] = [
@@ -470,6 +471,43 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${alpha})`;
 }
 
+function mixHexColors(fromHex: string, toHex: string, amount: number) {
+  const mixed = new THREE.Color(fromHex);
+  mixed.lerp(new THREE.Color(toHex), clamp(amount, 0, 1));
+  return `#${mixed.getHexString()}`;
+}
+
+function tuneHexColor(hex: string, lightnessOffset = 0, saturationScale = 1) {
+  const color = new THREE.Color(hex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  color.getHSL(hsl);
+  color.setHSL(hsl.h, clamp(hsl.s * saturationScale, 0, 1), clamp(hsl.l + lightnessOffset, 0, 1));
+  return `#${color.getHexString()}`;
+}
+
+function kelvinHexColor(teff: number | null, fallback = "#ffd18a") {
+  if (!teff || Number.isNaN(teff)) return fallback;
+  const temperature = clamp(teff, 1000, 40000) / 100;
+  let red: number;
+  let green: number;
+  let blue: number;
+  if (temperature <= 66) {
+    red = 255;
+    green = 99.4708025861 * Math.log(temperature) - 161.1195681661;
+    blue = temperature <= 19 ? 0 : 138.5177312231 * Math.log(temperature - 10) - 305.0447927307;
+  } else {
+    red = 329.698727446 * Math.pow(temperature - 60, -0.1332047592);
+    green = 288.1221695283 * Math.pow(temperature - 60, -0.0755148492);
+    blue = 255;
+  }
+  const color = new THREE.Color(
+    clamp(red, 0, 255) / 255,
+    clamp(green, 0, 255) / 255,
+    clamp(blue, 0, 255) / 255,
+  );
+  return `#${color.getHexString()}`;
+}
+
 function extendedObjectDisplaySize(distancePc: number, sizePc: number) {
   const size = Math.max(Number(sizePc) || 0.2, 0.2);
   const distance = Math.max(Number(distancePc) || 0.5, size * 0.55);
@@ -738,12 +776,14 @@ function getNebulaTexture(entry: DeepSkyObject) {
 function stellarStyleFromData({
   seedKey,
   spectralType,
+  effectiveTemperatureK,
   luminositySolar,
   radiusSolar,
   apparentMagnitude,
 }: {
   seedKey: string;
   spectralType: string | null;
+  effectiveTemperatureK: number | null;
   luminositySolar: number | null;
   radiusSolar: number | null;
   apparentMagnitude?: number | null;
@@ -766,17 +806,30 @@ function stellarStyleFromData({
   };
 
   const palette = paletteByBucket[bucket] ?? paletteByBucket.Other;
+  const blackbody = kelvinHexColor(effectiveTemperatureK, palette.core);
+  const isHot = bucket === "O" || bucket === "B" || bucket === "A";
+  const core = tuneHexColor(mixHexColors(palette.core, blackbody, 0.72), isHot ? 0.04 : 0.02, isHot ? 0.88 : 1.08);
+  const rim = tuneHexColor(
+    mixHexColors(palette.rim, mixHexColors(blackbody, isHot ? "#7faeff" : bucket === "M" ? "#ff7f56" : "#ffbe7f", isHot ? 0.55 : 0.3), 0.62),
+    -0.05,
+    isHot ? 0.94 : 1.12,
+  );
+  const corona = tuneHexColor(mixHexColors(palette.corona, blackbody, 0.76), 0.08, isHot ? 0.84 : 1.02);
+  const halo = tuneHexColor(mixHexColors(palette.halo, blackbody, 0.68), 0.12, 0.78);
   const hotStarBoost = bucket === "O" || bucket === "B" || bucket === "A";
   const brightnessScale = apparentMagnitude !== null && apparentMagnitude !== undefined
     ? clamp(1.34 - apparentMagnitude * 0.08 + (hotStarBoost ? 0.1 : 0), 0.42, 1.6)
     : clamp(0.72 + luminosity * 0.24 + variation * 0.08 + (hotStarBoost ? 0.14 : 0), 0.58, 1.34);
-  const sizeLift = clamp(0.9 + luminosity * 0.16 + Math.sqrt(radius) * 0.1 + brightnessScale * 0.05 + variation * 0.05, 0.84, 1.52);
+  const sizeLift = clamp(0.7 + Math.pow(radius, 0.5) * 0.34 + luminosity * 0.1 + brightnessScale * 0.03 + variation * 0.03, 0.72, 1.86);
 
   return {
-    ...palette,
+    core,
+    rim,
+    corona,
+    halo,
     radiusScale: sizeLift,
-    glowScale: clamp(1.48 + luminosity * 0.34 + brightnessScale * 0.22 + variation * 0.12 + (hotStarBoost ? 0.18 : 0), 1.4, 2.55),
-    glowOpacity: clamp(0.08 + luminosity * 0.08 + brightnessScale * 0.08 + variation * 0.03 + (hotStarBoost ? 0.05 : 0), 0.08, 0.4),
+    glowScale: clamp(1.42 + luminosity * 0.32 + brightnessScale * 0.18 + variation * 0.08 + (hotStarBoost ? 0.14 : 0), 1.34, 2.38),
+    glowOpacity: clamp(0.08 + luminosity * 0.06 + brightnessScale * 0.06 + variation * 0.02 + (hotStarBoost ? 0.04 : 0), 0.08, 0.34),
     brightnessScale,
   };
 }
@@ -785,6 +838,7 @@ function stellarStyle(system: UniverseSystem): StarRenderStyle {
   return stellarStyleFromData({
     seedKey: system.id,
     spectralType: system.stellar.spectralType,
+    effectiveTemperatureK: system.stellar.effectiveTemperatureK,
     luminositySolar: stellarLuminosity(system),
     radiusSolar: system.stellar.radiusSolar,
     apparentMagnitude: system.stellar.photometry.vMag ?? system.stellar.photometry.jMag ?? system.stellar.photometry.kMag,
@@ -795,6 +849,7 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
   const base = stellarStyleFromData({
     seedKey: anchor.id,
     spectralType: anchor.spectralType ?? "A",
+    effectiveTemperatureK: anchor.effectiveTemperatureK ?? 10000,
     luminositySolar: 0.001,
     radiusSolar: anchor.radiusSolar ?? 0.012,
   });
@@ -814,19 +869,18 @@ function whiteDwarfStyle(anchor: WhiteDwarfAnchor): StarRenderStyle {
 
 function stellarColor(teff: number | null, spectralType: string | null = null) {
   const bucket = spectralBucket(spectralType);
-  if (bucket === "O") return "#6ea9ff";
-  if (bucket === "B") return "#a9cbff";
-  if (bucket === "A") return "#f7fbff";
-  if (bucket === "F") return "#fff2d2";
-  if (bucket === "G") return "#ffd88f";
-  if (bucket === "K") return "#ffb16f";
-  if (bucket === "M") return "#ff845e";
-  if (!teff) return "#ffd18a";
-  if (teff >= 9000) return "#a8c2ff";
-  if (teff >= 7500) return "#d7e3ff";
-  if (teff >= 6000) return "#ffe9bc";
-  if (teff >= 5000) return "#ffc88f";
-  return "#ff946f";
+  const fallbackByBucket: Record<string, string> = {
+    O: "#75aaff",
+    B: "#a9cbff",
+    A: "#f7fbff",
+    F: "#fff3d9",
+    G: "#ffe09c",
+    K: "#ffb977",
+    M: "#ff855c",
+    Other: "#ffd18a",
+    Unspecified: "#ffd18a",
+  };
+  return kelvinHexColor(teff, fallbackByBucket[bucket] ?? "#ffd18a");
 }
 
 function spectralBucket(spectralType: string | null) {
@@ -871,9 +925,9 @@ function selectedStarRadius(system: UniverseSystem) {
   const radius = Math.max(system.stellar.radiusSolar ?? 1, 0.25);
   const apparentMagnitude = system.stellar.photometry.vMag ?? system.stellar.photometry.jMag ?? system.stellar.photometry.kMag;
   const brightnessBoost = apparentMagnitude !== null && apparentMagnitude !== undefined
-    ? clamp((8.5 - apparentMagnitude) * 0.012, 0, 0.12)
+    ? clamp((8.5 - apparentMagnitude) * 0.01, 0, 0.09)
     : 0;
-  return clamp(0.28 + Math.sqrt(radius) * 0.072 + luminosity * 0.05 + brightnessBoost, 0.28, 0.66);
+  return clamp(0.22 + Math.pow(radius, 0.55) * 0.11 + luminosity * 0.045 + brightnessBoost, 0.24, 0.76);
 }
 
 function planetRadius(radiusEarth: number | null) {
@@ -2981,6 +3035,10 @@ function DeepSkyAnchor({
   onHoverChange: (hover: StageHover | null) => void;
 }) {
   const texture = useMemo(() => getNebulaTexture(entry), [entry]);
+  const primaryRef = useRef<THREE.Sprite>(null);
+  const primaryMaterialRef = useRef<THREE.SpriteMaterial>(null);
+  const hazeMaterialRef = useRef<THREE.SpriteMaterial>(null);
+  const bloomMaterialRef = useRef<THREE.SpriteMaterial>(null);
   const primaryOpacity =
     entry.kind === "dark"
       ? 0.92
@@ -3035,6 +3093,27 @@ function DeepSkyAnchor({
     };
   }, [onHoverChange]);
 
+  useFrame(({ clock }) => {
+    if (entry.kind !== "pulsar") return;
+    const period = entry.pulsePeriodSeconds ?? 0.2;
+    const phase = (clock.elapsedTime % period) / period;
+    const spike = Math.pow(Math.max(0, Math.cos(phase * Math.PI * 2)), 18);
+    const bloom = Math.pow(Math.max(0, Math.cos(phase * Math.PI * 2)), 10);
+    if (primaryMaterialRef.current) {
+      primaryMaterialRef.current.opacity = primaryOpacity + spike * 0.48;
+    }
+    if (hazeMaterialRef.current) {
+      hazeMaterialRef.current.opacity = hazeOpacity + bloom * 0.18;
+    }
+    if (bloomMaterialRef.current) {
+      bloomMaterialRef.current.opacity = bloomOpacity + bloom * 0.42;
+    }
+    if (primaryRef.current) {
+      const pulseScale = 1 + spike * 0.22;
+      primaryRef.current.scale.set(scale * pulseScale, scale * pulseScale, 1);
+    }
+  });
+
   function showHover(event: ThreeEvent<PointerEvent>) {
     onHoverChange({
       x: event.nativeEvent.offsetX,
@@ -3044,6 +3123,9 @@ function DeepSkyAnchor({
       lines: [
         deepSkyKindLabel(entry.kind),
         `${formatNumber(distanceLy(entry.distancePc), 1)} ly · ${formatNumber(entry.distancePc, 0)} pc`,
+        ...(entry.kind === "pulsar" && entry.pulsePeriodSeconds
+          ? [`Spin period: ${formatNumber(entry.pulsePeriodSeconds * 1000, 2)} ms · ${formatNumber(1 / entry.pulsePeriodSeconds, 2)} Hz`]
+          : []),
         `XYZ: ${formatCartesian(cartesianPc, 0)}`,
       ],
     });
@@ -3052,12 +3134,14 @@ function DeepSkyAnchor({
   return (
     <group>
       <sprite
+        ref={primaryRef}
         scale={[scale, scale, 1]}
         onPointerOver={showHover}
         onPointerMove={showHover}
         onPointerOut={() => onHoverChange(null)}
       >
         <spriteMaterial
+          ref={primaryMaterialRef}
           attach="material"
           map={texture}
           color="#ffffff"
@@ -3070,6 +3154,7 @@ function DeepSkyAnchor({
       </sprite>
       <sprite scale={[scale * hazeScale, scale * hazeScale, 1]} raycast={() => null}>
         <spriteMaterial
+          ref={hazeMaterialRef}
           attach="material"
           map={texture}
           color={entry.kind === "dark" || entry.kind === "molecular" ? entry.tint : "#ffffff"}
@@ -3082,6 +3167,7 @@ function DeepSkyAnchor({
       </sprite>
       <sprite scale={[scale * bloomScale, scale * bloomScale, 1]} raycast={() => null}>
         <spriteMaterial
+          ref={bloomMaterialRef}
           attach="material"
           map={texture}
           color={entry.kind === "dark" || entry.kind === "molecular" ? entry.accent : entry.tint}
@@ -3577,6 +3663,7 @@ function StageScene({
         const style = stellarStyleFromData({
           seedKey: `reference-${star.name}`,
           spectralType: star.spectralType,
+          effectiveTemperatureK: star.effectiveTemperatureK,
           luminositySolar: star.luminositySolar,
           radiusSolar: star.radiusSolar,
         });

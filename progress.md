@@ -153,3 +153,8 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - Extended the legacy-narrative sanitizer again in src/lib/science/local/legacy-analysis.ts to catch recurring `validated`, `Framework Validation`, `guaranteed`, and similar framework-overclaim phrasing that remained in the local documents.
 - Added explicit evidence-class labels to the active hover/readout layer in src/components/universe/universe-stage.tsx so planet, host-star, reference-star, and white-dwarf tooltips now distinguish archive/catalog values, derived quantities, and Monte Carlo intervals.
 - Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅.
+
+- Reintroduced star color conservatively in src/components/universe/universe-stage.tsx through palette generation only: blackbody-style temperature mixing now feeds the existing stable shaders instead of changing shader behavior.
+- Strengthened star sizing so physical stellar radius drives visible scale more strongly, while apparent magnitude mainly affects glow/visibility rather than overwhelming size.
+- Added per-object pulsar spin periods to the deep-sky pulsar catalog and now pulse those anchors from their own periods, with hover readouts in milliseconds and hertz.
+- Validation after this pass: npm run lint ✅, npm run build ✅, production server restarted ✅, Playwright smoke screenshot ✅ at .playwright-cli/page-2026-03-10T00-59-32-223Z.png.
