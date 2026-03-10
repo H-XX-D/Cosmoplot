@@ -221,6 +221,7 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
 
   uniform float uTime;
   uniform float uMorphology;
+  uniform float uWarmth;
   uniform vec3 uCoreColor;
   uniform vec3 uRimColor;
 
@@ -288,19 +289,36 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
     float coreHotspot = pow(max(0.0, 1.0 - distance(vUv, vec2(0.5)) * 2.0), 4.2);
     float coolBias = clamp(uMorphology, 0.0, 1.0);
     float hotBias = 1.0 - coolBias;
+    float warmth = clamp(uWarmth, 0.0, 1.0);
     pits *= mix(0.52, 1.12, coolBias);
     shadow *= mix(0.56, 1.06, coolBias);
     microPits *= mix(0.46, 1.18, coolBias);
     ridge *= mix(0.78, 1.08, coolBias);
     faculae *= mix(1.16, 0.82, coolBias);
-    orangeVeins *= mix(1.04, 0.82, coolBias);
+    orangeVeins *= mix(1.04, 0.82, coolBias) * warmth;
     vec3 emberTone = mix(
-      mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4),
+      mix(
+        mix(vec3(1.0, 0.66, 0.24), vec3(0.94, 0.4, 0.12), pits * 0.4),
+        mix(uCoreColor, uRimColor, 0.4),
+        1.0 - warmth
+      ),
       mix(vec3(0.9, 0.95, 1.0), vec3(0.74, 0.84, 1.0), pits * 0.3),
       hotBias * 0.82
     );
-    vec3 burnTone = mix(uRimColor, mix(vec3(1.0, 0.5, 0.18), vec3(0.76, 0.86, 1.0), hotBias * 0.82), 0.24);
-    vec3 textureTone = mix(vec3(0.76, 0.62, 0.5), vec3(0.82, 0.88, 1.0), hotBias * 0.9);
+    vec3 burnTone = mix(
+      uRimColor,
+      mix(
+        mix(vec3(1.0, 0.5, 0.18), uRimColor, 1.0 - warmth),
+        vec3(0.76, 0.86, 1.0),
+        hotBias * 0.82
+      ),
+      0.24
+    );
+    vec3 textureTone = mix(
+      mix(vec3(0.76, 0.62, 0.5), vec3(0.76, 0.78, 0.88), 1.0 - warmth),
+      vec3(0.82, 0.88, 1.0),
+      hotBias * 0.9
+    );
     float pulse = 0.92 + 0.08 * sin(uTime * 2.2 + vUv.x * 18.0 + vUv.y * 11.0);
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.08, 0.0, 1.0));
@@ -2856,6 +2874,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
     () => ({
       uTime: { value: 0 },
       uMorphology: { value: style.morphologyBias },
+      uWarmth: { value: 0.28 },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
     }),
@@ -2959,6 +2978,7 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
     () => ({
       uTime: { value: 0 },
       uMorphology: { value: style.morphologyBias },
+      uWarmth: { value: 1 },
       uCoreColor: { value: coreColor },
       uRimColor: { value: rimColor },
     }),
