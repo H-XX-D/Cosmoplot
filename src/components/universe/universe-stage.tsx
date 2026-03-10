@@ -360,9 +360,9 @@ const CORONA_FRAGMENT_SHADER = `
     float flicker = noise(vUv * 8.0 + vec2(uTime * 0.05, -uTime * 0.04));
     float plume = noise(vUv * 22.0 - vec2(uTime * 0.11, uTime * 0.07));
     float rayField = rays(vUv, uTime);
-    float shell = smoothstep(0.18, 0.96, radius) * (1.0 - smoothstep(0.84, 1.2, radius));
-    float alpha = fresnel * (0.22 + flicker * 0.14 + plume * 0.1) + rayField * 0.24 * shell;
-    vec3 coronaColor = mix(uColor, vec3(1.0, 0.84, 0.58), 0.28 + rayField * 0.22);
+    float shell = smoothstep(0.42, 0.94, radius) * (1.0 - smoothstep(0.84, 1.2, radius));
+    float alpha = (fresnel * (0.12 + flicker * 0.08 + plume * 0.06) + rayField * 0.14 * shell) * smoothstep(0.28, 0.92, radius);
+    vec3 coronaColor = mix(uColor, vec3(1.0), 0.08 + rayField * 0.06 + plume * 0.04);
     gl_FragColor = vec4(coronaColor, alpha);
   }
 `;
@@ -2899,7 +2899,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={1.065 + style.brightnessScale * 0.035}>
+      <mesh scale={1.075 + style.brightnessScale * 0.04}>
         <sphereGeometry args={[radius, 132, 132]} />
         <shaderMaterial
           ref={coronaMaterialRef}
@@ -2907,7 +2907,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
           fragmentShader={CORONA_FRAGMENT_SHADER}
           uniforms={coronaUniforms}
           transparent
-          opacity={0.32}
+          opacity={0.22}
           depthWrite={false}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
