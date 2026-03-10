@@ -11,7 +11,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { DISPLAY_LOG_SCALE, equatorialToCartesianPc, logScaledVector } from "@/lib/science/coordinates";
@@ -25,7 +25,7 @@ import {
   type PlanetRegime,
 } from "@/components/ui/planet-globe";
 import { clamp, hsla, lerp } from "@/lib/utils";
-import type { PlanetScienceBundle, RetentionAudit, UniversePlanet, UniverseSnapshot, UniverseSystem, WhiteDwarfAnchor } from "@/lib/science/types";
+import type { PlanetScienceBundle, RetentionAudit, SourceDescriptor, UniversePlanet, UniverseSnapshot, UniverseSystem, WhiteDwarfAnchor } from "@/lib/science/types";
 
 type MetricKind = "observed" | "inferred" | "derived" | "source";
 
@@ -73,7 +73,7 @@ type CameraFlight = {
   duration: number;
 };
 
-type DeepSkyKind = "emission" | "dark" | "molecular" | "planetary" | "supernova" | "galaxy" | "pulsar";
+type DeepSkyKind = "emission" | "dark" | "molecular" | "planetary" | "supernova" | "galaxy" | "pulsar" | "blackHole" | "quasar";
 
 type DeepSkyObject = {
   name: string;
@@ -85,6 +85,9 @@ type DeepSkyObject = {
   tint: string;
   accent: string;
   pulsePeriodSeconds?: number;
+  massSolar?: number;
+  sourceUrl?: string;
+  artReferenceUrl?: string;
 };
 
 type ReferenceStar = {
@@ -122,6 +125,14 @@ type PlanetViewSyncRef = {
   current: PlanetGlobeLiveView | null;
 };
 
+type FocusKind = "planet" | "system" | "deepSky" | "whiteDwarf" | "referenceStar";
+
+type StageSelectionCommand =
+  | { kind: "system"; key: string; nonce: number }
+  | { kind: "deepSky"; key: string; nonce: number }
+  | { kind: "whiteDwarf"; key: string; nonce: number }
+  | { kind: "referenceStar"; key: string; nonce: number };
+
 type AdvancedStageFilters = {
   minFlux: number;
   maxFlux: number;
@@ -154,6 +165,165 @@ const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
   uncertaintyMode: "median",
 };
 
+function sanitizeFilenamePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "object";
+}
+
+function downloadTextFile(filename: string, content: string, mime = "text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function metricRowsToCsv(section: string, metrics: Metric[]) {
+  return metrics.map((metric) => [
+    section,
+    metric.kind,
+    metric.label,
+    metric.value,
+    metric.note,
+    metric.provenance ?? "",
+    metric.equation ?? "",
+  ]);
+}
+
+function chartRowsToCsv(rows: ChartRow[]) {
+  return rows.map((row) => [
+    "chart",
+    row.label,
+    row.value,
+    row.max,
+    row.note,
+    row.intervalLow ?? "",
+    row.intervalHigh ?? "",
+  ]);
+}
+
+function focusObjectNoun(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "deep-sky object";
+    case "whiteDwarf":
+      return "white dwarf";
+    case "referenceStar":
+      return "reference star";
+    case "system":
+      return "system";
+    default:
+      return "planet";
+  }
+}
+
+function observedSectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Observed Deep-Sky Inputs";
+    case "whiteDwarf":
+      return "Observed White-Dwarf Inputs";
+    case "referenceStar":
+      return "Observed Stellar Inputs";
+    case "system":
+      return "Observed System Inputs";
+    default:
+      return "Observed Inputs";
+  }
+}
+
+function derivedSectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Derived Spatial Context";
+    case "whiteDwarf":
+      return "Derived Degenerate-Star Context";
+    case "referenceStar":
+      return "Derived Stellar Context";
+    case "system":
+      return "Derived System Context";
+    default:
+      return "Inferred / Model-Derived";
+  }
+}
+
+function uncertaintySectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Catalog Confidence Notes";
+    case "whiteDwarf":
+      return "White-Dwarf Uncertainty Notes";
+    case "referenceStar":
+      return "Reference-Star Uncertainty Notes";
+    default:
+      return "Formal Uncertainty Propagation";
+  }
+}
+
+function planningSectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Deep-Sky Planning Context";
+    case "whiteDwarf":
+      return "Degenerate-Star Planning Context";
+    case "referenceStar":
+      return "Reference-Star Planning Context";
+    default:
+      return "Observation Planning Output";
+  }
+}
+
+function chartsSectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Deep-Sky Chart Stack";
+    case "whiteDwarf":
+      return "White-Dwarf Chart Stack";
+    case "referenceStar":
+      return "Reference-Star Chart Stack";
+    case "system":
+      return "System Chart Stack";
+    default:
+      return "Science Chart Stack";
+  }
+}
+
+function analysisSectionTitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Deep-Sky Analysis";
+    case "whiteDwarf":
+      return "White-Dwarf Analysis";
+    case "referenceStar":
+      return "Reference-Star Analysis";
+    case "system":
+      return "System Analysis";
+    default:
+      return "Full Maximal Analysis";
+  }
+}
+
+function analysisSectionSubtitle(focusKind: FocusKind | null) {
+  switch (focusKind) {
+    case "deepSky":
+      return "Catalog and scene context retained under the map";
+    case "whiteDwarf":
+      return "Degenerate-star lab context retained under the map";
+    case "referenceStar":
+      return "Reference-star context retained under the map";
+    case "system":
+      return "System-level narrative retained under the map";
+    default:
+      return "Science-side narrative retained under the map";
+  }
+}
+
 const WORLD_X_AXIS = new THREE.Vector3(1, 0, 0);
 const WORLD_Y_AXIS = new THREE.Vector3(0, 1, 0);
 
@@ -173,9 +343,84 @@ const DEEP_SKY_CATALOG: DeepSkyObject[] = [
   { name: "Triangulum Galaxy", kind: "galaxy", raDeg: 23.4621, decDeg: 30.6599, distancePc: 857000, sizePc: 30000, tint: "#69cfff", accent: "#ffd89d" },
   { name: "Large Magellanic Cloud", kind: "galaxy", raDeg: 80.8942, decDeg: -69.7561, distancePc: 49970, sizePc: 9000, tint: "#78d2ff", accent: "#fff0bf" },
   { name: "Small Magellanic Cloud", kind: "galaxy", raDeg: 13.1866, decDeg: -72.8286, distancePc: 61700, sizePc: 7000, tint: "#8cd8ff", accent: "#fff2c2" },
+  {
+    name: "Whirlpool Galaxy",
+    kind: "galaxy",
+    raDeg: 202.4696,
+    decDeg: 47.1952,
+    distancePc: 8580000,
+    sizePc: 76000,
+    tint: "#82d4ff",
+    accent: "#ffe1b8",
+    sourceUrl: "https://science.nasa.gov/asset/hubble/the-whirlpool-galaxy-m51/",
+    artReferenceUrl: "https://science.nasa.gov/asset/hubble/the-whirlpool-galaxy-m51/",
+  },
+  {
+    name: "Sombrero Galaxy",
+    kind: "galaxy",
+    raDeg: 189.9975,
+    decDeg: -11.6231,
+    distancePc: 9550000,
+    sizePc: 49000,
+    tint: "#95d7ff",
+    accent: "#ffe6b7",
+    sourceUrl: "https://science.nasa.gov/asset/hubble/sombrero-galaxy/",
+    artReferenceUrl: "https://science.nasa.gov/asset/hubble/sombrero-galaxy/",
+  },
+  {
+    name: "M87 Galaxy",
+    kind: "galaxy",
+    raDeg: 187.7059,
+    decDeg: 12.3911,
+    distancePc: 16800000,
+    sizePc: 120000,
+    tint: "#8fd4ff",
+    accent: "#ffe0b6",
+    sourceUrl: "https://science.nasa.gov/asset/hubble/m87",
+    artReferenceUrl: "https://science.nasa.gov/asset/hubble/m87",
+  },
   { name: "Vela Pulsar", kind: "pulsar", raDeg: 128.8369, decDeg: -45.1764, distancePc: 287, sizePc: 0.8, tint: "#8ac8ff", accent: "#d9f0ff", pulsePeriodSeconds: 0.0893 },
   { name: "Geminga", kind: "pulsar", raDeg: 98.4756, decDeg: 17.7703, distancePc: 250, sizePc: 0.7, tint: "#87beff", accent: "#f0f8ff", pulsePeriodSeconds: 0.237 },
   { name: "PSR B1257+12", kind: "pulsar", raDeg: 194.546, decDeg: 12.682, distancePc: 710, sizePc: 0.7, tint: "#90c2ff", accent: "#edf6ff", pulsePeriodSeconds: 0.00622 },
+  {
+    name: "Sagittarius A*",
+    kind: "blackHole",
+    raDeg: 266.4168,
+    decDeg: -29.0078,
+    distancePc: 7940,
+    sizePc: 2.4,
+    tint: "#82c4ff",
+    accent: "#ffb36d",
+    massSolar: 4150000,
+    sourceUrl: "https://science.nasa.gov/universe/black-holes/sagittarius-a/",
+    artReferenceUrl: "https://science.nasa.gov/asset/webb/flaring-disk-around-milky-ways-black-hole-artists-concept",
+  },
+  {
+    name: "Cygnus X-1",
+    kind: "blackHole",
+    raDeg: 299.5903,
+    decDeg: 35.2016,
+    distancePc: 1860,
+    sizePc: 1.2,
+    tint: "#88c2ff",
+    accent: "#ff905c",
+    massSolar: 21.2,
+    sourceUrl: "https://science.nasa.gov/universe/black-holes/cygnus-x-1/",
+    artReferenceUrl: "https://science.nasa.gov/asset/webb/black-hole-cygnus-x-1-illustration/",
+  },
+  {
+    name: "3C 273",
+    kind: "quasar",
+    raDeg: 187.2779,
+    decDeg: 2.0524,
+    distancePc: 749000000,
+    sizePc: 180,
+    tint: "#a6d2ff",
+    accent: "#fff1d0",
+    massSolar: 886000000,
+    sourceUrl: "https://science.nasa.gov/asset/webb/quasar-illustration/",
+    artReferenceUrl: "https://science.nasa.gov/asset/webb/quasar-illustration/",
+  },
 ];
 
 const REFERENCE_STAR_CATALOG: ReferenceStar[] = [
@@ -202,6 +447,12 @@ const DEEP_SKY_ART: Partial<Record<string, string>> = {
   "Eagle Nebula": "/assets/deep-sky/eagle-nebula.png",
   "Crab Nebula": "/assets/deep-sky/crab-nebula.png",
   "Helix Nebula": "/assets/deep-sky/helix-nebula.jpg",
+  "Whirlpool Galaxy": "/assets/deep-sky/whirlpool-galaxy.jpg",
+  "Sombrero Galaxy": "/assets/deep-sky/sombrero-galaxy.png",
+  "M87 Galaxy": "/assets/deep-sky/m87-galaxy.jpeg",
+  "Sagittarius A*": "/assets/deep-sky/sagittarius-a-star.png",
+  "Cygnus X-1": "/assets/deep-sky/cygnus-x1-black-hole.png",
+  "3C 273": "/assets/deep-sky/quasar-illustration.png",
 };
 
 const STAR_VERTEX_SHADER = `
@@ -269,25 +520,33 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
   }
 
   void main() {
+    vec2 wobbleA = vec2(
+      sin(uTime * 0.16 + vUv.y * 16.0) + sin(uTime * 0.09 + vUv.x * 10.0),
+      cos(uTime * 0.13 + vUv.x * 14.0) + sin(uTime * 0.07 + vUv.y * 12.0)
+    ) * 0.045;
+    vec2 wobbleB = vec2(
+      sin(uTime * 0.12 + vUv.x * 19.0) - cos(uTime * 0.08 + vUv.y * 17.0),
+      cos(uTime * 0.11 + vUv.y * 21.0) + sin(uTime * 0.06 + vUv.x * 23.0)
+    ) * 0.032;
     vec2 flow = vec2(
-      fbm(vUv * 14.0 + vec2(uTime * 0.05, -uTime * 0.03)),
-      fbm(vUv * 22.0 + vec2(-uTime * 0.04, uTime * 0.025))
-    );
-    float convection = fbm(vUv * 12.0 + flow * 1.4 + vec2(uTime * 0.05, -uTime * 0.03));
-    float granulation = fbm(vUv * 26.0 + flow * 2.2 + vec2(uTime * 0.08, -uTime * 0.05));
-    float subGranulation = fbm(vUv * 58.0 + flow * 3.6 + vec2(uTime * 0.11, -uTime * 0.08));
-    float sparkle = noise(vUv * 34.0 + flow * 2.6 + vec2(13.4 - uTime * 0.09, uTime * 0.05));
-    float pits = smoothstep(0.6, 0.9, fbm(vUv * 16.0 + flow * 1.8 + vec2(7.2 + uTime * 0.03, -uTime * 0.02)));
-    float microPits = smoothstep(0.68, 0.95, fbm(vUv * 74.0 + flow * 4.1 + vec2(-uTime * 0.06, uTime * 0.04)));
+      fbm(vUv * 14.0 + wobbleA + vec2(2.4, -1.7)),
+      fbm(vUv * 22.0 + wobbleB + vec2(-3.1, 4.6))
+    ) - 0.5;
+    float convection = fbm(vUv * 12.0 + flow * 1.28 + wobbleA * 1.8);
+    float granulation = fbm(vUv * 26.0 + flow * 2.0 + wobbleB * 2.2);
+    float subGranulation = fbm(vUv * 58.0 + flow * 3.2 + wobbleA * 2.8 + wobbleB * 1.2);
+    float sparkle = noise(vUv * 34.0 + flow * 2.2 + wobbleB * 2.4 + vec2(13.4, 0.0));
+    float pits = smoothstep(0.6, 0.9, fbm(vUv * 16.0 + flow * 1.55 + wobbleA * 2.1 + vec2(7.2, 0.0)));
+    float microPits = smoothstep(0.68, 0.95, fbm(vUv * 74.0 + flow * 3.5 + wobbleB * 3.2));
     float spotSeed = fbm(vUv * 5.6 + flow * 0.7 + vec2(41.0, -17.0));
     float spotScatter = fbm(vUv * 9.4 - flow * 1.1 + vec2(-23.0, 58.0));
     float spotClusterMask = smoothstep(0.72, 0.9, spotSeed) * smoothstep(0.48, 0.82, spotScatter);
     float spotVoid = smoothstep(0.62, 0.94, fbm(vUv * 3.2 + vec2(91.0, -73.0)));
-    float ember = smoothstep(0.52, 0.9, fbm(vUv * 22.0 + flow * 2.1 + vec2(17.6 + uTime * 0.06, -uTime * 0.03)));
-    float shadow = smoothstep(0.56, 0.92, fbm(vUv * 40.0 + flow * 3.2 + vec2(9.8 - uTime * 0.04, uTime * 0.02)));
-    float ridge = pow(abs(fbm(vUv * 46.0 - flow * 3.0 + vec2(uTime * 0.07, -uTime * 0.05)) - 0.5) * 2.0, 1.18);
-    float faculae = smoothstep(0.56, 0.9, fbm(vUv * 52.0 + flow * 2.8 + vec2(uTime * 0.08, -uTime * 0.04)));
-    float orangeVeins = smoothstep(0.52, 0.92, fbm(vUv * 82.0 + flow * 4.8 + vec2(4.6 + uTime * 0.05, uTime * 0.03)));
+    float ember = smoothstep(0.52, 0.9, fbm(vUv * 22.0 + flow * 2.0 + wobbleA * 1.7 + vec2(17.6, -3.1)));
+    float shadow = smoothstep(0.56, 0.92, fbm(vUv * 40.0 + flow * 2.8 + wobbleB * 2.4 + vec2(9.8, 2.4)));
+    float ridge = pow(abs(fbm(vUv * 46.0 - flow * 2.6 + wobbleA * 2.3 - wobbleB * 1.2) - 0.5) * 2.0, 1.18);
+    float faculae = smoothstep(0.56, 0.9, fbm(vUv * 52.0 + flow * 2.35 + wobbleB * 2.0 + vec2(5.7, -7.4)));
+    float orangeVeins = smoothstep(0.52, 0.92, fbm(vUv * 82.0 + flow * 4.1 + wobbleA * 3.4 + vec2(4.6, 1.8)));
     float facing = clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
     float limb = pow(1.0 - facing, 1.58);
     float coreHotspot = pow(max(0.0, 1.0 - distance(vUv, vec2(0.5)) * 2.0), 4.2);
@@ -324,7 +583,7 @@ const DISTANT_STAR_FRAGMENT_SHADER = `
       vec3(0.82, 0.88, 1.0),
       hotBias * 0.9
     );
-    float pulse = 0.92 + 0.08 * sin(uTime * 2.2 + vUv.x * 18.0 + vUv.y * 11.0);
+    float pulse = 0.96 + 0.04 * sin(uTime * 1.25 + fbm(vUv * 7.0 + flow * 1.6) * 6.28318);
 
     vec3 color = mix(uCoreColor, uRimColor, clamp(limb * 0.94 + (1.0 - convection) * 0.08, 0.0, 1.0));
     color *= 0.9 + convection * 0.07 + granulation * mix(0.08, 0.16, coolBias) + subGranulation * mix(0.04, 0.12, coolBias);
@@ -477,6 +736,10 @@ function deepSkyKindLabel(kind: DeepSkyKind) {
       return "Nearby galaxy";
     case "pulsar":
       return "Pulsar";
+    case "blackHole":
+      return "Black-hole system";
+    case "quasar":
+      return "Quasar";
     default:
       return "Emission nebula";
   }
@@ -529,6 +792,8 @@ function getNebulaTexture(entry: DeepSkyObject) {
       ctx.filter =
         entry.kind === "dark" || entry.kind === "molecular"
           ? "saturate(1.08) contrast(1.16) brightness(0.86)"
+          : entry.kind === "blackHole" || entry.kind === "quasar"
+            ? "saturate(1.22) contrast(1.18) brightness(1.02)"
           : entry.kind === "supernova"
             ? "saturate(1.24) contrast(1.14) brightness(1.02)"
             : "saturate(1.2) contrast(1.12) brightness(0.98)";
@@ -632,6 +897,46 @@ function getNebulaTexture(entry: DeepSkyObject) {
     ctx.beginPath();
     ctx.ellipse(0, 0, size * 0.18, size * 0.11, seed * 1.2, 0, Math.PI * 2);
     ctx.fill();
+  } else if (entry.kind === "blackHole" || entry.kind === "quasar") {
+    const glow = ctx.createRadialGradient(0, 0, size * 0.02, 0, 0, size * 0.4);
+    glow.addColorStop(0, hexToRgba(entry.accent, 0.18));
+    glow.addColorStop(0.36, hexToRgba(entry.tint, 0.12));
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.rotate(seed * Math.PI * 0.6);
+    const disk = ctx.createLinearGradient(-size * 0.26, 0, size * 0.26, 0);
+    disk.addColorStop(0, hexToRgba(entry.tint, 0.0));
+    disk.addColorStop(0.24, hexToRgba(entry.tint, 0.54));
+    disk.addColorStop(0.5, hexToRgba(entry.accent, 0.82));
+    disk.addColorStop(0.76, hexToRgba(entry.tint, 0.54));
+    disk.addColorStop(1, hexToRgba(entry.tint, 0.0));
+    ctx.fillStyle = disk;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size * 0.29, size * (entry.kind === "quasar" ? 0.08 : 0.05), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0,0,0,0.94)";
+    ctx.arc(0, 0, size * (entry.kind === "quasar" ? 0.08 : 0.12), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = "screen";
+    const jetAngle = seed * Math.PI * 1.4;
+    for (const direction of [-1, 1]) {
+      ctx.strokeStyle = hexToRgba(entry.accent, entry.kind === "quasar" ? 0.42 : 0.24);
+      ctx.lineWidth = entry.kind === "quasar" ? 8 : 5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(jetAngle) * size * 0.08 * direction, Math.sin(jetAngle) * size * 0.08 * direction);
+      ctx.lineTo(Math.cos(jetAngle) * size * 0.34 * direction, Math.sin(jetAngle) * size * 0.34 * direction);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
   } else if (entry.kind === "dark" || entry.kind === "molecular") {
     const outer = ctx.createRadialGradient(0, 0, size * 0.06, 0, 0, size * 0.42);
     outer.addColorStop(0, hexToRgba(entry.tint, 0.12));
@@ -758,7 +1063,7 @@ function stellarStyleFromData({
     F: { core: "#fff8e9", rim: "#f2dfbf", corona: "#fff3d8", halo: "#fff7e8" },
     G: { core: "#fff4cf", rim: "#ffc879", corona: "#ffe0a8", halo: "#fff0c8" },
     K: { core: "#ffe5c6", rim: "#ffab67", corona: "#ffd0a2", halo: "#ffe7ca" },
-    M: { core: "#ffd2bd", rim: "#ff7655", corona: "#ffad85", halo: "#ffd6c4" },
+    M: { core: "#ffc7bb", rim: "#ff5a39", corona: "#ff9a70", halo: "#ffd1c6" },
     Other: { core: "#fff0c6", rim: "#ffbb76", corona: "#ffdaab", halo: "#fff0cf" },
     Unspecified: { core: "#fff0c6", rim: "#ffbb76", corona: "#ffdaab", halo: "#fff0cf" },
   };
@@ -766,9 +1071,11 @@ function stellarStyleFromData({
   const palette = paletteByBucket[bucket] ?? paletteByBucket.Other;
   const blackbody = kelvinHexColor(effectiveTemperatureK, palette.core);
   const isHot = bucket === "O" || bucket === "B" || bucket === "A";
-  const core = tuneHexColor(mixHexColors(palette.core, blackbody, 0.72), isHot ? 0.04 : 0.02, isHot ? 0.88 : 1.08);
+  const blackbodyMix = bucket === "M" ? 0.42 : bucket === "K" ? 0.56 : 0.72;
+  const warmAnchor = bucket === "M" ? "#ff643f" : bucket === "K" ? "#ff9958" : "#ffbe7f";
+  const core = tuneHexColor(mixHexColors(palette.core, blackbody, blackbodyMix), isHot ? 0.04 : 0.02, isHot ? 0.88 : 1.08);
   const rim = tuneHexColor(
-    mixHexColors(palette.rim, mixHexColors(blackbody, isHot ? "#7faeff" : bucket === "M" ? "#ff7f56" : "#ffbe7f", isHot ? 0.55 : 0.3), 0.62),
+    mixHexColors(palette.rim, mixHexColors(blackbody, isHot ? "#7faeff" : warmAnchor, isHot ? 0.55 : bucket === "M" ? 0.46 : 0.3), 0.62),
     -0.05,
     isHot ? 0.94 : 1.12,
   );
@@ -1633,7 +1940,639 @@ function buildSynopsis(system: UniverseSystem, planet: UniversePlanet | null, sc
   const cloudFraction = science?.atmosphere.cloudCoverFraction;
   const fluxRange = intervalSummary(propagation?.fluxEarthMultiple, 2, " S⊕");
   const tempRange = intervalSummary(propagation?.equilibriumK, 0, " K");
-  return `${planet.name} is modeled here as a ${planetClass(planet)} in the ${system.name} system. Official archive radius and mass place it in a ${density ? `${formatNumber(density, 2)} g/cm³ bulk-density` : "density-unresolved"} regime, while the host star and semi-major axis imply ${insolation ? `${formatNumber(insolation, 2)} S⊕ incident flux` : "an unresolved irradiation field"}. The current temperature regime is ${temperatureClass(planet.equilibriumK)}${dayside ? ` with a dayside estimate near ${formatNumber(dayside, 0)} K` : ""}${orbitVelocity ? ` and an orbital velocity near ${formatNumber(orbitVelocity, 1)} km/s` : ""}${magnetic ? `; the current magnetic proxy is ${formatNumber(magnetic, 1)} microT with ${protection} shielding.` : ""}${science?.retention ? ` Escape audit: ${retentionDisplayValue(science.retention)} via ${titleCaseSlug(science.retention.dominantLossProcess)}.` : ""}${fluxRange ? ` Propagated flux range: ${fluxRange}.` : ""}${tempRange ? ` Propagated equilibrium-temperature range: ${tempRange}.` : ""}${science ? ` JWST/MAST currently contributes ${jwstObservationCount} observation${jwstObservationCount === 1 ? "" : "s"} and ${jwstProductCount} product${jwstProductCount === 1 ? "" : "s"}${coverage ? ` across ${coverage}` : ""}. ${chemistry ? `Atmosphere evidence presently favors ${chemistry}. ` : ""}${science.atmosphere.cloudInterpretation}${cloudFraction !== null && cloudFraction !== undefined ? ` Cloud proxy: ${formatNumber(cloudFraction * 100, 0)}%.` : ""}` : ""}${local?.habitability ? ` Local analysis assessment: ${local.habitability}.` : local?.interestingReason ? ` Local analysis flag: ${local.interestingReason}.` : ""}`;
+  return `${planet.name} is modeled here as a ${planetClass(planet)} in the ${system.name} system. Official archive radius and mass place it in a ${density ? `${formatNumber(density, 2)} g/cm³ bulk-density` : "density-unresolved"} regime, while the host star and semi-major axis imply ${insolation ? `${formatNumber(insolation, 2)} S⊕ incident flux` : "an unresolved irradiation field"}. The current temperature regime is ${temperatureClass(planet.equilibriumK)}${dayside ? ` with a dayside estimate near ${formatNumber(dayside, 0)} K` : ""}${orbitVelocity ? ` and an orbital velocity near ${formatNumber(orbitVelocity, 1)} km/s` : ""}${magnetic ? `; the current magnetic proxy is ${formatNumber(magnetic, 1)} microT with ${protection} shielding.` : ""}${science?.retention ? ` Escape audit: ${retentionDisplayValue(science.retention)} via ${titleCaseSlug(science.retention.dominantLossProcess)}.` : ""}${fluxRange ? ` Propagated flux range: ${fluxRange}.` : ""}${tempRange ? ` Propagated equilibrium-temperature range: ${tempRange}.` : ""}${science ? ` JWST/MAST currently contributes ${jwstObservationCount} observation${jwstObservationCount === 1 ? "" : "s"} and ${jwstProductCount} product${jwstProductCount === 1 ? "" : "s"}${coverage ? ` across ${coverage}` : ""}. ${chemistry ? `Atmosphere evidence presently favors ${chemistry}. ` : ""}${science.atmosphere.cloudInterpretation}${cloudFraction !== null && cloudFraction !== undefined ? ` Cloud proxy: ${formatNumber(cloudFraction * 100, 0)}%.` : ""}` : ""} Orbit display basis: ${orbitBasisSummary(planet)}.${local?.habitability ? ` Local analysis assessment: ${local.habitability}.` : local?.interestingReason ? ` Local analysis flag: ${local.interestingReason}.` : ""}`;
+}
+
+function buildDeepSkySynopsis(entry: DeepSkyObject) {
+  const distance = distanceLy(entry.distancePc);
+  const size = entry.kind === "pulsar" ? null : entry.sizePc * 3.26156;
+  const massText = entry.massSolar ? ` The current mass anchor is ${entry.massSolar >= 1_000_000 ? `${formatNumber(entry.massSolar / 1_000_000, 2)} million M☉` : `${formatNumber(entry.massSolar, 1)} M☉`}.` : "";
+  const behaviorText =
+    entry.kind === "blackHole"
+      ? " The visual layer treats this as an accretion-disk-dominated black-hole system rather than a resolved body."
+      : entry.kind === "quasar"
+        ? " The visual layer treats this as an active-galactic-nucleus beacon with a compact luminous core and jet structure."
+        : entry.kind === "galaxy"
+          ? " The visual layer keeps the galaxy image, class, and rough scale fixed while compressing distance for exploration."
+          : "";
+  return `${entry.name} is rendered here as a ${deepSkyKindLabel(entry.kind).toLowerCase()} ${formatNumber(distance, 0)} light-years from the Sun. The stage uses the archive-style sky position and a display-compressed distance model, but the object tag, class, and approximate physical scale remain tied to the catalog layer.${size ? ` The working size proxy is about ${formatNumber(size, 0)} light-years across.` : ""}${entry.kind === "pulsar" && entry.pulsePeriodSeconds ? ` Pulse period is ${formatNumber(entry.pulsePeriodSeconds * 1000, 2)} ms.` : ""}${massText}${behaviorText}`;
+}
+
+function buildWhiteDwarfSynopsis(anchor: WhiteDwarfAnchor) {
+  return `${anchor.name} is a white dwarf anchor in the local degenerate-star layer, ${formatNumber(distanceLy(anchor.distancePc), 1)} light-years from the Sun.${anchor.effectiveTemperatureK ? ` The current catalog temperature is ${formatNumber(anchor.effectiveTemperatureK, 0)} K.` : ""}${anchor.massSolar ? ` Mass is ${formatNumber(anchor.massSolar, 2)} M☉` : " Mass is unresolved"}${anchor.radiusSolar ? ` and radius is ${formatNumber(anchor.radiusSolar, 4)} R☉.` : "."}${anchor.gravitationalRedshiftKmS ? ` The local white-dwarf lab currently tracks a gravitational-redshift proxy near ${formatNumber(anchor.gravitationalRedshiftKmS, 1)} km/s.` : ""}`;
+}
+
+function buildReferenceStarSynopsis(star: ReferenceStar) {
+  return `${star.name} is a reference ${star.spectralType} anchor ${formatNumber(distanceLy(star.distancePc), 1)} light-years from the Sun. The current catalog temperature is ${formatNumber(star.effectiveTemperatureK, 0)} K, with radius ${formatNumber(star.radiusSolar, 2)} R☉ and luminosity ${formatNumber(star.luminositySolar, 2)} L☉. This layer exists to keep nearby bright stellar color and scale anchored to known astrophysical reference points.`;
+}
+
+function deepSkyAngularSizeArcmin(entry: DeepSkyObject) {
+  if (!entry.sizePc || !entry.distancePc) return null;
+  return 2 * Math.atan((entry.sizePc * 0.5) / entry.distancePc) * (180 / Math.PI) * 60;
+}
+
+function staticSource(name: string, kind: SourceDescriptor["kind"], url: string): SourceDescriptor {
+  return {
+    id: scienceKey(name),
+    name,
+    kind,
+    url,
+    accessedAt: new Date().toISOString(),
+    cache: "hit",
+  };
+}
+
+function deepSkySources(entry: DeepSkyObject) {
+  return [
+    staticSource(`${entry.name} layer`, "catalog", entry.sourceUrl ?? "https://science.nasa.gov/universe/"),
+    ...(DEEP_SKY_ART[entry.name] ? [staticSource(`${entry.name} art reference`, "imaging", entry.artReferenceUrl ?? entry.sourceUrl ?? "https://science.nasa.gov/universe/")] : []),
+  ];
+}
+
+function referenceStarSources(star: ReferenceStar) {
+  return [staticSource(`${star.name} reference star`, "catalog", "https://science.nasa.gov/universe/stars/")];
+}
+
+function buildDeepSkyObservedMetrics(entry: DeepSkyObject): Metric[] {
+  return [
+    {
+      label: "Object Class",
+      value: deepSkyKindLabel(entry.kind),
+      note: "Deep-sky object class carried by the local exploration catalog layer.",
+      kind: "observed",
+      provenance: "Source: deep-sky catalog layer",
+    },
+    {
+      label: "Distance",
+      value: `${formatNumber(entry.distancePc, 0)} pc`,
+      note: `${formatNumber(distanceLy(entry.distancePc), 0)} light-years from the Sun.`,
+      kind: "observed",
+      provenance: "Source: deep-sky catalog layer distance anchor",
+    },
+    {
+      label: "RA / Dec",
+      value: `${formatNumber(entry.raDeg, 2)}° / ${formatSigned(entry.decDeg, 2)}°`,
+      note: "Sky position used for Sun-centered placement in the exploration scene.",
+      kind: "observed",
+      provenance: "Source: deep-sky catalog layer",
+    },
+    {
+      label: "Size Proxy",
+      value: `${formatNumber(entry.sizePc, 1)} pc`,
+      note: entry.kind === "pulsar" ? "Compact object display scale proxy." : `${formatNumber(entry.sizePc * 3.26156, 1)} light-year working size proxy.`,
+      kind: "observed",
+      provenance: "Source: deep-sky catalog layer",
+    },
+    ...(entry.kind === "pulsar" && entry.pulsePeriodSeconds
+      ? [{
+          label: "Pulse Period",
+          value: `${formatNumber(entry.pulsePeriodSeconds * 1000, 2)} ms`,
+          note: `${formatNumber(1 / entry.pulsePeriodSeconds, 2)} Hz visualized in the scene pulse.`,
+          kind: "observed" as const,
+          provenance: "Source: deep-sky catalog pulsar anchor",
+        }]
+      : []),
+    ...(entry.massSolar
+      ? [{
+          label: entry.kind === "blackHole" || entry.kind === "quasar" ? "Mass Anchor" : "Mass Proxy",
+          value: entry.massSolar >= 1_000_000 ? `${formatNumber(entry.massSolar / 1_000_000, 2)} million M☉` : `${formatNumber(entry.massSolar, 1)} M☉`,
+          note: entry.kind === "blackHole" || entry.kind === "quasar"
+            ? "Catalog/standard-reference mass used to contextualize the compact object."
+            : "Catalog mass proxy carried in the deep-sky layer.",
+          kind: "observed" as const,
+          provenance: "Source: deep-sky catalog / standard reference anchor",
+        }]
+      : []),
+  ];
+}
+
+function buildDeepSkyDerivedMetrics(entry: DeepSkyObject): Metric[] {
+  const xyz = equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc);
+  const angularSize = deepSkyAngularSizeArcmin(entry);
+  return [
+    {
+      label: "XYZ from Sun",
+      value: formatCartesian(xyz),
+      note: "Derived from RA, Dec, and distance in the current equatorial frame.",
+      kind: "derived",
+      provenance: "Source: deep-sky catalog RA/Dec/distance",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    },
+    {
+      label: "Angular Size",
+      value: angularSize ? `${formatNumber(angularSize, 1)} arcmin` : "Unresolved",
+      note: "First-pass angular-size estimate from physical-size proxy and distance.",
+      kind: "derived",
+      provenance: "Source: size proxy + distance",
+      equation: "Eq: theta ≈ 2 atan(size / 2d)",
+    },
+    {
+      label: "Scene Basis",
+      value: "Display-compressed",
+      note: "Distance and size are compressed for exploration, but direction and object class remain source-anchored.",
+      kind: "inferred",
+      provenance: "Source: scene display transform",
+    },
+  ];
+}
+
+function buildDeepSkyUncertaintyMetrics(entry: DeepSkyObject): Metric[] {
+  return [{
+    label: "Catalog state",
+    value: entry.kind === "pulsar" ? "Timing anchor" : "Scene anchor",
+    note: "This object currently uses catalog-grade placement and class metadata rather than a planet-style propagated uncertainty model.",
+    kind: "source",
+    provenance: "Source: deep-sky catalog layer",
+  }];
+}
+
+function buildDeepSkyChartRows(entry: DeepSkyObject): ChartRow[] {
+  const distance = distanceLy(entry.distancePc);
+  const angularSize = deepSkyAngularSizeArcmin(entry);
+  return [
+    { label: "Distance", value: Math.min(distance, 2_600_000), max: 2_600_000, note: `${formatNumber(distance, 0)} ly`, hue: 198 },
+    { label: "Size", value: Math.min(entry.sizePc * 3.26156, 50_000), max: 50_000, note: `${formatNumber(entry.sizePc * 3.26156, 1)} ly`, hue: 28 },
+    {
+      label: entry.kind === "pulsar" ? "Pulse" : entry.massSolar ? "Mass" : "Angular",
+      value:
+        entry.kind === "pulsar" && entry.pulsePeriodSeconds
+          ? Math.min(1 / entry.pulsePeriodSeconds, 200)
+          : entry.massSolar
+            ? Math.min(Math.log10(1 + entry.massSolar), 12)
+            : Math.min(angularSize ?? 0, 200),
+      max: entry.kind === "pulsar" ? 200 : entry.massSolar ? 12 : 200,
+      note:
+        entry.kind === "pulsar" && entry.pulsePeriodSeconds
+          ? `${formatNumber(1 / entry.pulsePeriodSeconds, 2)} Hz`
+          : entry.massSolar
+            ? entry.massSolar >= 1_000_000
+              ? `${formatNumber(entry.massSolar / 1_000_000, 2)} million M☉`
+              : `${formatNumber(entry.massSolar, 1)} M☉`
+            : angularSize ? `${formatNumber(angularSize, 1)} arcmin` : "pending",
+      hue: entry.kind === "pulsar" ? 214 : entry.massSolar ? 18 : 286,
+    },
+  ];
+}
+
+function buildDeepSkyAnalysis(entry: DeepSkyObject) {
+  const xyz = equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc);
+  return [
+    `TARGET: ${entry.name}`,
+    `OBJECT CLASS: ${deepSkyKindLabel(entry.kind)}`,
+    `FRAME: Sun-centered equatorial XYZ generated from deep-sky catalog RA / Dec / distance.`,
+    "",
+    "OBSERVED INPUTS [O]",
+    analysisClaim({
+      label: "Distance",
+      classification: "O",
+      value: `${formatNumber(entry.distancePc, 0)} pc (${formatNumber(distanceLy(entry.distancePc), 0)} ly)`,
+      source: "deep-sky catalog layer",
+    }),
+    analysisClaim({
+      label: "RA / Dec",
+      classification: "O",
+      value: `${formatNumber(entry.raDeg, 2)}° / ${formatSigned(entry.decDeg, 2)}°`,
+      source: "deep-sky catalog layer",
+    }),
+    analysisClaim({
+      label: "Size proxy",
+      classification: "O",
+      value: `${formatNumber(entry.sizePc, 1)} pc`,
+      source: "deep-sky catalog layer",
+    }),
+    ...(entry.kind === "pulsar" && entry.pulsePeriodSeconds ? [analysisClaim({
+      label: "Pulse period",
+      classification: "O",
+      value: `${formatNumber(entry.pulsePeriodSeconds * 1000, 2)} ms`,
+      source: "deep-sky pulsar timing anchor",
+    })] : []),
+    ...(entry.massSolar ? [analysisClaim({
+      label: "Mass anchor",
+      classification: "O",
+      value: entry.massSolar >= 1_000_000 ? `${formatNumber(entry.massSolar / 1_000_000, 2)} million M☉` : `${formatNumber(entry.massSolar, 1)} M☉`,
+      source: "deep-sky catalog / standard reference anchor",
+    })] : []),
+    "",
+    "DERIVED / DISPLAY [D/I]",
+    analysisClaim({
+      label: "XYZ from Sun",
+      classification: "D",
+      value: formatCartesian(xyz),
+      source: "catalog RA/Dec/distance",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    }),
+    analysisClaim({
+      label: "Scene basis",
+      classification: "I",
+      value: "Display-compressed deep-sky exploration layer",
+      source: "scene transform and catalog class anchor",
+    }),
+    "",
+    "SCIENCE INTERPRETATION",
+    buildDeepSkySynopsis(entry),
+  ].join("\n");
+}
+
+function buildWhiteDwarfObservedMetrics(anchor: WhiteDwarfAnchor): Metric[] {
+  return [
+    {
+      label: "Distance",
+      value: `${formatNumber(anchor.distancePc, 2)} pc`,
+      note: `${formatNumber(distanceLy(anchor.distancePc), 1)} light-years from the Sun.`,
+      kind: "observed",
+      provenance: "Source: white-dwarf anchor catalog",
+    },
+    {
+      label: "Spectral Type",
+      value: anchor.spectralType ?? "Unknown",
+      note: "White-dwarf spectral type carried by the local degenerate-star layer.",
+      kind: "observed",
+      provenance: "Source: white-dwarf anchor catalog",
+    },
+    {
+      label: "Effective Temp",
+      value: anchor.effectiveTemperatureK ? `${formatNumber(anchor.effectiveTemperatureK, 0)} K` : "Unknown",
+      note: "Observed/collated temperature from the white-dwarf anchor record.",
+      kind: "observed",
+      provenance: "Source: white-dwarf anchor catalog",
+    },
+    {
+      label: "Mass / Radius",
+      value: `${anchor.massSolar ? `${formatNumber(anchor.massSolar, 2)} M☉` : "Unknown"} / ${anchor.radiusSolar ? `${formatNumber(anchor.radiusSolar, 4)} R☉` : "Unknown"}`,
+      note: "Compact-object structural anchor from the white-dwarf layer.",
+      kind: "observed",
+      provenance: "Source: white-dwarf anchor catalog",
+    },
+  ];
+}
+
+function buildWhiteDwarfDerivedMetrics(anchor: WhiteDwarfAnchor): Metric[] {
+  return [
+    {
+      label: "XYZ from Sun",
+      value: formatCartesian(anchor.cartesianPc),
+      note: "Derived from the white-dwarf anchor position in the current equatorial frame.",
+      kind: "derived",
+      provenance: "Source: white-dwarf anchor coordinates",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    },
+    {
+      label: "Gravitational Redshift",
+      value: anchor.gravitationalRedshiftKmS ? `${formatNumber(anchor.gravitationalRedshiftKmS, 1)} km/s` : "Unresolved",
+      note: "White-dwarf lab redshift proxy carried into the scene layer.",
+      kind: "derived",
+      provenance: "Source: white-dwarf lab bundle",
+    },
+  ];
+}
+
+function buildWhiteDwarfUncertaintyMetrics(): Metric[] {
+  return [{
+    label: "Catalog state",
+    value: "Degenerate-star layer",
+    note: "White-dwarf anchors currently use the repaired local lab catalog, not the exoplanet Monte Carlo path.",
+    kind: "source",
+    provenance: "Source: local white-dwarf lab catalog",
+  }];
+}
+
+function buildWhiteDwarfChartRows(anchor: WhiteDwarfAnchor): ChartRow[] {
+  return [
+    { label: "Distance", value: Math.min(anchor.distancePc, 100), max: 100, note: `${formatNumber(anchor.distancePc, 2)} pc`, hue: 198 },
+    { label: "Mass", value: Math.min(anchor.massSolar ?? 0, 1.4), max: 1.4, note: anchor.massSolar ? `${formatNumber(anchor.massSolar, 2)} M☉` : "pending", hue: 24 },
+    { label: "Radius", value: Math.min((anchor.radiusSolar ?? 0) * 1000, 30), max: 30, note: anchor.radiusSolar ? `${formatNumber(anchor.radiusSolar, 4)} R☉` : "pending", hue: 214 },
+    { label: "Teff", value: Math.min(anchor.effectiveTemperatureK ?? 0, 150000), max: 150000, note: anchor.effectiveTemperatureK ? `${formatNumber(anchor.effectiveTemperatureK, 0)} K` : "pending", hue: 286 },
+  ];
+}
+
+function buildWhiteDwarfAnalysis(anchor: WhiteDwarfAnchor) {
+  return [
+    `TARGET: ${anchor.name}`,
+    `OBJECT CLASS: White dwarf`,
+    `FRAME: Sun-centered equatorial XYZ generated from the local degenerate-star anchor layer.`,
+    "",
+    "OBSERVED INPUTS [O]",
+    analysisClaim({
+      label: "Distance",
+      classification: "O",
+      value: `${formatNumber(anchor.distancePc, 2)} pc (${formatNumber(distanceLy(anchor.distancePc), 1)} ly)`,
+      source: "white-dwarf anchor catalog",
+    }),
+    analysisClaim({
+      label: "Spectral type / Teff",
+      classification: "O",
+      value: `${anchor.spectralType ?? "Unknown"} / ${anchor.effectiveTemperatureK ? `${formatNumber(anchor.effectiveTemperatureK, 0)} K` : "unresolved"}`,
+      source: "white-dwarf anchor catalog",
+    }),
+    analysisClaim({
+      label: "Mass / Radius",
+      classification: "O",
+      value: `${anchor.massSolar ? `${formatNumber(anchor.massSolar, 2)} M☉` : "unresolved"} / ${anchor.radiusSolar ? `${formatNumber(anchor.radiusSolar, 4)} R☉` : "unresolved"}`,
+      source: "white-dwarf anchor catalog",
+    }),
+    "",
+    "DERIVED / LAB CONTEXT [D]",
+    analysisClaim({
+      label: "XYZ from Sun",
+      classification: "D",
+      value: formatCartesian(anchor.cartesianPc),
+      source: "white-dwarf anchor coordinates",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    }),
+    analysisClaim({
+      label: "Gravitational redshift proxy",
+      classification: "D",
+      value: anchor.gravitationalRedshiftKmS ? `${formatNumber(anchor.gravitationalRedshiftKmS, 1)} km/s` : "unresolved",
+      source: "white-dwarf lab bundle",
+    }),
+    "",
+    "SCIENCE INTERPRETATION",
+    buildWhiteDwarfSynopsis(anchor),
+  ].join("\n");
+}
+
+function buildReferenceStarObservedMetrics(star: ReferenceStar): Metric[] {
+  return [
+    {
+      label: "Distance",
+      value: `${formatNumber(star.distancePc, 2)} pc`,
+      note: `${formatNumber(distanceLy(star.distancePc), 1)} light-years from the Sun.`,
+      kind: "observed",
+      provenance: "Source: reference-star catalog layer",
+    },
+    {
+      label: "Spectral Type",
+      value: star.spectralType,
+      note: "Reference stellar class used to anchor field-star color and scale.",
+      kind: "observed",
+      provenance: "Source: reference-star catalog layer",
+    },
+    {
+      label: "Effective Temp",
+      value: `${formatNumber(star.effectiveTemperatureK, 0)} K`,
+      note: "Catalog effective temperature used for color and morphology.",
+      kind: "observed",
+      provenance: "Source: reference-star catalog layer",
+    },
+    {
+      label: "Radius / Luminosity",
+      value: `${formatNumber(star.radiusSolar, 2)} R☉ / ${formatNumber(star.luminositySolar, 2)} L☉`,
+      note: "Reference stellar size and luminosity anchor.",
+      kind: "observed",
+      provenance: "Source: reference-star catalog layer",
+    },
+  ];
+}
+
+function buildReferenceStarDerivedMetrics(star: ReferenceStar): Metric[] {
+  const xyz = equatorialToCartesianPc(star.raDeg, star.decDeg, star.distancePc);
+  return [
+    {
+      label: "XYZ from Sun",
+      value: formatCartesian(xyz),
+      note: "Derived from RA, Dec, and distance in the reference-star layer.",
+      kind: "derived",
+      provenance: "Source: reference-star RA/Dec/distance",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    },
+    {
+      label: "Color Basis",
+      value: spectralBucket(star.spectralType),
+      note: "Temperature and spectral class drive the field-star palette and morphology.",
+      kind: "inferred",
+      provenance: "Source: effective temperature + spectral type",
+    },
+  ];
+}
+
+function buildReferenceStarUncertaintyMetrics(): Metric[] {
+  return [{
+    label: "Catalog state",
+    value: "Reference-star layer",
+    note: "Reference stars use catalog-grade anchors for color, size, and placement rather than exoplanet propagation.",
+    kind: "source",
+    provenance: "Source: local reference-star catalog",
+  }];
+}
+
+function buildReferenceStarChartRows(star: ReferenceStar): ChartRow[] {
+  return [
+    { label: "Distance", value: Math.min(star.distancePc, 30), max: 30, note: `${formatNumber(star.distancePc, 2)} pc`, hue: 198 },
+    { label: "Radius", value: Math.min(star.radiusSolar, 8), max: 8, note: `${formatNumber(star.radiusSolar, 2)} R☉`, hue: 24 },
+    { label: "Luminosity", value: Math.min(star.luminositySolar, 300), max: 300, note: `${formatNumber(star.luminositySolar, 2)} L☉`, hue: 214 },
+    { label: "Teff", value: Math.min(star.effectiveTemperatureK, 15000), max: 15000, note: `${formatNumber(star.effectiveTemperatureK, 0)} K`, hue: 286 },
+  ];
+}
+
+function buildReferenceStarAnalysis(star: ReferenceStar) {
+  const xyz = equatorialToCartesianPc(star.raDeg, star.decDeg, star.distancePc);
+  return [
+    `TARGET: ${star.name}`,
+    `OBJECT CLASS: Reference star`,
+    `FRAME: Sun-centered equatorial XYZ generated from the bright-star reference layer.`,
+    "",
+    "OBSERVED INPUTS [O]",
+    analysisClaim({
+      label: "Distance",
+      classification: "O",
+      value: `${formatNumber(star.distancePc, 2)} pc (${formatNumber(distanceLy(star.distancePc), 1)} ly)`,
+      source: "reference-star catalog layer",
+    }),
+    analysisClaim({
+      label: "Spectral type / Teff",
+      classification: "O",
+      value: `${star.spectralType} / ${formatNumber(star.effectiveTemperatureK, 0)} K`,
+      source: "reference-star catalog layer",
+    }),
+    analysisClaim({
+      label: "Radius / Luminosity",
+      classification: "O",
+      value: `${formatNumber(star.radiusSolar, 2)} R☉ / ${formatNumber(star.luminositySolar, 2)} L☉`,
+      source: "reference-star catalog layer",
+    }),
+    "",
+    "DERIVED / DISPLAY [D/I]",
+    analysisClaim({
+      label: "XYZ from Sun",
+      classification: "D",
+      value: formatCartesian(xyz),
+      source: "reference-star catalog coordinates",
+      equation: "Eq: Cartesian transform from spherical coordinates",
+    }),
+    analysisClaim({
+      label: "Palette basis",
+      classification: "I",
+      value: `${spectralBucket(star.spectralType)}-class visual morphology anchor`,
+      source: "effective temperature + spectral type",
+    }),
+    "",
+    "SCIENCE INTERPRETATION",
+    buildReferenceStarSynopsis(star),
+  ].join("\n");
+}
+
+function FocusFrame({
+  eyebrow,
+  synopsis,
+  controls,
+  children,
+}: {
+  eyebrow: string;
+  synopsis: string;
+  controls?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative isolate overflow-hidden rounded-[1.85rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,12,26,0.84),rgba(3,8,19,0.72))] p-5 shadow-[0_28px_80px_rgba(2,8,24,0.45)]">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,8,20,0.08),rgba(2,6,17,0.78))]" />
+      <div className="absolute inset-x-[16%] top-[5%] h-16 rounded-full bg-sky-300/8 blur-3xl" />
+      <div className="relative z-10 mb-4 rounded-[1.35rem] border border-white/8 bg-slate-950/28 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[0.66rem] uppercase tracking-[0.24em] text-sky-100/48">{eyebrow}</div>
+          {controls ?? null}
+        </div>
+        <p className="mt-3 text-sm leading-7 text-slate-200/82">{synopsis}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function StarOverviewVisual({ system }: { system: UniverseSystem }) {
+  const style = stellarStyle(system);
+  const starSize = clamp(selectedStarRadius(system) * 56, 72, 158);
+  const orbitPreview = system.planets.slice(0, 5);
+  return (
+    <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,0.08),transparent_0_18%,rgba(255,170,120,0.04)_34%,transparent_56%),linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          className="relative rounded-full"
+          style={{
+            width: `${starSize}px`,
+            height: `${starSize}px`,
+            background: `radial-gradient(circle at 38% 36%, rgba(255,255,255,0.94), ${style.core} 24%, ${style.rim} 68%, rgba(0,0,0,0.2) 100%)`,
+            boxShadow: `0 0 54px ${hexToRgba(style.halo, 0.28)}, 0 0 120px ${hexToRgba(style.corona, 0.16)}`,
+          }}
+        >
+          <div
+            className="absolute inset-0 rounded-full opacity-60 mix-blend-screen"
+            style={{
+              background: `radial-gradient(circle at 56% 42%, rgba(255,255,255,0) 0 36%, ${hexToRgba(style.core, 0.2)} 52%, rgba(255,255,255,0) 72%)`,
+            }}
+          />
+        </div>
+      </div>
+      {orbitPreview.map((entry, index) => (
+        <div
+          key={entry.id}
+          className="absolute rounded-full border border-white/10"
+          style={{
+            inset: `${18 + index * 8}% ${14 + index * 7}%`,
+          }}
+        />
+      ))}
+      {orbitPreview.map((entry, index) => (
+        <div
+          key={`${entry.id}-planet`}
+          className="absolute rounded-full"
+          style={{
+            left: `${54 + index * 6}%`,
+            top: `${31 + index * 8}%`,
+            width: `${entry.radiusEarth && entry.radiusEarth > 3 ? 16 : 10}px`,
+            height: `${entry.radiusEarth && entry.radiusEarth > 3 ? 16 : 10}px`,
+            background: index % 2 === 0 ? "rgba(114,226,255,0.94)" : "rgba(255,177,105,0.94)",
+            boxShadow: "0 0 20px rgba(114,226,255,0.22)",
+          }}
+        />
+      ))}
+      <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/8 bg-slate-950/28 px-3 py-2 text-xs text-slate-200/70">
+        Host-star overview mode: click a planet to switch the rail into planet detail.
+      </div>
+    </div>
+  );
+}
+
+function DeepSkyVisualFocus({ entry }: { entry: DeepSkyObject }) {
+  const artPath = DEEP_SKY_ART[entry.name];
+  return (
+    <FocusFrame eyebrow={`${deepSkyKindLabel(entry.kind)} Synopsis`} synopsis={buildDeepSkySynopsis(entry)}>
+      <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-92"
+          style={{
+            backgroundImage: artPath ? `url(${artPath})` : `radial-gradient(circle at 45% 52%, ${entry.tint}, transparent 0 22%, ${entry.accent} 40%, transparent 72%)`,
+            filter: entry.kind === "dark" ? "saturate(1.08) contrast(1.08) brightness(0.78)" : "saturate(1.18) contrast(1.14) brightness(1.06)",
+          }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.06),transparent_0_32%,rgba(2,8,18,0.16)_58%,rgba(2,8,18,0.72)_100%)]" />
+        <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/8 bg-slate-950/38 px-3 py-2 text-xs text-slate-200/74">
+          {deepSkyKindLabel(entry.kind)} · {formatNumber(distanceLy(entry.distancePc), 0)} ly · XYZ derived from RA / Dec / distance
+        </div>
+      </div>
+    </FocusFrame>
+  );
+}
+
+function WhiteDwarfVisualFocus({ anchor }: { anchor: WhiteDwarfAnchor }) {
+  const style = whiteDwarfStyle(anchor);
+  return (
+    <FocusFrame eyebrow="White Dwarf Synopsis" synopsis={buildWhiteDwarfSynopsis(anchor)}>
+      <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_50%_28%,rgba(190,225,255,0.14),transparent_0_18%,rgba(125,190,255,0.08)_32%,transparent_56%),linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative rounded-full"
+            style={{
+              width: "6.8rem",
+              height: "6.8rem",
+              background: `radial-gradient(circle at 40% 38%, rgba(255,255,255,0.98), ${style.core} 30%, ${style.rim} 72%, rgba(0,0,0,0.16) 100%)`,
+              boxShadow: `0 0 46px ${hexToRgba(style.halo, 0.3)}, 0 0 110px ${hexToRgba(style.corona, 0.18)}`,
+            }}
+          />
+        </div>
+        <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/8 bg-slate-950/38 px-3 py-2 text-xs text-slate-200/74">
+          White dwarf lab layer · {anchor.spectralType ?? "type unresolved"} · {anchor.massSolar ? `${formatNumber(anchor.massSolar, 2)} M☉` : "mass unresolved"}
+        </div>
+      </div>
+    </FocusFrame>
+  );
+}
+
+function ReferenceStarVisualFocus({ star }: { star: ReferenceStar }) {
+  const style = stellarStyleFromData({
+    seedKey: `reference-${star.name}`,
+    spectralType: star.spectralType,
+    effectiveTemperatureK: star.effectiveTemperatureK,
+    luminositySolar: star.luminositySolar,
+    radiusSolar: star.radiusSolar,
+  });
+  const starSize = clamp((0.26 + Math.pow(star.radiusSolar, 0.55) * 0.12) * 88, 74, 164);
+  return (
+    <FocusFrame eyebrow="Reference Star Synopsis" synopsis={buildReferenceStarSynopsis(star)}>
+      <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_26%_28%,rgba(255,255,255,0.10),transparent_0_20%,rgba(255,170,120,0.06)_34%,transparent_58%),linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative rounded-full"
+            style={{
+              width: `${starSize}px`,
+              height: `${starSize}px`,
+              background: `radial-gradient(circle at 38% 36%, rgba(255,255,255,0.96), ${style.core} 24%, ${style.rim} 68%, rgba(0,0,0,0.2) 100%)`,
+              boxShadow: `0 0 54px ${hexToRgba(style.halo, 0.28)}, 0 0 116px ${hexToRgba(style.corona, 0.16)}`,
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-full opacity-58 mix-blend-screen"
+              style={{
+                background: `radial-gradient(circle at 56% 42%, rgba(255,255,255,0) 0 36%, ${hexToRgba(style.core, 0.18)} 52%, rgba(255,255,255,0) 72%)`,
+              }}
+            />
+          </div>
+        </div>
+        <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/8 bg-slate-950/38 px-3 py-2 text-xs text-slate-200/74">
+          Reference-star layer · {star.spectralType} · {formatNumber(star.effectiveTemperatureK, 0)} K
+        </div>
+      </div>
+    </FocusFrame>
+  );
 }
 
 function buildObservedMetrics(system: UniverseSystem, planet: UniversePlanet | null, science?: PlanetScienceBundle | null): Metric[] {
@@ -2499,6 +3438,9 @@ function hashFraction(input: string) {
 }
 
 function initialOrbitPhase(planet: UniversePlanet, index: number) {
+  if (planet.meanAnomalyDegAtEpoch !== null && planet.meanAnomalyDegAtEpoch !== undefined) {
+    return (planet.meanAnomalyDegAtEpoch * Math.PI) / 180;
+  }
   return hashFraction(`${planet.id}:${index}:phase`) * Math.PI * 2;
 }
 
@@ -2506,7 +3448,17 @@ function orbitInclination(planet: UniversePlanet, index: number) {
   return (hashFraction(`${planet.id}:${index}:inc`) - 0.5) * 0.38;
 }
 
-function orbitOrientation(planet: UniversePlanet, index: number) {
+function orbitLongitudeAscendingNode(planet: UniversePlanet, index: number) {
+  if (planet.longitudeAscendingNodeDeg !== null && planet.longitudeAscendingNodeDeg !== undefined) {
+    return (planet.longitudeAscendingNodeDeg * Math.PI) / 180;
+  }
+  return hashFraction(`${planet.id}:${index}:node`) * Math.PI * 2;
+}
+
+function orbitArgumentPeriastron(planet: UniversePlanet, index: number) {
+  if (planet.argumentPeriastronDeg !== null && planet.argumentPeriastronDeg !== undefined) {
+    return (planet.argumentPeriastronDeg * Math.PI) / 180;
+  }
   return hashFraction(`${planet.id}:${index}:omega`) * Math.PI * 2;
 }
 
@@ -2517,6 +3469,9 @@ function orbitEccentricity(planet: UniversePlanet) {
 function orbitPlaneTilt(planet: UniversePlanet, index: number) {
   const fallback = orbitInclination(planet, index);
   if (planet.inclinationDeg === null || planet.inclinationDeg === undefined) return fallback;
+  if (planet.inclinationReference === "ecliptic") {
+    return clamp((planet.inclinationDeg * Math.PI) / 180, -0.42, 0.42);
+  }
   const deviation = clamp((planet.inclinationDeg - 90) * (Math.PI / 180), -0.75, 0.75);
   return clamp(deviation * 0.8 + fallback * 0.35, -0.62, 0.62);
 }
@@ -2542,15 +3497,30 @@ function orbitPointForEccentricAnomaly(planet: UniversePlanet, index: number, ec
   const eccentricity = orbitEccentricity(planet);
   const semiMinorRadius = semiMajorRadius * Math.sqrt(Math.max(1 - eccentricity * eccentricity, 0.0001));
   const tilt = orbitPlaneTilt(planet, index);
-  const orientation = orbitOrientation(planet, index);
+  const node = orbitLongitudeAscendingNode(planet, index);
+  const argumentPeriastron = orbitArgumentPeriastron(planet, index);
   const point = new THREE.Vector3(
     semiMajorRadius * (Math.cos(eccentricAnomaly) - eccentricity),
     0,
     semiMinorRadius * Math.sin(eccentricAnomaly),
   );
+  point.applyAxisAngle(WORLD_Y_AXIS, argumentPeriastron);
   point.applyAxisAngle(WORLD_X_AXIS, tilt);
-  point.applyAxisAngle(WORLD_Y_AXIS, orientation);
+  point.applyAxisAngle(WORLD_Y_AXIS, node);
   return point;
+}
+
+function orbitBasisSummary(planet: UniversePlanet) {
+  if (planet.orbitBasis === "jpl-approx") {
+    return "JPL approximate Solar System elements anchored near the current epoch";
+  }
+  if (planet.orbitBasis === "measured") {
+    return "archive eccentricity, inclination, argument of periastron, and epoch anchor";
+  }
+  if (planet.orbitBasis === "mixed") {
+    return "archive eccentricity/inclination with inferred node or phase where unavailable";
+  }
+  return "best-guess compressed ellipse with inferred phase/orientation";
 }
 
 function activeSystemLocalPosition(planet: UniversePlanet, index: number, timeDays: number) {
@@ -2918,12 +3888,12 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
         <meshBasicMaterial
           color={coreColor}
           transparent
-          opacity={clamp(0.012 + style.brightnessScale * 0.02, 0.012, 0.045)}
+          opacity={clamp(0.008 + style.brightnessScale * 0.014, 0.008, 0.028)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={1.075 + style.brightnessScale * 0.04}>
+      <mesh scale={1.03 + style.brightnessScale * 0.02}>
         <sphereGeometry args={[radius, 132, 132]} />
         <shaderMaterial
           ref={coronaMaterialRef}
@@ -2931,7 +3901,7 @@ function SelectedStarBody({ style, radius }: { style: StarRenderStyle; radius: n
           fragmentShader={CORONA_FRAGMENT_SHADER}
           uniforms={coronaUniforms}
           transparent
-          opacity={0.22}
+          opacity={0.12}
           depthWrite={false}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
@@ -3023,13 +3993,13 @@ function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: 
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      <mesh scale={style.glowScale}>
+      <mesh scale={Math.min(style.glowScale, 1.72)}>
         <sphereGeometry args={[radius, 12, 12]} />
         <meshBasicMaterial
           ref={haloMaterialRef}
           color={haloColor}
           transparent
-          opacity={style.glowOpacity}
+          opacity={style.glowOpacity * 0.68}
           depthWrite={false}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
@@ -3082,56 +4052,77 @@ function DeepSkyAnchor({
   onHoverChange: (hover: StageHover | null) => void;
 }) {
   const texture = useMemo(() => getNebulaTexture(entry), [entry]);
-  const primaryRef = useRef<THREE.Sprite>(null);
-  const primaryMaterialRef = useRef<THREE.SpriteMaterial>(null);
-  const hazeMaterialRef = useRef<THREE.SpriteMaterial>(null);
-  const bloomMaterialRef = useRef<THREE.SpriteMaterial>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const primaryRef = useRef<THREE.Mesh>(null);
+  const primaryMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const hazeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const bloomMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const primaryOpacity =
     entry.kind === "dark"
-      ? 0.92
+      ? 0.98
       : entry.kind === "molecular"
-        ? 0.84
+        ? 0.92
         : entry.kind === "galaxy"
-          ? 1.12
-          : entry.kind === "pulsar"
+          ? 1.34
+          : entry.kind === "blackHole"
             ? 1.22
-            : 1.18;
+            : entry.kind === "quasar"
+              ? 1.46
+          : entry.kind === "pulsar"
+            ? 1.38
+            : 1.28;
   const hazeOpacity =
     entry.kind === "dark"
-      ? 0.34
+      ? 0.4
       : entry.kind === "molecular"
-        ? 0.28
+        ? 0.34
         : entry.kind === "galaxy"
-          ? 0.36
+          ? 0.48
+          : entry.kind === "blackHole"
+            ? 0.22
+            : entry.kind === "quasar"
+              ? 0.34
           : entry.kind === "pulsar"
-            ? 0.2
-            : 0.4;
+            ? 0.26
+            : 0.5;
   const hazeScale =
     entry.kind === "dark" || entry.kind === "molecular"
-      ? 2.1
+      ? 2.4
       : entry.kind === "galaxy"
-        ? 2.9
+        ? 3.3
+        : entry.kind === "blackHole"
+          ? 2.15
+          : entry.kind === "quasar"
+            ? 3.55
         : entry.kind === "pulsar"
-          ? 2.2
-          : 2.7;
+          ? 2.5
+          : 3.05;
   const bloomOpacity =
     entry.kind === "dark"
-      ? 0.12
+      ? 0.16
       : entry.kind === "molecular"
-        ? 0.16
+        ? 0.22
         : entry.kind === "galaxy"
-          ? 0.18
+          ? 0.3
+          : entry.kind === "blackHole"
+            ? 0.18
+            : entry.kind === "quasar"
+              ? 0.34
           : entry.kind === "pulsar"
-            ? 0.3
-            : 0.24;
+            ? 0.38
+            : 0.32;
   const bloomScale =
     entry.kind === "dark" || entry.kind === "molecular"
-      ? 2.7
+      ? 3
       : entry.kind === "galaxy"
-        ? 3.6
+        ? 4.1
+        : entry.kind === "blackHole"
+          ? 2.5
+          : entry.kind === "quasar"
+            ? 4.35
         : entry.kind === "pulsar"
-          ? 2.9
-          : 3.3;
+          ? 3.3
+          : 3.7;
   const cartesianPc = useMemo(() => equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc), [entry]);
 
   useEffect(() => {
@@ -3140,7 +4131,10 @@ function DeepSkyAnchor({
     };
   }, [onHoverChange]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
+    if (groupRef.current) {
+      groupRef.current.quaternion.copy(camera.quaternion);
+    }
     if (entry.kind !== "pulsar") return;
     const period = entry.pulsePeriodSeconds ?? 0.2;
     const phase = (clock.elapsedTime % period) / period;
@@ -3173,21 +4167,25 @@ function DeepSkyAnchor({
         ...(entry.kind === "pulsar" && entry.pulsePeriodSeconds
           ? [`Spin period: ${formatNumber(entry.pulsePeriodSeconds * 1000, 2)} ms · ${formatNumber(1 / entry.pulsePeriodSeconds, 2)} Hz`]
           : []),
+        ...(entry.massSolar
+          ? [entry.massSolar >= 1_000_000 ? `Mass anchor: ${formatNumber(entry.massSolar / 1_000_000, 2)} million M☉` : `Mass anchor: ${formatNumber(entry.massSolar, 1)} M☉`]
+          : []),
         `XYZ: ${formatCartesian(cartesianPc, 0)}`,
       ],
     });
   }
 
   return (
-    <group>
-      <sprite
+    <group ref={groupRef}>
+      <mesh
         ref={primaryRef}
         scale={[scale, scale, 1]}
         onPointerOver={showHover}
         onPointerMove={showHover}
         onPointerOut={() => onHoverChange(null)}
       >
-        <spriteMaterial
+        <planeGeometry args={[1, 1, 1, 1]} />
+        <meshBasicMaterial
           ref={primaryMaterialRef}
           attach="material"
           map={texture}
@@ -3198,9 +4196,10 @@ function DeepSkyAnchor({
           blending={entry.kind === "dark" || entry.kind === "molecular" ? THREE.NormalBlending : THREE.AdditiveBlending}
           opacity={primaryOpacity}
         />
-      </sprite>
-      <sprite scale={[scale * hazeScale, scale * hazeScale, 1]} raycast={() => null}>
-        <spriteMaterial
+      </mesh>
+      <mesh scale={[scale * hazeScale, scale * hazeScale, 1]} raycast={() => null}>
+        <planeGeometry args={[1, 1, 1, 1]} />
+        <meshBasicMaterial
           ref={hazeMaterialRef}
           attach="material"
           map={texture}
@@ -3211,9 +4210,10 @@ function DeepSkyAnchor({
           blending={entry.kind === "dark" || entry.kind === "molecular" ? THREE.NormalBlending : THREE.AdditiveBlending}
           opacity={hazeOpacity}
         />
-      </sprite>
-      <sprite scale={[scale * bloomScale, scale * bloomScale, 1]} raycast={() => null}>
-        <spriteMaterial
+      </mesh>
+      <mesh scale={[scale * bloomScale, scale * bloomScale, 1]} raycast={() => null}>
+        <planeGeometry args={[1, 1, 1, 1]} />
+        <meshBasicMaterial
           ref={bloomMaterialRef}
           attach="material"
           map={texture}
@@ -3224,7 +4224,7 @@ function DeepSkyAnchor({
           blending={THREE.AdditiveBlending}
           opacity={bloomOpacity}
         />
-      </sprite>
+      </mesh>
     </group>
   );
 }
@@ -3646,8 +4646,11 @@ function StageScene({
   whiteDwarfs,
   showWhiteDwarfs,
   selectedSystem,
+  selectedWhiteDwarf,
+  selectedReferenceStar,
   selectedPlanet,
   selectedPlanetScience,
+  selectionCommand,
   planetViewSyncRef,
   simulationDays,
   orbitSpeedMultiplier,
@@ -3656,14 +4659,20 @@ function StageScene({
   freeRoam,
   onSelectSystem,
   onSelectPlanet,
+  onSelectDeepSky,
+  onSelectWhiteDwarf,
+  onSelectReferenceStar,
   onHoverChange,
 }: {
   systems: UniverseSystem[];
   whiteDwarfs: WhiteDwarfAnchor[];
   showWhiteDwarfs: boolean;
   selectedSystem: UniverseSystem | null;
+  selectedWhiteDwarf: WhiteDwarfAnchor | null;
+  selectedReferenceStar: ReferenceStar | null;
   selectedPlanet: UniversePlanet | null;
   selectedPlanetScience?: PlanetScienceBundle | null;
+  selectionCommand: StageSelectionCommand | null;
   planetViewSyncRef?: PlanetViewSyncRef;
   simulationDays: number;
   orbitSpeedMultiplier: number;
@@ -3672,6 +4681,9 @@ function StageScene({
   freeRoam: boolean;
   onSelectSystem: (system: UniverseSystem) => void;
   onSelectPlanet: (planet: UniversePlanet) => void;
+  onSelectDeepSky: (entry: DeepSkyObject) => void;
+  onSelectWhiteDwarf: (anchor: WhiteDwarfAnchor) => void;
+  onSelectReferenceStar: (star: ReferenceStar) => void;
   onHoverChange: (hover: StageHover | null) => void;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -3684,6 +4696,9 @@ function StageScene({
   const lastDeepSkyClickRef = useRef<{ id: string; at: number } | null>(null);
   const pendingWhiteDwarfClickRef = useRef<number | null>(null);
   const lastWhiteDwarfClickRef = useRef<{ id: string; at: number } | null>(null);
+  const pendingReferenceStarClickRef = useRef<number | null>(null);
+  const lastReferenceStarClickRef = useRef<{ id: string; at: number } | null>(null);
+  const introFlightDoneRef = useRef(false);
   const previousZoomFactorRef = useRef(zoomFactor);
   const markers = useMemo(() => {
     const preferredSystems = [
@@ -3717,8 +4732,8 @@ function StageScene({
         return {
           ...style,
           radiusScale: style.radiusScale * 1.22,
-          glowScale: style.glowScale * 1.08,
-          glowOpacity: clamp(style.glowOpacity * 1.45, 0.16, 0.34),
+          glowScale: Math.min(style.glowScale * 0.92, 1.56),
+          glowOpacity: clamp(style.glowOpacity * 0.78, 0.08, 0.18),
         };
       })(),
     }));
@@ -3729,7 +4744,17 @@ function StageScene({
       display: logScaledVector(equatorialToCartesianPc(entry.raDeg, entry.decDeg, entry.distancePc)),
       scale:
         extendedObjectDisplaySize(entry.distancePc, entry.sizePc)
-        * (entry.kind === "galaxy" ? 1.7 : entry.kind === "pulsar" ? 1.45 : 1),
+        * (
+          entry.kind === "galaxy"
+            ? 1.7
+            : entry.kind === "blackHole"
+              ? 1.58
+              : entry.kind === "quasar"
+                ? 1.95
+                : entry.kind === "pulsar"
+                  ? 1.45
+                  : 1
+        ),
     }));
   }, []);
   const whiteDwarfMarkers = useMemo(() => {
@@ -3739,6 +4764,30 @@ function StageScene({
       style: whiteDwarfStyle(anchor),
     }));
   }, [whiteDwarfs]);
+  const selectedReferenceMarker = useMemo(() => {
+    if (!selectedReferenceStar) return null;
+    const style = stellarStyleFromData({
+      seedKey: `reference-${selectedReferenceStar.name}`,
+      spectralType: selectedReferenceStar.spectralType,
+      effectiveTemperatureK: selectedReferenceStar.effectiveTemperatureK,
+      luminositySolar: selectedReferenceStar.luminositySolar,
+      radiusSolar: selectedReferenceStar.radiusSolar,
+    });
+    return {
+      star: selectedReferenceStar,
+      display: logScaledVector(equatorialToCartesianPc(selectedReferenceStar.raDeg, selectedReferenceStar.decDeg, selectedReferenceStar.distancePc)),
+      style: {
+        ...style,
+        radiusScale: style.radiusScale * 1.22,
+        glowScale: Math.min(style.glowScale * 0.92, 1.56),
+        glowOpacity: clamp(style.glowOpacity * 0.78, 0.08, 0.18),
+      },
+    };
+  }, [selectedReferenceStar]);
+  const selectedWhiteDwarfMarker = useMemo(
+    () => (selectedWhiteDwarf ? whiteDwarfMarkers.find(({ anchor }) => anchor.id === selectedWhiteDwarf.id) ?? null : null),
+    [selectedWhiteDwarf, whiteDwarfMarkers],
+  );
 
   const selectedPosition = selectedSystem ? logScaledVector(selectedSystem.cartesianPc) : null;
   const isSunSelected = selectedSystem?.id === "sun";
@@ -3755,6 +4804,9 @@ function StageScene({
       }
       if (pendingWhiteDwarfClickRef.current !== null) {
         window.clearTimeout(pendingWhiteDwarfClickRef.current);
+      }
+      if (pendingReferenceStarClickRef.current !== null) {
+        window.clearTimeout(pendingReferenceStarClickRef.current);
       }
       onHoverChange(null);
     };
@@ -3838,7 +4890,7 @@ function StageScene({
     controlsRef.current.update();
   }
 
-  function startFlightToSystem(target: THREE.Vector3, planetCount: number) {
+  function startFlightToSystem(target: THREE.Vector3, planetCount: number, duration = 1.35) {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
@@ -3850,7 +4902,7 @@ function StageScene({
       fromTarget: controls.target.clone(),
       toTarget: target.clone(),
       startedAt: sceneTimeRef.current,
-      duration: 1.35,
+      duration,
     };
   }
 
@@ -3902,6 +4954,54 @@ function StageScene({
     };
   }
 
+  useEffect(() => {
+    if (!selectionCommand) return;
+
+    if (selectionCommand.kind === "system") {
+      const system = systems.find((entry) => entry.id === selectionCommand.key);
+      if (!system) return;
+      const target = logScaledVector(system.cartesianPc);
+      const targetVector = new THREE.Vector3(target.x, target.y, target.z);
+      if (!freeRoam) {
+        setOrbitPivot(targetVector);
+      }
+      startFlightToSystem(targetVector, system.planets.length);
+      return;
+    }
+
+    if (selectionCommand.kind === "deepSky") {
+      const object = deepSkyObjects.find(({ entry }) => entry.name === selectionCommand.key);
+      if (!object) return;
+      const targetVector = new THREE.Vector3(object.display.x, object.display.y, object.display.z);
+      if (!freeRoam) {
+        setOrbitPivot(targetVector);
+      }
+      startFlightToDeepSky(targetVector, object.scale);
+      return;
+    }
+
+    if (selectionCommand.kind === "whiteDwarf") {
+      const object = whiteDwarfMarkers.find(({ anchor }) => anchor.id === selectionCommand.key);
+      if (!object) return;
+      const targetVector = new THREE.Vector3(object.display.x, object.display.y, object.display.z);
+      if (!freeRoam) {
+        setOrbitPivot(targetVector);
+      }
+      startFlightToWhiteDwarf(targetVector);
+      return;
+    }
+
+    if (selectionCommand.kind === "referenceStar") {
+      const object = referenceMarkers.find(({ star }) => star.name === selectionCommand.key);
+      if (!object) return;
+      const targetVector = new THREE.Vector3(object.display.x, object.display.y, object.display.z);
+      if (!freeRoam) {
+        setOrbitPivot(targetVector);
+      }
+      startFlightToSystem(targetVector, 0, 1.2);
+    }
+  }, [selectionCommand, systems, deepSkyObjects, whiteDwarfMarkers, referenceMarkers, freeRoam]);
+
   function handleStarClick(system: UniverseSystem, target: THREE.Vector3, now: number) {
     const last = lastStarClickRef.current;
     const isDouble = !!last && last.id === system.id && now - last.at < 280;
@@ -3942,6 +5042,7 @@ function StageScene({
 
     if (isDouble) {
       lastDeepSkyClickRef.current = null;
+      onSelectDeepSky(entry);
       setOrbitPivot(target);
       startFlightToDeepSky(target, scale);
       return;
@@ -3949,6 +5050,7 @@ function StageScene({
 
     lastDeepSkyClickRef.current = { id: entry.name, at: now };
     pendingDeepSkyClickRef.current = window.setTimeout(() => {
+      onSelectDeepSky(entry);
       if (!freeRoam) {
         setOrbitPivot(target);
       }
@@ -3970,6 +5072,7 @@ function StageScene({
 
     if (isDouble) {
       lastWhiteDwarfClickRef.current = null;
+      onSelectWhiteDwarf(anchor);
       setOrbitPivot(target);
       startFlightToWhiteDwarf(target);
       return;
@@ -3977,12 +5080,42 @@ function StageScene({
 
     lastWhiteDwarfClickRef.current = { id: anchor.id, at: now };
     pendingWhiteDwarfClickRef.current = window.setTimeout(() => {
+      onSelectWhiteDwarf(anchor);
       if (!freeRoam) {
         setOrbitPivot(target);
       }
       pendingWhiteDwarfClickRef.current = null;
       if (lastWhiteDwarfClickRef.current?.id === anchor.id) {
         lastWhiteDwarfClickRef.current = null;
+      }
+    }, 260);
+  }
+
+  function handleReferenceStarClick(star: ReferenceStar, target: THREE.Vector3, now: number) {
+    const last = lastReferenceStarClickRef.current;
+    const isDouble = !!last && last.id === star.name && now - last.at < 280;
+
+    if (pendingReferenceStarClickRef.current !== null) {
+      window.clearTimeout(pendingReferenceStarClickRef.current);
+      pendingReferenceStarClickRef.current = null;
+    }
+
+    if (isDouble) {
+      lastReferenceStarClickRef.current = null;
+      onSelectReferenceStar(star);
+      startFlightToSystem(target, 0, 1.2);
+      return;
+    }
+
+    lastReferenceStarClickRef.current = { id: star.name, at: now };
+    pendingReferenceStarClickRef.current = window.setTimeout(() => {
+      onSelectReferenceStar(star);
+      if (!freeRoam) {
+        setOrbitPivot(target);
+      }
+      pendingReferenceStarClickRef.current = null;
+      if (lastReferenceStarClickRef.current?.id === star.name) {
+        lastReferenceStarClickRef.current = null;
       }
     }, 260);
   }
@@ -3998,6 +5131,16 @@ function StageScene({
     cameraRef.current = camera as THREE.PerspectiveCamera;
     sceneTimeRef.current = clock.elapsedTime;
     const controls = controlsRef.current;
+    if (!introFlightDoneRef.current && controls && selectedSystem && selectedPosition) {
+      introFlightDoneRef.current = true;
+      const farDistance = DISPLAY_LOG_SCALE * 8.8;
+      const introOffset = new THREE.Vector3(farDistance * 0.16, farDistance * 0.09, farDistance);
+      const introTarget = new THREE.Vector3(selectedPosition.x, selectedPosition.y, selectedPosition.z);
+      controls.target.copy(introTarget);
+      camera.position.copy(introTarget.clone().add(introOffset));
+      controls.update();
+      startFlightToSystem(introTarget, selectedSystem.planets.length, 3.19);
+    }
     const flight = flightRef.current;
     if (!controls || !flight) return;
 
@@ -4059,18 +5202,34 @@ function StageScene({
           }}
         >
           <DeepSkyAnchor entry={entry} scale={scale} onHoverChange={onHoverChange} />
-          {entry.kind === "galaxy" || entry.kind === "pulsar" ? (
+          {entry.kind === "galaxy" || entry.kind === "pulsar" || entry.kind === "blackHole" || entry.kind === "quasar" ? (
             <SystemInterestTag
-              label={entry.kind === "galaxy" ? "galaxy" : "pulsar"}
+              label={
+                entry.kind === "galaxy"
+                  ? "galaxy"
+                  : entry.kind === "pulsar"
+                    ? "pulsar"
+                    : entry.kind === "blackHole"
+                      ? "black hole"
+                      : "quasar"
+              }
               accent={entry.kind === "galaxy" ? entry.accent : entry.tint}
-              offset={entry.kind === "galaxy" ? scale * 0.34 : scale * 0.28}
+              offset={
+                entry.kind === "galaxy"
+                  ? scale * 0.34
+                  : entry.kind === "quasar"
+                    ? scale * 0.36
+                    : scale * 0.28
+              }
             />
           ) : null}
         </group>
       ))}
 
       {showWhiteDwarfs
-        ? whiteDwarfMarkers.map(({ anchor, display, style }) => (
+        ? whiteDwarfMarkers
+            .filter(({ anchor }) => anchor.id !== selectedWhiteDwarf?.id)
+            .map(({ anchor, display, style }) => (
             <group
               key={anchor.id}
               position={[display.x, display.y, display.z]}
@@ -4094,7 +5253,9 @@ function StageScene({
           ))
         : null}
 
-      {referenceMarkers.map(({ star, display, style }) => (
+      {referenceMarkers
+        .filter(({ star }) => star.name !== selectedReferenceStar?.name)
+        .map(({ star, display, style }) => (
         <group
           key={star.name}
           position={[display.x, display.y, display.z]}
@@ -4107,6 +5268,10 @@ function StageScene({
             updateReferenceStarHover(event, star, style.core);
           }}
           onPointerOut={() => onHoverChange(null)}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleReferenceStarClick(star, new THREE.Vector3(display.x, display.y, display.z), event.timeStamp);
+          }}
         >
           <DistantStarMarker style={style} radius={systemRadius(star.distancePc) * style.radiusScale * 1.16} />
         </group>
@@ -4199,6 +5364,80 @@ function StageScene({
           />
         </group>
       ) : null}
+
+      {selectedReferenceMarker ? (
+        <group position={[selectedReferenceMarker.display.x, selectedReferenceMarker.display.y, selectedReferenceMarker.display.z]}>
+          <group
+            onPointerOver={(event) => {
+              event.stopPropagation();
+              updateReferenceStarHover(event, selectedReferenceMarker.star, selectedReferenceMarker.style.core);
+            }}
+            onPointerMove={(event) => {
+              event.stopPropagation();
+              updateReferenceStarHover(event, selectedReferenceMarker.star, selectedReferenceMarker.style.core);
+            }}
+            onPointerOut={() => onHoverChange(null)}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleReferenceStarClick(
+                selectedReferenceMarker.star,
+                new THREE.Vector3(
+                  selectedReferenceMarker.display.x,
+                  selectedReferenceMarker.display.y,
+                  selectedReferenceMarker.display.z,
+                ),
+                event.timeStamp,
+              );
+            }}
+          >
+            <mesh>
+              <sphereGeometry args={[systemRadius(selectedReferenceMarker.star.distancePc) * selectedReferenceMarker.style.radiusScale * 2.5, 24, 24]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+            <SelectedStarBody
+              style={selectedReferenceMarker.style}
+              radius={systemRadius(selectedReferenceMarker.star.distancePc) * selectedReferenceMarker.style.radiusScale * 1.18}
+            />
+          </group>
+        </group>
+      ) : null}
+
+      {selectedWhiteDwarfMarker ? (
+        <group position={[selectedWhiteDwarfMarker.display.x, selectedWhiteDwarfMarker.display.y, selectedWhiteDwarfMarker.display.z]}>
+          <group
+            onPointerOver={(event) => {
+              event.stopPropagation();
+              updateWhiteDwarfHover(event, selectedWhiteDwarfMarker.anchor, selectedWhiteDwarfMarker.style.core);
+            }}
+            onPointerMove={(event) => {
+              event.stopPropagation();
+              updateWhiteDwarfHover(event, selectedWhiteDwarfMarker.anchor, selectedWhiteDwarfMarker.style.core);
+            }}
+            onPointerOut={() => onHoverChange(null)}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleWhiteDwarfClick(
+                selectedWhiteDwarfMarker.anchor,
+                new THREE.Vector3(
+                  selectedWhiteDwarfMarker.display.x,
+                  selectedWhiteDwarfMarker.display.y,
+                  selectedWhiteDwarfMarker.display.z,
+                ),
+                event.timeStamp,
+              );
+            }}
+          >
+            <mesh>
+              <sphereGeometry args={[systemRadius(selectedWhiteDwarfMarker.anchor.distancePc) * 2.2, 24, 24]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+            <SelectedStarBody
+              style={selectedWhiteDwarfMarker.style}
+              radius={systemRadius(selectedWhiteDwarfMarker.anchor.distancePc) * 0.92}
+            />
+          </group>
+        </group>
+      ) : null}
     </>
   );
 }
@@ -4219,136 +5458,98 @@ function VisualFocus({
   planetViewSyncRef?: PlanetViewSyncRef;
 }) {
   const palette = paletteForSelection(system, planet, science);
-  const orbits = system.planets.slice(0, 4);
   const visualModel = planet ? planetVisualModel(system, planet, science) : null;
   const synopsis = buildSynopsis(system, planet, science);
   const [visualZoom, setVisualZoom] = useState(1);
 
   return (
-    <div className="relative isolate overflow-hidden rounded-[1.85rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,12,26,0.84),rgba(3,8,19,0.72))] p-5 shadow-[0_28px_80px_rgba(2,8,24,0.45)]">
+    <FocusFrame
+      eyebrow={planet ? "Planet Synopsis" : "Star Synopsis"}
+      synopsis={synopsis}
+      controls={planet ? (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[0.62rem] uppercase tracking-[0.18em] text-slate-200">
+            <button
+              type="button"
+              onClick={() => setVisualZoom((value) => clamp(value - 0.15, 0.7, 2.8))}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              -
+            </button>
+            <span>{visualZoom.toFixed(2)}x</span>
+            <button
+              type="button"
+              onClick={() => setVisualZoom((value) => clamp(value + 0.15, 0.7, 2.8))}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleMagnetosphere}
+            className={`rounded-full border px-3 py-1.5 text-[0.62rem] uppercase tracking-[0.2em] transition ${showMagnetosphere ? "border-cyan-300/34 bg-cyan-300/12 text-cyan-50" : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"}`}
+          >
+            {showMagnetosphere ? "Hide Mag Field" : "Show Mag Field"}
+          </button>
+        </div>
+      ) : null}
+    >
       <div
         className="absolute inset-0"
         style={{
           background: `radial-gradient(circle at 26% 22%, ${hsla(palette.star, 0.28)}, transparent 0 18%, ${hsla(palette.accent, 0.16)} 34%, transparent 62%), linear-gradient(180deg, rgba(3,8,20,0.08), rgba(2,6,17,0.78))`,
         }}
       />
-      <div className="absolute inset-x-[16%] top-[5%] h-16 rounded-full bg-sky-300/8 blur-3xl" />
-      <div className="relative z-10 mb-4 rounded-[1.35rem] border border-white/8 bg-slate-950/28 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-[0.66rem] uppercase tracking-[0.24em] text-sky-100/48">Planet Synopsis</div>
-          {planet ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[0.62rem] uppercase tracking-[0.18em] text-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setVisualZoom((value) => clamp(value - 0.15, 0.7, 2.8))}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-slate-100 transition hover:bg-white/[0.08]"
-                >
-                  -
-                </button>
-                <span>{visualZoom.toFixed(2)}x</span>
-                <button
-                  type="button"
-                  onClick={() => setVisualZoom((value) => clamp(value + 0.15, 0.7, 2.8))}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-slate-100 transition hover:bg-white/[0.08]"
-                >
-                  +
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={onToggleMagnetosphere}
-                className={`rounded-full border px-3 py-1.5 text-[0.62rem] uppercase tracking-[0.2em] transition ${showMagnetosphere ? "border-cyan-300/34 bg-cyan-300/12 text-cyan-50" : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"}`}
-              >
-                {showMagnetosphere ? "Hide Mag Field" : "Show Mag Field"}
-              </button>
-            </div>
-          ) : null}
-        </div>
-        <p className="mt-3 text-sm leading-7 text-slate-200/82">{synopsis}</p>
-      </div>
-      <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,0.08),transparent_0_18%,rgba(255,170,120,0.04)_34%,transparent_56%),linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
-        <div
-          className="absolute left-[8%] top-[8%] rounded-full blur-3xl"
-          style={{
-            width: "12rem",
-            height: "12rem",
-            background: hsla(palette.star, 0.34),
-          }}
-        />
-
-        {planet ? (
-          <>
-            {(() => {
-              const renderProps = visualModel!.renderProps;
-              return (
-                <>
-                  <div className="absolute inset-x-[18%] top-[58%] h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    onWheel={(event) => {
-                      event.preventDefault();
-                      setVisualZoom((value) => clamp(value + (event.deltaY < 0 ? 0.12 : -0.12), 0.7, 2.8));
-                    }}
-                  >
-                    <div
-                      className="w-full max-w-[25rem] origin-center transition-transform duration-200"
-                      style={{ transform: `scale(${visualZoom * 0.9})` }}
-                    >
-                      <PlanetGlobe
-                        {...renderProps}
-                        liveViewRef={planetViewSyncRef}
-                        showMagnetosphere={showMagnetosphere}
-                        className="!min-h-[24rem]"
-                      />
-                    </div>
-                  </div>
-                  <div className="absolute inset-x-0 bottom-5 flex justify-center">
-                    <div className="flex gap-2 text-[0.65rem] uppercase tracking-[0.24em] text-slate-200/62">
-                      <span>{planetClass(planet)}</span>
-                      <span>·</span>
-                      <span>{temperatureClass(planet.equilibriumK)}</span>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </>
-        ) : (
-          <>
-            {orbits.map((entry, index) => (
-              <div
-                key={entry.id}
-                className="absolute rounded-full border border-white/10"
-                style={{
-                  inset: `${24 + index * 10}% ${18 + index * 8}%`,
-                }}
-              />
-            ))}
-            {orbits.map((entry, index) => {
-              const size = entry.radiusEarth && entry.radiusEarth > 3 ? 18 : 12;
-              return (
+      {planet ? (
+        <div className="relative min-h-[18rem] overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,0.08),transparent_0_18%,rgba(255,170,120,0.04)_34%,transparent_56%),linear-gradient(180deg,rgba(7,16,36,0.82),rgba(2,8,18,0.96))]">
+          <div
+            className="absolute left-[8%] top-[8%] rounded-full blur-3xl"
+            style={{
+              width: "12rem",
+              height: "12rem",
+              background: hsla(palette.star, 0.34),
+            }}
+          />
+          {(() => {
+            const renderProps = visualModel!.renderProps;
+            return (
+              <>
+                <div className="absolute inset-x-[18%] top-[58%] h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <div
-                  key={`${entry.id}-planet`}
-                  className="absolute rounded-full"
-                  style={{
-                    left: `${52 + index * 8}%`,
-                    top: `${27 + index * 9}%`,
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    background: index % 2 === 0 ? "rgba(114,226,255,0.92)" : "rgba(255,177,105,0.92)",
-                    boxShadow: "0 0 20px rgba(114,226,255,0.22)",
+                  className="absolute inset-0 flex items-center justify-center"
+                  onWheel={(event) => {
+                    event.preventDefault();
+                    setVisualZoom((value) => clamp(value + (event.deltaY < 0 ? 0.12 : -0.12), 0.7, 2.8));
                   }}
-                />
-              );
-            })}
-            <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/8 bg-slate-950/28 px-3 py-2 text-xs text-slate-200/70">
-              System focus mode: planets orbit the selected host while science cards below update from the same archive object.
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+                >
+                  <div
+                    className="w-full max-w-[25rem] origin-center transition-transform duration-200"
+                    style={{ transform: `scale(${visualZoom * 0.9})` }}
+                  >
+                    <PlanetGlobe
+                      {...renderProps}
+                      liveViewRef={planetViewSyncRef}
+                      showMagnetosphere={showMagnetosphere}
+                      className="!min-h-[24rem]"
+                    />
+                  </div>
+                </div>
+                <div className="absolute inset-x-0 bottom-5 flex justify-center">
+                  <div className="flex gap-2 text-[0.65rem] uppercase tracking-[0.24em] text-slate-200/62">
+                    <span>{planetClass(planet)}</span>
+                    <span>·</span>
+                    <span>{temperatureClass(planet.equilibriumK)}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      ) : (
+        <StarOverviewVisual system={system} />
+      )}
+    </FocusFrame>
   );
 }
 
@@ -4364,15 +5565,20 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
   const [spectralFilter, setSpectralFilter] = useState("all");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedStageFilters>(DEFAULT_ADVANCED_STAGE_FILTERS);
-  const [simulationDays, setSimulationDays] = useState(0);
+  const [simulationDays] = useState(0);
   const [orbitSpeedMultiplier, setOrbitSpeedMultiplier] = useState(1);
   const [zoomFactor, setZoomFactor] = useState(1);
   const [followLocked, setFollowLocked] = useState(false);
   const [freeRoam, setFreeRoam] = useState(false);
   const [showWhiteDwarfs, setShowWhiteDwarfs] = useState(false);
   const [showMagnetosphere, setShowMagnetosphere] = useState(false);
+  const [focusKind, setFocusKind] = useState<FocusKind>(defaultPlanet ? "planet" : "system");
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(defaultSystem?.id ?? null);
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(defaultPlanet?.id ?? null);
+  const [selectedDeepSkyName, setSelectedDeepSkyName] = useState<string | null>(null);
+  const [selectedWhiteDwarfId, setSelectedWhiteDwarfId] = useState<string | null>(null);
+  const [selectedReferenceStarName, setSelectedReferenceStarName] = useState<string | null>(null);
+  const [selectionCommand, setSelectionCommand] = useState<StageSelectionCommand | null>(null);
   const [planetScience, setPlanetScience] = useState<PlanetScienceBundle | null>(null);
   const [planetScienceResolvedKey, setPlanetScienceResolvedKey] = useState<string | null>(null);
   const [stageHover, setStageHover] = useState<StageHover | null>(null);
@@ -4392,27 +5598,58 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
   }, [advancedFilters, query, spectralFilter, snapshot.systems]);
 
   const selectedSystem = useMemo(() => {
+    if (focusKind === "deepSky" || focusKind === "whiteDwarf" || focusKind === "referenceStar") {
+      return null;
+    }
     if (!filteredSystems.length) {
       return null;
     }
     if (!selectedSystemId) return filteredSystems[0] ?? null;
     return filteredSystems.find((system) => system.id === selectedSystemId) ?? filteredSystems[0] ?? null;
-  }, [filteredSystems, selectedSystemId]);
+  }, [filteredSystems, selectedSystemId, focusKind]);
 
   const selectedPlanet = useMemo(() => {
-    if (!selectedSystem) return null;
-    if (!selectedPlanetId) return selectedSystem.planets[0] ?? null;
-    return selectedSystem.planets.find((planet) => planet.id === selectedPlanetId) ?? selectedSystem.planets[0] ?? null;
-  }, [selectedPlanetId, selectedSystem]);
+    if (!selectedSystem || focusKind !== "planet") return null;
+    if (!selectedPlanetId) return null;
+    return selectedSystem.planets.find((planet) => planet.id === selectedPlanetId) ?? null;
+  }, [focusKind, selectedPlanetId, selectedSystem]);
 
   const selectedPlanetScience = useMemo(() => {
     if (!planetScience || !selectedPlanet) return null;
     return scienceKey(planetScience.planetName) === scienceKey(selectedPlanet.name) ? planetScience : null;
   }, [planetScience, selectedPlanet]);
+  const selectedDeepSky = useMemo(
+    () => (selectedDeepSkyName ? DEEP_SKY_CATALOG.find((entry) => entry.name === selectedDeepSkyName) ?? null : null),
+    [selectedDeepSkyName],
+  );
+  const selectedWhiteDwarf = useMemo(
+    () => (selectedWhiteDwarfId ? snapshot.whiteDwarfs.anchors.find((anchor) => anchor.id === selectedWhiteDwarfId) ?? null : null),
+    [selectedWhiteDwarfId, snapshot.whiteDwarfs.anchors],
+  );
+  const selectedReferenceStar = useMemo(
+    () => (selectedReferenceStarName ? REFERENCE_STAR_CATALOG.find((star) => star.name === selectedReferenceStarName) ?? null : null),
+    [selectedReferenceStarName],
+  );
+  const objectNavigatorOptions = useMemo(() => ({
+    systems: filteredSystems.map((system) => ({ value: `system:${system.id}`, label: system.name })),
+    deepSky: DEEP_SKY_CATALOG.map((entry) => ({ value: `deepSky:${entry.name}`, label: `${entry.name} · ${deepSkyKindLabel(entry.kind)}` })),
+    whiteDwarfs: snapshot.whiteDwarfs.anchors.map((anchor) => ({ value: `whiteDwarf:${anchor.id}`, label: `${anchor.name} · white dwarf` })),
+    referenceStars: REFERENCE_STAR_CATALOG.map((star) => ({ value: `referenceStar:${star.name}`, label: `${star.name} · ${star.spectralType}` })),
+  }), [filteredSystems, snapshot.whiteDwarfs.anchors]);
+  const navigatorValue =
+    focusKind === "deepSky" && selectedDeepSky
+      ? `deepSky:${selectedDeepSky.name}`
+      : focusKind === "whiteDwarf" && selectedWhiteDwarf
+        ? `whiteDwarf:${selectedWhiteDwarf.id}`
+        : focusKind === "referenceStar" && selectedReferenceStar
+          ? `referenceStar:${selectedReferenceStar.name}`
+          : selectedSystem
+            ? `system:${selectedSystem.id}`
+            : objectNavigatorOptions.systems[0]?.value ?? "";
 
   useEffect(() => {
     planetViewSyncRef.current = null;
-  }, [selectedSystem?.id, selectedPlanet?.id]);
+  }, [selectedSystem?.id, selectedPlanet?.id, focusKind, selectedDeepSkyName, selectedWhiteDwarfId, selectedReferenceStarName]);
   const selectedPlanetKey = selectedPlanet ? scienceKey(selectedPlanet.name) : null;
   const planetScienceLoading = !!selectedPlanetKey && planetScienceResolvedKey !== selectedPlanetKey;
 
@@ -4443,12 +5680,199 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     };
   }, [selectedPlanet?.name]);
 
-  const observedMetrics = selectedSystem ? buildObservedMetrics(selectedSystem, selectedPlanet, selectedPlanetScience) : [];
-  const derivedMetrics = selectedSystem ? buildDerivedMetrics(selectedSystem, selectedPlanet, selectedPlanetScience) : [];
-  const uncertaintyMetrics = selectedSystem ? buildUncertaintyMetrics(selectedSystem, selectedPlanet, selectedPlanetScience) : [];
-  const chartRows = selectedSystem ? buildChartRows(selectedSystem, selectedPlanet, selectedPlanetScience) : [];
-  const analysis = selectedSystem ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience) : "No target in the current filtered universe slice.";
-  const sources = selectedSystem ? dedupeSources(selectedSystem, selectedPlanet, selectedPlanetScience) : [];
+  const activeFocusKind: FocusKind | null = selectedDeepSky
+    ? "deepSky"
+    : selectedWhiteDwarf
+      ? "whiteDwarf"
+      : selectedReferenceStar
+        ? "referenceStar"
+        : selectedSystem
+          ? (selectedPlanet ? "planet" : "system")
+          : null;
+
+  const observedMetrics = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkyObservedMetrics(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfObservedMetrics(selectedWhiteDwarf)
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarObservedMetrics(selectedReferenceStar)
+        : selectedSystem
+          ? buildObservedMetrics(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : [];
+  const derivedMetrics = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkyDerivedMetrics(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfDerivedMetrics(selectedWhiteDwarf)
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarDerivedMetrics(selectedReferenceStar)
+        : selectedSystem
+          ? buildDerivedMetrics(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : [];
+  const uncertaintyMetrics = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkyUncertaintyMetrics(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfUncertaintyMetrics()
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarUncertaintyMetrics()
+        : selectedSystem
+          ? buildUncertaintyMetrics(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : [];
+  const chartRows = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkyChartRows(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfChartRows(selectedWhiteDwarf)
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarChartRows(selectedReferenceStar)
+        : selectedSystem
+          ? buildChartRows(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : [];
+  const analysis = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkyAnalysis(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfAnalysis(selectedWhiteDwarf)
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarAnalysis(selectedReferenceStar)
+        : selectedSystem
+          ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : "No target in the current filtered universe slice.";
+  const sources = activeFocusKind === "deepSky" && selectedDeepSky
+    ? deepSkySources(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? [...selectedWhiteDwarf.provenance, ...snapshot.whiteDwarfs.sources]
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? referenceStarSources(selectedReferenceStar)
+        : selectedSystem
+          ? dedupeSources(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : [];
+  const activeTitle = activeFocusKind === "deepSky" && selectedDeepSky
+    ? selectedDeepSky.name
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? selectedWhiteDwarf.name
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? selectedReferenceStar.name
+        : selectedPlanet?.name ?? selectedSystem?.name ?? "No selection";
+  const activeSynopsis = activeFocusKind === "deepSky" && selectedDeepSky
+    ? buildDeepSkySynopsis(selectedDeepSky)
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? buildWhiteDwarfSynopsis(selectedWhiteDwarf)
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? buildReferenceStarSynopsis(selectedReferenceStar)
+        : selectedSystem
+          ? buildSynopsis(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : "The current filter set returned no systems.";
+  const activeBasis = activeFocusKind === "deepSky"
+    ? "Catalog · Scene"
+    : activeFocusKind === "whiteDwarf"
+      ? "Catalog · Local"
+      : activeFocusKind === "referenceStar"
+        ? "Catalog"
+        : selectedSystem
+          ? compactSourceBadges(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : "None";
+  const activeSourceNote = activeFocusKind === "planet" && selectedSystem && selectedPlanet
+    ? compactSourceNote(selectedSystem, selectedPlanet, selectedPlanetScience)
+    : activeFocusKind === "system"
+      ? "Host-star/system overview derived from archive fields."
+      : activeFocusKind === "deepSky"
+        ? "Deep-sky object class and placement from the local scene catalog."
+        : activeFocusKind === "whiteDwarf"
+          ? "White-dwarf detail from the repaired local degenerate-star layer."
+          : activeFocusKind === "referenceStar"
+            ? "Reference-star detail from the local bright-star anchor layer."
+            : "";
+  const activeStatus = activeFocusKind === "planet"
+    ? (planetScienceLoading ? "Pulling official internet enrichment..." : selectedSystem ? localAnalysisStatus(selectedSystem, selectedPlanet, selectedPlanetScience) : "Archive snapshot only")
+    : activeFocusKind === "system"
+      ? "Host-star overview"
+      : activeFocusKind === "deepSky"
+        ? "Deep-sky catalog focus"
+        : activeFocusKind === "whiteDwarf"
+          ? "Degenerate-star layer focus"
+          : activeFocusKind === "referenceStar"
+            ? "Reference-star focus"
+            : "";
+  const activeObservationPlan = activeFocusKind === "deepSky" && selectedDeepSky
+    ? `Deep-sky planning path: ${selectedDeepSky.name} is currently a catalog-and-art anchor, not a JWST exoplanet target card. Use this panel for spatial context, class, and scale rather than exoplanet transit planning.`
+    : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
+      ? `White-dwarf planning path: ${selectedWhiteDwarf.name} belongs to the degenerate-star lab layer. The relevant next step is mass-radius / gravitational-redshift analysis, not the exoplanet transit planner.`
+      : activeFocusKind === "referenceStar" && selectedReferenceStar
+        ? `Reference-star planning path: ${selectedReferenceStar.name} is a stellar calibration anchor used to keep field color, scale, and temperature morphology grounded. It is not currently part of the JWST exoplanet follow-up queue.`
+      : selectedSystem
+          ? buildObservationPlan(selectedSystem, selectedPlanet, selectedPlanetScience)
+          : "No target selected.";
+  const observedTitle = observedSectionTitle(activeFocusKind);
+  const derivedTitle = derivedSectionTitle(activeFocusKind);
+  const uncertaintyTitle = uncertaintySectionTitle(activeFocusKind);
+  const planningTitle = planningSectionTitle(activeFocusKind);
+  const chartTitle = chartsSectionTitle(activeFocusKind);
+  const analysisTitle = analysisSectionTitle(activeFocusKind);
+  const analysisSubtitle = analysisSectionSubtitle(activeFocusKind);
+  const exportBaseName = `${sanitizeFilenamePart(activeTitle)}-${sanitizeFilenamePart(focusObjectNoun(activeFocusKind))}`;
+  const exportJson = JSON.stringify({
+    title: activeTitle,
+    focusKind: activeFocusKind,
+    synopsis: activeSynopsis,
+    basis: activeBasis,
+    status: activeStatus,
+    sourceNote: activeSourceNote,
+    observationPlan: activeObservationPlan,
+    observedMetrics,
+    derivedMetrics,
+    uncertaintyMetrics,
+    chartRows,
+    sources,
+    analysis,
+  }, null, 2);
+  const exportTxt = [
+    `TITLE: ${activeTitle}`,
+    `FOCUS: ${focusObjectNoun(activeFocusKind)}`,
+    `STATUS: ${activeStatus || "Unspecified"}`,
+    `BASIS: ${activeBasis || "Unspecified"}`,
+    activeSourceNote ? `SOURCE NOTE: ${activeSourceNote}` : null,
+    "",
+    "SYNOPSIS",
+    activeSynopsis,
+    "",
+    observedTitle.toUpperCase(),
+    ...observedMetrics.map((metric) => `- ${metric.label}: ${metric.value} | ${metric.note}`),
+    "",
+    derivedTitle.toUpperCase(),
+    ...derivedMetrics.map((metric) => `- ${metric.label}: ${metric.value} | ${metric.note}`),
+    "",
+    uncertaintyTitle.toUpperCase(),
+    ...uncertaintyMetrics.map((metric) => `- ${metric.label}: ${metric.value} | ${metric.note}`),
+    "",
+    planningTitle.toUpperCase(),
+    activeObservationPlan,
+    "",
+    chartTitle.toUpperCase(),
+    ...chartRows.map((row) => `- ${row.label}: ${row.note}`),
+    "",
+    "PROVENANCE",
+    ...sources.map((source) => `- ${source.name} | ${source.kind} | ${source.url}`),
+    "",
+    analysisTitle.toUpperCase(),
+    analysis,
+  ].filter(Boolean).join("\n");
+  const exportCsvRows = [
+    ["section", "kind", "label", "value", "note", "provenance", "equation"],
+    ...metricRowsToCsv("observed", observedMetrics),
+    ...metricRowsToCsv("derived", derivedMetrics),
+    ...metricRowsToCsv("uncertainty", uncertaintyMetrics),
+    ["planning", activeFocusKind ?? "", planningTitle, activeObservationPlan, "", "", ""],
+    ...chartRowsToCsv(chartRows),
+    ...sources.map((source) => ["source", source.kind, source.name, source.url, source.cache, source.accessedAt, ""]),
+  ];
+  const exportCsv = exportCsvRows
+    .map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, "\"\"")}"`).join(","))
+    .join("\n");
+  const contextPanelTitle = activeFocusKind === "deepSky"
+    ? "Object context"
+    : activeFocusKind === "whiteDwarf"
+      ? "White dwarf context"
+      : activeFocusKind === "referenceStar"
+        ? "Star context"
+        : "Planets in focus";
   const orbitSpeedLabel = `${orbitSpeedMultiplier.toFixed(1)}x`;
 
   function jumpHome() {
@@ -4460,12 +5884,16 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     setFollowLocked(false);
     setShowWhiteDwarfs(false);
     setZoomFactor(1);
+    setFocusKind("planet");
     setSelectedSystemId("sun");
     setSelectedPlanetId("earth");
+    setSelectedDeepSkyName(null);
+    setSelectedWhiteDwarfId(null);
+    setSelectedReferenceStarName(null);
   }
 
   return (
-    <section id="science-deck" className="space-y-6">
+    <section id="science-deck" className="scroll-mt-28 space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_30rem] xl:items-start">
         <div className="space-y-6">
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(7,16,34,0.82),rgba(3,9,22,0.62))] shadow-[0_30px_120px_rgba(2,8,24,0.42)] backdrop-blur-xl">
@@ -4482,7 +5910,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
               </div>
             </div>
 
-            <div className="grid gap-3 border-b border-white/8 px-5 py-4 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_13rem_10rem_10rem_auto]">
+            <div className="grid gap-3 border-b border-white/8 px-5 py-4 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_16rem_10rem_auto]">
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.24em] text-slate-300/58">
                   <Search className="h-3.5 w-3.5" /> Search planet / star
@@ -4497,18 +5925,84 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
 
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.24em] text-slate-300/58">
-                  <Crosshair className="h-3.5 w-3.5" /> Star system
+                  <Crosshair className="h-3.5 w-3.5" /> Navigator target
                 </span>
                 <select
-                  value={selectedSystem?.id ?? ""}
-                  onChange={(event) => setSelectedSystemId(event.target.value || null)}
+                  value={navigatorValue}
+                  onChange={(event) => {
+                    const [kind, rawKey] = event.target.value.split(":");
+                    const key = rawKey ?? "";
+                    if (!key) return;
+                    setFreeRoam(false);
+                    setFollowLocked(false);
+                    setSelectedPlanetId(null);
+                    if (kind === "system") {
+                      setFocusKind("system");
+                      setSelectedSystemId(key);
+                      setSelectedDeepSkyName(null);
+                      setSelectedWhiteDwarfId(null);
+                      setSelectedReferenceStarName(null);
+                      setSelectionCommand({ kind: "system", key, nonce: Date.now() });
+                      return;
+                    }
+                    if (kind === "deepSky") {
+                      setFocusKind("deepSky");
+                      setSelectedDeepSkyName(key);
+                      setSelectedSystemId(null);
+                      setSelectedWhiteDwarfId(null);
+                      setSelectedReferenceStarName(null);
+                      setSelectionCommand({ kind: "deepSky", key, nonce: Date.now() });
+                      return;
+                    }
+                    if (kind === "whiteDwarf") {
+                      setShowWhiteDwarfs(true);
+                      setFocusKind("whiteDwarf");
+                      setSelectedWhiteDwarfId(key);
+                      setSelectedDeepSkyName(null);
+                      setSelectedSystemId(null);
+                      setSelectedReferenceStarName(null);
+                      setSelectionCommand({ kind: "whiteDwarf", key, nonce: Date.now() });
+                      return;
+                    }
+                    if (kind === "referenceStar") {
+                      setFocusKind("referenceStar");
+                      setSelectedReferenceStarName(key);
+                      setSelectedDeepSkyName(null);
+                      setSelectedWhiteDwarfId(null);
+                      setSelectedSystemId(null);
+                      setSelectionCommand({ kind: "referenceStar", key, nonce: Date.now() });
+                    }
+                  }}
                   className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-300/30 focus:bg-slate-950/58"
                 >
-                  {filteredSystems.map((system) => (
-                    <option key={system.id} value={system.id}>
-                      {system.name}
-                    </option>
-                  ))}
+                  <optgroup label="Host systems">
+                    {objectNavigatorOptions.systems.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Deep sky">
+                    {objectNavigatorOptions.deepSky.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Reference stars">
+                    {objectNavigatorOptions.referenceStars.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="White dwarfs">
+                    {objectNavigatorOptions.whiteDwarfs.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </label>
 
@@ -4528,18 +6022,6 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   <option value="M">M</option>
                   <option value="Other">Other</option>
                 </select>
-              </label>
-
-              <label className="space-y-2">
-                <span className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.24em] text-slate-300/58">
-                  <Orbit className="h-3.5 w-3.5" /> Sim time (days)
-                </span>
-                <input
-                  type="number"
-                  value={simulationDays}
-                  onChange={(event) => setSimulationDays(Number(event.target.value || 0))}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300/30 focus:bg-slate-950/58"
-                />
               </label>
 
               <div className="relative flex items-end xl:min-w-[8rem]">
@@ -4663,19 +6145,6 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   >
                     Advanced Filters
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (freeRoam) {
-                        setFreeRoam(false);
-                      }
-                      setFollowLocked((value) => !value);
-                    }}
-                    disabled={!selectedPlanet}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm font-medium transition ${selectedPlanet ? (followLocked ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08]") : "cursor-not-allowed border-white/8 bg-white/[0.02] text-slate-500"}`}
-                  >
-                    {followLocked ? "Unlock Follow" : "Lock Follow"}
-                  </button>
                 </div>
               </div>
             </div>
@@ -4691,7 +6160,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(129,226,255,0.10),transparent_0_20%,rgba(255,159,111,0.06)_34%,transparent_62%)]" />
               <Canvas
-                camera={{ position: [0, 10, 46], fov: 48 }}
+                camera={{ position: [0, DISPLAY_LOG_SCALE * 0.8, DISPLAY_LOG_SCALE * 8.8], fov: 48 }}
                 gl={{ alpha: true, antialias: true }}
                 onPointerMissed={() => setStageHover(null)}
                 onCreated={({ gl }) => {
@@ -4704,8 +6173,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   whiteDwarfs={snapshot.whiteDwarfs.anchors}
                   showWhiteDwarfs={showWhiteDwarfs}
                   selectedSystem={selectedSystem}
+                  selectedWhiteDwarf={selectedWhiteDwarf}
+                  selectedReferenceStar={selectedReferenceStar}
                   selectedPlanet={selectedPlanet}
                   selectedPlanetScience={selectedPlanetScience}
+                  selectionCommand={selectionCommand}
                   planetViewSyncRef={planetViewSyncRef}
                   simulationDays={simulationDays}
                   orbitSpeedMultiplier={orbitSpeedMultiplier}
@@ -4713,11 +6185,45 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   followLocked={followLocked}
                   freeRoam={freeRoam}
                   onSelectSystem={(system) => {
+                    setFocusKind("system");
                     setSelectedSystemId(system.id);
-                    setSelectedPlanetId(system.planets[0]?.id ?? null);
+                    setSelectedPlanetId(null);
+                    setSelectedDeepSkyName(null);
+                    setSelectedWhiteDwarfId(null);
+                    setSelectedReferenceStarName(null);
                     setFollowLocked(false);
                   }}
-                  onSelectPlanet={(planet) => setSelectedPlanetId(planet.id)}
+                  onSelectPlanet={(planet) => {
+                    setFocusKind("planet");
+                    setSelectedPlanetId(planet.id);
+                    setSelectedDeepSkyName(null);
+                    setSelectedWhiteDwarfId(null);
+                    setSelectedReferenceStarName(null);
+                  }}
+                  onSelectDeepSky={(entry) => {
+                    setFocusKind("deepSky");
+                    setSelectedDeepSkyName(entry.name);
+                    setSelectedWhiteDwarfId(null);
+                    setSelectedReferenceStarName(null);
+                    setSelectedPlanetId(null);
+                    setFollowLocked(false);
+                  }}
+                  onSelectWhiteDwarf={(anchor) => {
+                    setFocusKind("whiteDwarf");
+                    setSelectedWhiteDwarfId(anchor.id);
+                    setSelectedDeepSkyName(null);
+                    setSelectedReferenceStarName(null);
+                    setSelectedPlanetId(null);
+                    setFollowLocked(false);
+                  }}
+                  onSelectReferenceStar={(star) => {
+                    setFocusKind("referenceStar");
+                    setSelectedReferenceStarName(star.name);
+                    setSelectedDeepSkyName(null);
+                    setSelectedWhiteDwarfId(null);
+                    setSelectedPlanetId(null);
+                    setFollowLocked(false);
+                  }}
                   onHoverChange={setStageHover}
                 />
               </Canvas>
@@ -4746,7 +6252,24 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   ? "Free cam · drag, pan, zoom anywhere · double-click star/planet to fly"
                   : "Drag to orbit · wheel to zoom · right-click for free cam · click to set orbit point · double-click star/planet to fly"}
               </div>
-              <div className="absolute bottom-4 right-4 z-20 flex flex-col items-center gap-3 rounded-[1.35rem] border border-white/10 bg-slate-950/58 px-3 py-4 shadow-[0_18px_48px_rgba(2,8,24,0.48)] backdrop-blur-md">
+              <div className="absolute bottom-4 right-4 z-20 flex w-[5.5rem] flex-col items-center gap-2 rounded-[1.05rem] border border-white/10 bg-slate-950/58 px-2 py-2 shadow-[0_18px_48px_rgba(2,8,24,0.48)] backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (freeRoam) {
+                      setFreeRoam(false);
+                    }
+                    setFollowLocked((value) => !value);
+                  }}
+                  disabled={!selectedPlanet}
+                  className={`w-full rounded-full border px-2 py-1.5 text-[0.54rem] uppercase tracking-[0.18em] transition ${
+                    selectedPlanet
+                      ? (followLocked ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.05] text-slate-100 hover:bg-white/[0.1]")
+                      : "cursor-not-allowed border-white/8 bg-white/[0.02] text-slate-500"
+                  }`}
+                >
+                  {followLocked ? "Unlock" : "Follow"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -4758,7 +6281,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                       return next;
                     });
                   }}
-                  className={`w-full rounded-full border px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] transition ${
+                  className={`w-full rounded-full border px-2 py-1.5 text-[0.54rem] uppercase tracking-[0.18em] transition ${
                     freeRoam
                       ? "border-cyan-300/36 bg-cyan-300/14 text-cyan-50"
                       : "border-white/10 bg-white/[0.05] text-slate-100 hover:bg-white/[0.1]"
@@ -4766,8 +6289,8 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                 >
                   {freeRoam ? "Free Cam On" : "Free Cam"}
                 </button>
-                <div className="text-[0.62rem] uppercase tracking-[0.24em] text-slate-300/62">Zoom</div>
-                <div className="text-xs font-medium text-white">{zoomFactor.toFixed(2)}x</div>
+                <div className="text-[0.54rem] uppercase tracking-[0.2em] text-slate-300/62">Zoom</div>
+                <div className="text-[0.68rem] font-medium text-white">{zoomFactor.toFixed(2)}x</div>
                 <input
                   type="range"
                   min={0.35}
@@ -4776,11 +6299,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   value={zoomFactor}
                   onChange={(event) => setZoomFactor(Number(event.target.value))}
                   aria-label="Stage zoom"
-                  className="h-32 w-4 cursor-pointer appearance-none rounded-full bg-white/8 accent-cyan-300 [writing-mode:vertical-lr]"
+                  className="mx-auto h-16 w-3 cursor-pointer appearance-none rounded-full bg-white/8 accent-cyan-300 [writing-mode:vertical-lr]"
                   style={{ direction: "rtl" }}
                 />
-                <div className="text-[0.62rem] uppercase tracking-[0.24em] text-slate-300/62">Orbit speed</div>
-                <div className="text-xs font-medium text-white">{orbitSpeedLabel}</div>
+                <div className="text-[0.54rem] uppercase tracking-[0.2em] text-slate-300/62">Orbit</div>
+                <div className="text-[0.68rem] font-medium text-white">{orbitSpeedLabel}</div>
                 <input
                   type="range"
                   min={0.1}
@@ -4789,15 +6312,15 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   value={orbitSpeedMultiplier}
                   onChange={(event) => setOrbitSpeedMultiplier(Number(event.target.value))}
                   aria-label="Orbit speed"
-                  className="h-40 w-4 cursor-pointer appearance-none rounded-full bg-white/8 accent-sky-300 [writing-mode:vertical-lr]"
+                  className="mx-auto h-20 w-3 cursor-pointer appearance-none rounded-full bg-white/8 accent-sky-300 [writing-mode:vertical-lr]"
                   style={{ direction: "rtl" }}
                 />
                 <button
                   type="button"
                   onClick={jumpHome}
-                  className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2 py-1.5 text-[0.54rem] uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
                 >
-                  <House className="h-3.5 w-3.5" />
+                  <House className="h-3 w-3" />
                   Home
                 </button>
               </div>
@@ -4807,37 +6330,37 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/30 p-4">
                   <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Selection Report</div>
-                  <h3 className="mt-2 text-xl font-semibold text-white">{selectedPlanet?.name ?? selectedSystem?.name ?? "No selection"}</h3>
-                  {selectedPlanet ? (
+                  <h3 className="mt-2 text-xl font-semibold text-white">{activeTitle}</h3>
+                  {activeStatus ? (
                     <div className="mt-2 text-[0.66rem] uppercase tracking-[0.22em] text-sky-100/48">
-                      {planetScienceLoading ? "Pulling official internet enrichment..." : selectedSystem ? localAnalysisStatus(selectedSystem, selectedPlanet, selectedPlanetScience) : "Archive snapshot only"}
+                      {activeStatus}
                     </div>
                   ) : null}
-                  {selectedSystem ? (
+                  {activeBasis ? (
                     <div className="mt-2 text-xs leading-5 text-slate-400/78">
-                      Basis: {compactSourceBadges(selectedSystem, selectedPlanet, selectedPlanetScience)}
-                      {selectedPlanet ? ` · ${compactSourceNote(selectedSystem, selectedPlanet, selectedPlanetScience)}` : ""}
+                      Basis: {activeBasis}
+                      {activeSourceNote ? ` · ${activeSourceNote}` : ""}
                     </div>
                   ) : null}
                   <p className="mt-2 text-sm leading-6 text-slate-300/74">
-                    {selectedSystem ? buildSynopsis(selectedSystem, selectedPlanet, selectedPlanetScience) : "The current filter set returned no systems."}
+                    {activeSynopsis}
                   </p>
-                  {selectedSystem ? (
+                  {activeFocusKind === "planet" || activeFocusKind === "system" ? (
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">XYZ from Sun</div>
                         <div className="mt-1 text-sm text-white">
-                          {formatSigned(selectedSystem.cartesianPc.x, 2)}, {formatSigned(selectedSystem.cartesianPc.y, 2)}, {formatSigned(selectedSystem.cartesianPc.z, 2)} pc
+                          {selectedSystem ? `${formatSigned(selectedSystem.cartesianPc.x, 2)}, ${formatSigned(selectedSystem.cartesianPc.y, 2)}, ${formatSigned(selectedSystem.cartesianPc.z, 2)} pc` : "Unresolved"}
                         </div>
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Host star</div>
-                        <div className="mt-1 text-sm text-white">{selectedSystem.name} · {selectedSystem.stellar.spectralType ?? "Unknown"}</div>
+                        <div className="mt-1 text-sm text-white">{selectedSystem?.name ?? "Unresolved"} · {selectedSystem?.stellar.spectralType ?? "Unknown"}</div>
                         <div className="mt-1 text-xs text-slate-300/68">
-                          {selectedSystem.stellar.radiusSolar
+                          {selectedSystem?.stellar.radiusSolar
                             ? `R ${formatNumber(selectedSystem.stellar.radiusSolar, 2)} R☉`
                             : "R unresolved"}
-                          {selectedSystem.stellar.photometry.jMag !== null || selectedSystem.stellar.photometry.kMag !== null
+                          {selectedSystem && (selectedSystem.stellar.photometry.jMag !== null || selectedSystem.stellar.photometry.kMag !== null)
                             ? ` · J/K ${formatNumber(selectedSystem.stellar.photometry.jMag, 2)} / ${formatNumber(selectedSystem.stellar.photometry.kMag, 2)}`
                             : ""}
                         </div>
@@ -4845,47 +6368,143 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
                         <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
-                        <div className="mt-1 text-sm text-white">{selectedPlanet ? "Planet detail" : "System overview"}</div>
+                        <div className="mt-1 text-sm text-white">{activeFocusKind === "planet" ? "Planet detail" : "System overview"}</div>
                         {selectedPlanet ? (
                           <div className="mt-1 text-xs text-slate-300/68">
-                            {compactPlanetFluxTemp(selectedSystem, selectedPlanet, selectedPlanetScience) || compactPlanetMassRadius(selectedPlanet, selectedPlanetScience) || "Science summary unresolved"}
+                            {compactPlanetFluxTemp(selectedSystem!, selectedPlanet, selectedPlanetScience) || compactPlanetMassRadius(selectedPlanet, selectedPlanetScience) || "Science summary unresolved"}
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="mt-1 text-xs text-slate-300/68">
+                            {selectedSystem ? `${selectedSystem.planetCount} planets · ${selectedSystem.stellar.effectiveTemperatureK ? `${formatNumber(selectedSystem.stellar.effectiveTemperatureK, 0)} K host` : "host temperature unresolved"}` : "System summary unresolved"}
+                          </div>
+                        )}
                         <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-slate-400/60">
-                          Source: {compactSourceBadges(selectedSystem, selectedPlanet, selectedPlanetScience)}
+                          Source: {activeBasis}
                         </div>
-                        {mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason ? (
-                          <div className="mt-1 text-xs text-sky-100/62">{mergedLocalAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)?.interestingReason}</div>
+                        {mergedLocalAnalysis(selectedSystem!, selectedPlanet, selectedPlanetScience)?.interestingReason ? (
+                          <div className="mt-1 text-xs text-sky-100/62">{mergedLocalAnalysis(selectedSystem!, selectedPlanet, selectedPlanetScience)?.interestingReason}</div>
                         ) : null}
+                      </div>
+                    </div>
+                  ) : activeFocusKind === "deepSky" && selectedDeepSky ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">XYZ from Sun</div>
+                        <div className="mt-1 text-sm text-white">{formatCartesian(equatorialToCartesianPc(selectedDeepSky.raDeg, selectedDeepSky.decDeg, selectedDeepSky.distancePc))}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Object class</div>
+                        <div className="mt-1 text-sm text-white">{deepSkyKindLabel(selectedDeepSky.kind)}</div>
+                        <div className="mt-1 text-xs text-slate-300/68">{formatNumber(distanceLy(selectedDeepSky.distancePc), 0)} ly · {formatNumber(selectedDeepSky.sizePc * 3.26156, 1)} ly size proxy</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
+                        <div className="mt-1 text-sm text-white">{selectedDeepSky.kind === "pulsar" ? "Timing target" : "Scene anchor"}</div>
+                        <div className="mt-1 text-xs text-slate-300/68">
+                          {selectedDeepSky.pulsePeriodSeconds ? `${formatNumber(selectedDeepSky.pulsePeriodSeconds * 1000, 2)} ms pulse` : `${formatNumber(deepSkyAngularSizeArcmin(selectedDeepSky), 1)} arcmin apparent size`}
+                        </div>
+                      </div>
+                    </div>
+                  ) : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">XYZ from Sun</div>
+                        <div className="mt-1 text-sm text-white">{formatCartesian(selectedWhiteDwarf.cartesianPc)}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">White dwarf</div>
+                        <div className="mt-1 text-sm text-white">{selectedWhiteDwarf.spectralType ?? "Unknown"} · {selectedWhiteDwarf.effectiveTemperatureK ? `${formatNumber(selectedWhiteDwarf.effectiveTemperatureK, 0)} K` : "Teff unresolved"}</div>
+                        <div className="mt-1 text-xs text-slate-300/68">{selectedWhiteDwarf.massSolar ? `${formatNumber(selectedWhiteDwarf.massSolar, 2)} M☉` : "mass unresolved"} · {selectedWhiteDwarf.radiusSolar ? `${formatNumber(selectedWhiteDwarf.radiusSolar, 4)} R☉` : "radius unresolved"}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
+                        <div className="mt-1 text-sm text-white">Degenerate-star lab</div>
+                        <div className="mt-1 text-xs text-slate-300/68">{selectedWhiteDwarf.gravitationalRedshiftKmS ? `${formatNumber(selectedWhiteDwarf.gravitationalRedshiftKmS, 1)} km/s v_GR proxy` : "v_GR unresolved"}</div>
+                      </div>
+                    </div>
+                  ) : activeFocusKind === "referenceStar" && selectedReferenceStar ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">XYZ from Sun</div>
+                        <div className="mt-1 text-sm text-white">{formatCartesian(equatorialToCartesianPc(selectedReferenceStar.raDeg, selectedReferenceStar.decDeg, selectedReferenceStar.distancePc))}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Reference star</div>
+                        <div className="mt-1 text-sm text-white">{selectedReferenceStar.spectralType} · {formatNumber(selectedReferenceStar.effectiveTemperatureK, 0)} K</div>
+                        <div className="mt-1 text-xs text-slate-300/68">{formatNumber(selectedReferenceStar.radiusSolar, 2)} R☉ · {formatNumber(selectedReferenceStar.luminositySolar, 2)} L☉</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
+                        <div className="mt-1 text-sm text-white">Field-star anchor</div>
+                        <div className="mt-1 text-xs text-slate-300/68">{formatNumber(distanceLy(selectedReferenceStar.distancePc), 1)} ly from the Sun</div>
                       </div>
                     </div>
                   ) : null}
                 </div>
 
                 <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/30 p-4">
-                  <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Planets in focus</div>
+                  <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{contextPanelTitle}</div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {selectedSystem?.planets.length ? (
+                    {activeFocusKind === "planet" || activeFocusKind === "system" ? (
+                      selectedSystem?.planets.length ? (
                       selectedSystem.planets.map((planet) => (
                         <button
                           key={planet.id}
                           type="button"
-                          onClick={() => setSelectedPlanetId(planet.id)}
+                          onClick={() => {
+                            setFocusKind("planet");
+                            setSelectedPlanetId(planet.id);
+                          }}
                           className={`rounded-2xl border px-3 py-2 text-left transition ${selectedPlanet?.id === planet.id ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/18 hover:bg-white/[0.06]"}`}
                         >
                           <div className="text-xs uppercase tracking-[0.18em]">{planet.name}</div>
                           <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">
-                            {compactPlanetFluxTemp(selectedSystem, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
+                            {compactPlanetFluxTemp(selectedSystem!, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
                               || compactPlanetMassRadius(planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)
                               || "Science summary unresolved"}
                           </div>
                           <div className="mt-1 text-[0.6rem] uppercase tracking-[0.16em] text-slate-400/58">
-                            {compactSourceBadges(selectedSystem, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)}
+                            {compactSourceBadges(selectedSystem!, planet, selectedPlanet?.id === planet.id ? selectedPlanetScience : null)}
                           </div>
                         </button>
                       ))
                     ) : (
                       <div className="text-sm text-slate-400">No planets in the current filtered selection.</div>
+                    )) : activeFocusKind === "deepSky" && selectedDeepSky ? (
+                      <>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Coordinates</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">{formatNumber(selectedDeepSky.raDeg, 2)}° / {formatSigned(selectedDeepSky.decDeg, 2)}°</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Scene basis</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">Display-compressed distance · catalog direction retained</div>
+                        </div>
+                      </>
+                    ) : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf ? (
+                      <>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Tags</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">{selectedWhiteDwarf.tags.join(" · ") || "none"}</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Distance</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">{formatNumber(distanceLy(selectedWhiteDwarf.distancePc), 1)} ly</div>
+                        </div>
+                      </>
+                    ) : activeFocusKind === "referenceStar" && selectedReferenceStar ? (
+                      <>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Distance</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">{formatNumber(distanceLy(selectedReferenceStar.distancePc), 1)} ly</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em]">Morphology anchor</div>
+                          <div className="mt-1 text-[0.68rem] leading-4 text-slate-300/70">{spectralBucket(selectedReferenceStar.spectralType)}-class color/size reference</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-slate-400">No active object in focus.</div>
                     )}
                   </div>
                 </div>
@@ -4894,10 +6513,32 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
               <div className="rounded-[1.7rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Full Maximal Analysis</div>
-                    <h3 className="mt-2 text-xl font-semibold text-white">Science-side narrative retained under the map</h3>
+                    <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{analysisTitle}</div>
+                    <h3 className="mt-2 text-xl font-semibold text-white">{analysisSubtitle}</h3>
                   </div>
-                  <div className="font-mono text-[0.68rem] uppercase tracking-[0.24em] text-slate-400">Download hooks attach here in the next pass</div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => downloadTextFile(`${exportBaseName}.txt`, exportTxt)}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[0.68rem] uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
+                    >
+                      TXT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadTextFile(`${exportBaseName}.json`, exportJson, "application/json;charset=utf-8")}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[0.68rem] uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
+                    >
+                      JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadTextFile(`${exportBaseName}.csv`, exportCsv, "text/csv;charset=utf-8")}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[0.68rem] uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
+                    >
+                      CSV
+                    </button>
+                  </div>
                 </div>
                 <pre className="mt-5 whitespace-pre-wrap break-words rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-5 font-mono text-[0.84rem] leading-7 text-slate-200/82">{analysis}</pre>
               </div>
@@ -4906,7 +6547,13 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
         </div>
 
         <aside className="space-y-4">
-          {selectedSystem ? (
+          {selectedDeepSky ? (
+            <DeepSkyVisualFocus entry={selectedDeepSky} />
+          ) : selectedWhiteDwarf ? (
+            <WhiteDwarfVisualFocus anchor={selectedWhiteDwarf} />
+          ) : selectedReferenceStar ? (
+            <ReferenceStarVisualFocus star={selectedReferenceStar} />
+          ) : selectedSystem ? (
             <VisualFocus
               key={`${selectedSystem.id}:${selectedPlanet?.id ?? "system"}`}
               system={selectedSystem}
@@ -4920,7 +6567,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
             <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">
-              <Database className="h-3.5 w-3.5" /> Observed Inputs
+              <Database className="h-3.5 w-3.5" /> {observedTitle}
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {observedMetrics.map((metric) => (
@@ -4931,7 +6578,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
             <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">
-              <Orbit className="h-3.5 w-3.5" /> Inferred / Model-Derived
+              <Orbit className="h-3.5 w-3.5" /> {derivedTitle}
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {derivedMetrics.map((metric) => (
@@ -4941,7 +6588,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
           </section>
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
-            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Formal Uncertainty Propagation</div>
+            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{uncertaintyTitle}</div>
             <div className="mt-4 grid gap-3">
               {uncertaintyMetrics.map((metric) => (
                 <MetricCard key={metric.label} metric={metric} />
@@ -4950,36 +6597,40 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
           </section>
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
-            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Observation Planning Output</div>
-            <p className="mt-3 text-sm leading-7 text-slate-200/82">{selectedSystem ? buildObservationPlan(selectedSystem, selectedPlanet, selectedPlanetScience) : "No target selected."}</p>
+            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{planningTitle}</div>
+            <p className="mt-3 text-sm leading-7 text-slate-200/82">{activeObservationPlan}</p>
           </section>
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
             <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Provenance & Citations</div>
-            <div className="mt-4 space-y-3">
-              {sources.map((source) => (
-                <a
-                  key={source.url}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-[1.2rem] border border-white/10 bg-slate-950/30 p-4 transition hover:border-sky-300/24 hover:bg-slate-950/46"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-white">{source.name}</span>
-                    <span className={`rounded-full border px-2 py-1 text-[0.64rem] uppercase tracking-[0.18em] ${source.cache === "hit" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-50" : "border-amber-300/20 bg-amber-300/10 text-amber-50"}`}>
-                      {source.cache}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-300/70">{source.kind} · fetched {new Date(source.accessedAt).toLocaleString()}</p>
-                </a>
-              ))}
-            </div>
+            {sources.length ? (
+              <div className="mt-4 space-y-3">
+                {sources.map((source) => (
+                  <a
+                    key={`${source.url}-${source.name}`}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-[1.2rem] border border-white/10 bg-slate-950/30 p-4 transition hover:border-sky-300/24 hover:bg-slate-950/46"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-white">{source.name}</span>
+                      <span className={`rounded-full border px-2 py-1 text-[0.64rem] uppercase tracking-[0.18em] ${source.cache === "hit" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-50" : "border-amber-300/20 bg-amber-300/10 text-amber-50"}`}>
+                        {source.cache}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-300/70">{source.kind} · fetched {new Date(source.accessedAt).toLocaleString()}</p>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm leading-7 text-slate-300/72">No external provenance records are attached to this object layer yet.</p>
+            )}
           </section>
 
           <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
             <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">
-              <ChartColumn className="h-3.5 w-3.5" /> Science Chart Stack
+              <ChartColumn className="h-3.5 w-3.5" /> {chartTitle}
             </div>
             <div className="mt-4 space-y-4">
               {chartRows.map((row) => (
@@ -5015,7 +6666,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                 </div>
               ))}
             </div>
-            {selectedSystem?.planets.length ? (
+            {((activeFocusKind === "planet" || activeFocusKind === "system") && selectedSystem?.planets.length) ? (
               <div className="mt-5 rounded-[1.2rem] border border-white/8 bg-slate-950/26 p-4">
                 <div className="text-[0.68rem] uppercase tracking-[0.24em] text-slate-400">System orbit ladder</div>
                 <div className="mt-4 space-y-3">
