@@ -372,7 +372,7 @@ export type PlanetScienceBundle = {
   sources: SourceDescriptor[];
   localAnalysis?: LocalAnalysisBundle | null;
   researchNarrative?: string | null;
-  spectrumPoints?: Array<[number, number]> | null;
+  spectrumPoints?: { instrument: string; points: Array<[number, number]> } | null;
   uncertainty: {
     radiusEarth: MeasurementBounds;
     massEarth: MeasurementBounds;

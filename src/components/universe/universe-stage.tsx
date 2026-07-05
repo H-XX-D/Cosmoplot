@@ -2132,9 +2132,9 @@ function MetricCard({ metric }: { metric: Metric }) {
   );
 }
 
-// Reduced transmission spectrum as an inline SVG: transit depth (ppm) vs
-// wavelength (um). Wavelength axis is drawn short-to-long (left to right).
-function SpectrumChart({ points, molecules }: { points: Array<[number, number]>; molecules?: string[] }) {
+// Real reduced transmission spectrum as an inline SVG: reduced transit signal
+// vs wavelength (um). Units are instrument-specific, so the y-axis auto-scales.
+function SpectrumChart({ points, instrument }: { points: Array<[number, number]>; instrument?: string }) {
   const W = 640;
   const H = 220;
   const padL = 48;
@@ -2159,8 +2159,8 @@ function SpectrumChart({ points, molecules }: { points: Array<[number, number]>;
     <div className="rounded-[1.2rem] border border-sky-300/16 bg-slate-950/50 p-4">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[0.64rem] uppercase tracking-[0.22em] text-sky-100/60">Transmission spectrum</div>
-        {molecules?.length ? (
-          <div className="text-[0.6rem] uppercase tracking-[0.16em] text-emerald-200/70">{molecules.join(" · ")}</div>
+        {instrument ? (
+          <div className="text-[0.6rem] uppercase tracking-[0.16em] text-emerald-200/70">{instrument} · reduced</div>
         ) : null}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="Transmission spectrum">
@@ -2185,7 +2185,7 @@ function SpectrumChart({ points, molecules }: { points: Array<[number, number]>;
           <circle key={i} cx={x(p[0])} cy={y(p[1])} r="1.6" fill="#e0f2fe" />
         ))}
         <text x={(W) / 2} y={H - 4} textAnchor="middle" fontSize="9" fill="#64748b">Wavelength (um)</text>
-        <text x={12} y={H / 2} textAnchor="middle" fontSize="9" fill="#64748b" transform={`rotate(-90 12 ${H / 2})`}>Transit depth (ppm)</text>
+        <text x={12} y={H / 2} textAnchor="middle" fontSize="9" fill="#64748b" transform={`rotate(-90 12 ${H / 2})`}>Reduced transit signal</text>
       </svg>
     </div>
   );
@@ -7239,11 +7239,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                     </button>
                   </div>
                 </div>
-                {activeFocusKind === "planet" && selectedPlanetScience?.spectrumPoints?.length ? (
+                {activeFocusKind === "planet" && selectedPlanetScience?.spectrumPoints?.points?.length ? (
                   <div className="mt-5">
                     <SpectrumChart
-                      points={selectedPlanetScience.spectrumPoints}
-                      molecules={selectedPlanetScience.transmission ? undefined : undefined}
+                      points={selectedPlanetScience.spectrumPoints.points}
+                      instrument={selectedPlanetScience.spectrumPoints.instrument}
                     />
                   </div>
                 ) : null}

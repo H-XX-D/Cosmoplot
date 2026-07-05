@@ -45,20 +45,27 @@ export async function getTransmissionFeature(planetName: string): Promise<Transm
   return map.get(normalizeName(planetName)) ?? null;
 }
 
-const POINTS_PATH = path.join(process.cwd(), "data", "science", "spectra", "spectra-points.json");
-let pointsCache: Map<string, Array<[number, number]>> | null = null;
+export type ReducedSpectrum = {
+  instrument: string;
+  points: Array<[number, number]>;
+};
 
-// Per-planet reduced transmission spectrum: [wavelength_um, transit_depth_ppm]
-// points, committed to the repo for the spectrum chart on researched targets.
-export async function getSpectrumPoints(planetName: string): Promise<Array<[number, number]> | null> {
+const POINTS_PATH = path.join(process.cwd(), "data", "science", "spectra", "spectra-points.json");
+let pointsCache: Map<string, ReducedSpectrum> | null = null;
+
+// Real reduced JWST/archive transmission spectrum for a planet (wavelength_um,
+// reduced transit signal), committed to the repo for the spectrum chart.
+export async function getSpectrumPoints(planetName: string): Promise<ReducedSpectrum | null> {
   if (!planetName) return null;
   if (!pointsCache) {
-    const map = new Map<string, Array<[number, number]>>();
+    const map = new Map<string, ReducedSpectrum>();
     try {
-      const parsed = JSON.parse(await readFile(POINTS_PATH, "utf8")) as Record<string, Array<[number, number]>>;
-      for (const [name, points] of Object.entries(parsed)) map.set(normalizeName(name), points);
+      const parsed = JSON.parse(await readFile(POINTS_PATH, "utf8")) as Record<string, ReducedSpectrum>;
+      for (const [name, spectrum] of Object.entries(parsed)) {
+        if (spectrum?.points?.length) map.set(normalizeName(name), spectrum);
+      }
     } catch {
-      // No committed spectrum points.
+      // No committed reduced spectra.
     }
     pointsCache = map;
   }
