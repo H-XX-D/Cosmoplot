@@ -1,6 +1,7 @@
 import type {
   CatalogPropagation,
   MeasurementBounds,
+  PlanetInteriorStructure,
   PlanetMagnetosphere,
   RetentionAudit,
 } from "@/lib/science/types";
@@ -388,6 +389,82 @@ export function propagateCatalogPlanet(input: PropagateInput): CatalogPropagatio
   };
 }
 
+// Bulk interior composition from the mass-radius point, compared against the
+// Zeng, Sasselov & Stewart (2016) mass-radius relations. Each reference radius
+// is R/R_earth = C * (M/M_earth)^(1/3.7), with C set by core mass fraction:
+// pure iron 0.86, Earth-like 1.00, pure rock 1.07, and water-world coefficients
+// above that. Valid ~0.1-20 M_earth; larger bodies are flagged as giants.
+export function inferInteriorStructure(input: {
+  massEarth: number | null;
+  radiusEarth: number | null;
+  densityGcc: number | null;
+}): PlanetInteriorStructure {
+  const massEarth = input.massEarth;
+  const radiusEarth = input.radiusEarth;
+  const bulkDensityGcc = input.densityGcc ?? deriveDensityGcc(massEarth, radiusEarth);
+
+  if (!massEarth || !radiusEarth) {
+    return {
+      framework: "mass-radius-composition",
+      bulkDensityGcc,
+      composition: "unresolved",
+      requiresVolatiles: false,
+      referenceRadiiRe: null,
+      notes: ["Mass and radius are both required to place the planet on a mass-radius diagram."],
+    };
+  }
+
+  // Beyond the terrestrial/sub-Neptune regime the power-law relations break down.
+  if (massEarth > 20 || radiusEarth > 6) {
+    return {
+      framework: "mass-radius-composition",
+      bulkDensityGcc,
+      composition: "giant",
+      requiresVolatiles: true,
+      referenceRadiiRe: null,
+      notes: ["Mass or radius is beyond the terrestrial mass-radius regime; this is a gas or ice giant dominated by a deep H/He or volatile envelope."],
+    };
+  }
+
+  const exponent = 1 / 3.7;
+  const mPow = Math.pow(massEarth, exponent);
+  const iron = 0.86 * mPow; // 100% iron
+  const rock = 1.07 * mPow; // 100% silicate (Earth-like sits between iron and rock)
+  const water50 = 1.24 * mPow; // ~50% water mantle
+  const water100 = 1.41 * mPow; // ~100% water/ice
+
+  let composition: PlanetInteriorStructure["composition"];
+  if (radiusEarth < iron) composition = "iron-dominated";
+  else if (radiusEarth <= rock) composition = "rocky-terrestrial";
+  else if (radiusEarth <= water50) composition = "rock-volatile-mix";
+  else if (radiusEarth <= water100) composition = "water-ice-rich";
+  else composition = "gas-envelope";
+
+  const requiresVolatiles = radiusEarth > rock;
+  const notes = [
+    "Composition class is read from the mass-radius point against Zeng et al. (2016) reference curves; it is a bulk inference, not a layered interior model.",
+  ];
+  if (composition === "iron-dominated") {
+    notes.push("The planet is denser than a pure-iron sphere at this mass, which usually indicates a stripped or unusually iron-rich core, or an underestimated radius.");
+  } else if (requiresVolatiles) {
+    notes.push("The radius exceeds a pure-rock body at this mass, so a volatile layer (water/ice or an H/He envelope) is required to explain the size.");
+  }
+
+  return {
+    framework: "mass-radius-composition",
+    bulkDensityGcc,
+    composition,
+    requiresVolatiles,
+    referenceRadiiRe: {
+      iron,
+      rock,
+      water50,
+      water100,
+    },
+    notes,
+  };
+}
+
 export function deriveRetentionAudit(input: {
   massEarth: number | null;
   radiusEarth: number | null;
@@ -404,13 +481,29 @@ export function deriveRetentionAudit(input: {
       ? (KB * input.equilibriumK / (estimateMeanMolecularWeightKg(input.massEarth, input.densityGcc, input.equilibriumK) * gravity)) / 1000
       : null;
 
+  // Evaluate the Jeans escape parameter at the exobase, not the surface. The
+  // exobase radius is the base of the collisionless exosphere, taken here as a
+  // fixed number of bulk scale heights above the surface (isothermal-exosphere
+  // approximation, Earth-anchored). For terrestrials r_exo is within ~1% of the
+  // surface, so existing calibration holds; for puffy/hot atmospheres the large
+  // scale height lifts r_exo well above the surface, correctly weakening the
+  // binding and flagging escape that the surface evaluation missed. Temperature
+  // is held at T_eq (isothermal); a hotter thermosphere would only increase
+  // escape, so this remains a conservative upper bound on retention.
+  const EXOBASE_SCALE_HEIGHTS = 8;
   let jeansLambdaH2: number | null = null;
   let jeansLambdaN2: number | null = null;
+  let exobaseRadiusRe: number | null = null;
   if (input.massEarth && input.radiusEarth && input.equilibriumK) {
     const massKg = input.massEarth * M_EARTH;
     const radiusM = input.radiusEarth * R_EARTH;
-    jeansLambdaH2 = (G * massKg * (2.3 * AMU)) / (KB * input.equilibriumK * radiusM);
-    jeansLambdaN2 = (G * massKg * (28 * AMU)) / (KB * input.equilibriumK * radiusM);
+    const scaleHeightM = scaleHeightKm !== null ? scaleHeightKm * 1000 : 0;
+    // Cap the exobase at 3 planetary radii so an unbounded scale height cannot
+    // drive a non-physical runaway for extremely low-gravity envelopes.
+    const exobaseRadiusM = Math.min(radiusM + EXOBASE_SCALE_HEIGHTS * scaleHeightM, radiusM * 3);
+    exobaseRadiusRe = exobaseRadiusM / R_EARTH;
+    jeansLambdaH2 = (G * massKg * (2.3 * AMU)) / (KB * input.equilibriumK * exobaseRadiusM);
+    jeansLambdaN2 = (G * massKg * (28 * AMU)) / (KB * input.equilibriumK * exobaseRadiusM);
   }
 
   const irradiationStress = input.fluxEarthMultiple;
@@ -484,6 +577,7 @@ export function deriveRetentionAudit(input: {
 
   const notes = [
     "This is an escape-regime screen, not a direct measurement of whether an atmosphere exists today.",
+    "Jeans parameters are evaluated at the exobase (base of the collisionless exosphere), not the surface, using an isothermal-exosphere approximation at the equilibrium temperature.",
     "Hydrogen-rich envelope retention and heavier secondary-atmosphere retention are separated here; a world can lose H/He yet still retain or rebuild heavier gases.",
     "Magnetic shielding is not treated as a binary protection switch; stellar-wind coupling and open-field outflow can still permit escape under strong driving.",
   ];
@@ -508,6 +602,7 @@ export function deriveRetentionAudit(input: {
     escapeVelocityKmS,
     jeansLambdaH2,
     jeansLambdaN2,
+    exobaseRadiusRe,
     irradiationStress,
     energyLimitedLossProxy,
     regime,

@@ -9,7 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { deriveRetentionAudit, propagateCatalogPlanet } from "@/lib/science/physics";
+import { deriveRetentionAudit, inferInteriorStructure, propagateCatalogPlanet } from "@/lib/science/physics";
 import { measurementBounds } from "@/lib/utils";
 import type {
   AtmosphereEvidence,
@@ -1103,6 +1103,7 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
       fluxEarthMultiple: 1,
       stellarRadiusSolar: 1,
     }),
+    interior: inferInteriorStructure({ massEarth: 1, radiusEarth: 1, densityGcc: 5.51 }),
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1354,6 +1355,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     fluxEarthMultiple: radiation.fluxEarthMultiple,
     stellarRadiusSolar,
   });
+  const interior = inferInteriorStructure({ massEarth, radiusEarth, densityGcc });
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1407,6 +1409,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     atmosphere,
     propagation,
     retention,
+    interior,
     references: mergedReferences,
     sources: [
       archiveSource,

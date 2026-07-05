@@ -15,10 +15,13 @@ const ROOT_CANDIDATES = [
   process.env.COSMOPLOT_JWST_ROOT,
 ].filter((value): value is string => Boolean(value));
 const SYNTHETIC_RELATIVE_PATH = "synthetic_wd_sample.csv";
-const TREMBLAY_RELATIVE_PATH = "white_dwarf_data/tremblay2019_sample.csv";
 const LOAD_LOCAL_WHITE_DWARF_CSV = process.env.COSMOPLOT_LOAD_WHITE_DWARF_CSV === "1";
+// Real Tremblay et al. (2019) mass-radius sample, committed to the repo so the
+// white-dwarf population statistics are available in production. Gravitational
+// redshift is computed from mass and radius via standard GR.
+const TREMBLAY_MR_REPO_PATH = path.join(process.cwd(), "data", "science", "white-dwarfs", "tremblay2019_mr.csv");
 
-const CURATED_WHITE_DWARFS: Array<Omit<WhiteDwarfAnchor, "cartesianPc" | "provenance"> & { sourceUrl: string }> = [
+const CURATED_WHITE_DWARFS: Array<Omit<WhiteDwarfAnchor, "cartesianPc" | "provenance" | "theoreticalRadiusSolar"> & { sourceUrl: string }> = [
   {
     id: "sirius-b",
     name: "Sirius B",
@@ -108,6 +111,16 @@ async function firstExistingFile(relativePath: string): Promise<{ filePath: stri
   return null;
 }
 
+async function statFile(filePath: string): Promise<{ filePath: string; stat: Stats } | null> {
+  try {
+    const stat = await fs.stat(filePath);
+    if (stat.isFile()) return { filePath, stat };
+  } catch {
+    // File not present.
+  }
+  return null;
+}
+
 function toNumber(value: string | undefined) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return null;
@@ -144,10 +157,26 @@ function gravitationalRedshiftKmS(massSolar: number | null, radiusSolar: number 
   return (G * massSolar * SOLAR_MASS_KG) / (radiusSolar * SOLAR_RADIUS_M * C) / 1000;
 }
 
+// Theoretical white-dwarf radius from electron-degeneracy pressure
+// (Nauenberg 1972), including the relativistic turnover toward the
+// Chandrasekhar mass. mu_e = 2 (C/O composition) gives M_ch = 1.44 M_sun.
+// R/R_sun = 0.0127 * (M/M_sun)^(-1/3) * sqrt(1 - (M/M_ch)^(4/3)).
+export function theoreticalWhiteDwarfRadiusSolar(massSolar: number | null): number | null {
+  if (!massSolar || massSolar <= 0) return null;
+  const CHANDRASEKHAR_MASS_SOLAR = 1.44;
+  const ratio = massSolar / CHANDRASEKHAR_MASS_SOLAR;
+  if (ratio >= 1) return null;
+  return 0.0127 * Math.pow(massSolar, -1 / 3) * Math.sqrt(1 - Math.pow(ratio, 4 / 3));
+}
+
 function maybeRepairVelocity(raw: number | null, fallback: number | null) {
+  // Absent value: compute from the mass-radius relation. This is a derivation,
+  // not a repair of a bad measurement, so it is not counted as repaired.
   if (raw === null || raw === undefined || Number.isNaN(raw)) {
-    return { value: fallback, repaired: fallback !== null };
+    return { value: fallback, repaired: false };
   }
+  // Present but non-physical (e.g. a redshift velocity above light speed):
+  // discard and substitute the theoretical value, and flag it as repaired.
   if (Math.abs(raw) > 1000) {
     return { value: fallback, repaired: fallback !== null };
   }
@@ -225,6 +254,7 @@ function buildAnchors(source: SourceDescriptor): WhiteDwarfAnchor[] {
     effectiveTemperatureK: entry.effectiveTemperatureK,
     massSolar: entry.massSolar,
     radiusSolar: entry.radiusSolar,
+    theoreticalRadiusSolar: theoreticalWhiteDwarfRadiusSolar(entry.massSolar),
     gravitationalRedshiftKmS: entry.gravitationalRedshiftKmS,
     tags: entry.tags,
     provenance: [
@@ -242,22 +272,20 @@ function buildAnchors(source: SourceDescriptor): WhiteDwarfAnchor[] {
 }
 
 export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
-  const [syntheticFile, tremblayFile] = LOAD_LOCAL_WHITE_DWARF_CSV
-    ? await Promise.all([
-        firstExistingFile(SYNTHETIC_RELATIVE_PATH),
-        firstExistingFile(TREMBLAY_RELATIVE_PATH),
-      ])
-    : [null, null];
-  const key = `${syntheticFile?.stat.mtimeMs ?? "missing"}:${tremblayFile?.stat.mtimeMs ?? "missing"}`;
+  // Real Tremblay et al. (2019) mass-radius sample from the repo (production-safe).
+  const tremblayFile = await statFile(TREMBLAY_MR_REPO_PATH);
+  // Optional synthetic sample for local experimentation only (env-gated, off-repo).
+  const syntheticFile = LOAD_LOCAL_WHITE_DWARF_CSV ? await firstExistingFile(SYNTHETIC_RELATIVE_PATH) : null;
+  const key = `${tremblayFile?.stat.mtimeMs ?? "missing"}:${syntheticFile?.stat.mtimeMs ?? "missing"}`;
   if (cache?.key === key) {
     return cache.catalog;
   }
 
+  const tremblaySource = tremblayFile
+    ? localSource("wd-tremblay-2019", "Tremblay et al. 2019 white dwarf mass-radius sample", "https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.5222T")
+    : null;
   const syntheticSource = syntheticFile
     ? localSource("local-wd-synthetic", "Local synthetic white dwarf sample", syntheticFile.filePath)
-    : null;
-  const tremblaySource = tremblayFile
-    ? localSource("local-wd-tremblay", "Local Tremblay white dwarf sample", tremblayFile.filePath)
     : null;
   const anchorSource = {
     id: "nearby-white-dwarf-anchors",
@@ -268,13 +296,13 @@ export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
     cache: "miss" as const,
   };
 
-  const [syntheticRows, tremblayRows] = await Promise.all([
-    syntheticFile ? loadCsv(syntheticFile.filePath) : Promise.resolve([]),
+  const [tremblayRows, syntheticRows] = await Promise.all([
     tremblayFile ? loadCsv(tremblayFile.filePath) : Promise.resolve([]),
+    syntheticFile ? loadCsv(syntheticFile.filePath) : Promise.resolve([]),
   ]);
   const records = [
-    ...(syntheticSource ? syntheticRows.map((row) => syntheticRecord(row, syntheticSource)) : []),
     ...(tremblaySource ? tremblayRows.map((row) => tremblayRecord(row, tremblaySource)) : []),
+    ...(syntheticSource ? syntheticRows.map((row) => syntheticRecord(row, syntheticSource)) : []),
   ];
 
   const catalog: WhiteDwarfCatalog = {
@@ -282,7 +310,7 @@ export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
     summary: buildSummary(records),
     records,
     anchors: buildAnchors(anchorSource),
-    sources: [syntheticSource, tremblaySource, anchorSource].filter((source): source is SourceDescriptor => Boolean(source)),
+    sources: [tremblaySource, syntheticSource, anchorSource].filter((source): source is SourceDescriptor => Boolean(source)),
   };
 
   cache = { key, catalog };

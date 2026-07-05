@@ -147,11 +147,33 @@ export type CatalogPropagation = {
   oneScaleHeightSignalPpm: PropagatedInterval;
 };
 
+export type PlanetInteriorStructure = {
+  framework: "mass-radius-composition";
+  bulkDensityGcc: number | null;
+  composition:
+    | "iron-dominated"
+    | "rocky-terrestrial"
+    | "rock-volatile-mix"
+    | "water-ice-rich"
+    | "gas-envelope"
+    | "giant"
+    | "unresolved";
+  requiresVolatiles: boolean;
+  referenceRadiiRe: {
+    iron: number;
+    rock: number;
+    water50: number;
+    water100: number;
+  } | null;
+  notes: string[];
+};
+
 export type RetentionAudit = {
   framework: "escape-regime-audit";
   escapeVelocityKmS: number | null;
   jeansLambdaH2: number | null;
   jeansLambdaN2: number | null;
+  exobaseRadiusRe: number | null;
   irradiationStress: number | null;
   energyLimitedLossProxy: number | null;
   regime:
@@ -283,6 +305,7 @@ export type PlanetScienceBundle = {
   };
   atmosphere: AtmosphereEvidence;
   propagation: CatalogPropagation;
+  interior: PlanetInteriorStructure;
   retention: RetentionAudit;
   references: Array<{
     label: string;
@@ -392,6 +415,7 @@ export type WhiteDwarfAnchor = {
   effectiveTemperatureK: number | null;
   massSolar: number | null;
   radiusSolar: number | null;
+  theoreticalRadiusSolar: number | null;
   gravitationalRedshiftKmS: number | null;
   tags: string[];
   provenance: SourceDescriptor[];
