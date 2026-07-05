@@ -183,6 +183,16 @@ export type PlanetInteriorStructure = {
   notes: string[];
 };
 
+export type MassForecast = {
+  framework: "empirical-mass-radius";
+  massEarth: number;
+  lowEarth: number;
+  highEarth: number;
+  scatterDex: number;
+  relation: string;
+  notes: string[];
+};
+
 export type EarthSimilarityIndex = {
   index: number;
   interiorIndex: number;
@@ -342,6 +352,7 @@ export type PlanetScienceBundle = {
   transmission: TransmissionInference | null;
   earthSimilarity: EarthSimilarityIndex | null;
   habitableZone: HabitableZoneAssessment | null;
+  massForecast: MassForecast | null;
   retention: RetentionAudit;
   references: Array<{
     label: string;

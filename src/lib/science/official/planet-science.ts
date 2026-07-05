@@ -9,7 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
+import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, forecastMassFromRadius, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
 import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
 import { measurementBounds } from "@/lib/utils";
 import type {
@@ -1108,6 +1108,7 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
     transmission: null,
     earthSimilarity: computeEarthSimilarityIndex({ radiusEarth: 1, densityGcc: 5.51, massEarth: 1, equilibriumK: 255 }),
     habitableZone: assessHabitableZone({ luminositySolar: 1, stellarTeffK: 5772, semiMajorAxisAu: 1 }),
+    massForecast: forecastMassFromRadius(1),
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1370,6 +1371,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     }),
   };
   const earthSimilarity = computeEarthSimilarityIndex({ radiusEarth, densityGcc, massEarth, equilibriumK });
+  const massForecast = forecastMassFromRadius(radiusEarth);
   const habitableZone = assessHabitableZone({
     luminositySolar: stellarLuminosity,
     stellarTeffK: stellarTemperatureK,
@@ -1443,6 +1445,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     transmission,
     earthSimilarity,
     habitableZone,
+    massForecast,
     references: mergedReferences,
     sources: [
       archiveSource,

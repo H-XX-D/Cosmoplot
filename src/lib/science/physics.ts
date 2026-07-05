@@ -1,5 +1,6 @@
 import type {
   CatalogPropagation,
+  MassForecast,
   MeasurementBounds,
   PlanetInteriorStructure,
   PlanetMagnetosphere,
@@ -190,6 +191,58 @@ export function deriveEscapeVelocityKmS(massEarth: number | null, radiusEarth: n
   const massKg = massEarth * M_EARTH;
   const radiusM = radiusEarth * R_EARTH;
   return Math.sqrt((2 * G * massKg) / radiusM) / 1000;
+}
+
+// Thermal (root-mean-square) speed of a gas at temperature T: v_th = sqrt(3kT/m).
+// Defaults to atomic hydrogen (1 amu), the lightest and fastest-escaping species.
+export function deriveThermalVelocityKmS(equilibriumK: number | null, molecularMassAmu = 1) {
+  if (!equilibriumK || equilibriumK <= 0 || molecularMassAmu <= 0) return null;
+  return Math.sqrt((3 * KB * equilibriumK) / (molecularMassAmu * AMU)) / 1000;
+}
+
+// Escape-to-thermal speed ratio v_esc/v_th: a small ratio means the gas moves
+// fast enough to escape the gravity well. Complements the potential-form Jeans
+// parameter; ~5 or below flags efficient thermal escape of the given species.
+export function deriveEscapeToThermalRatio(
+  massEarth: number | null,
+  radiusEarth: number | null,
+  equilibriumK: number | null,
+  molecularMassAmu = 1,
+) {
+  const vEsc = deriveEscapeVelocityKmS(massEarth, radiusEarth);
+  const vTh = deriveThermalVelocityKmS(equilibriumK, molecularMassAmu);
+  if (!vEsc || !vTh) return null;
+  return vEsc / vTh;
+}
+
+// Forecast mass from radius using the empirical mass-radius relation fit with a
+// LAPACK QR least-squares solve over 41 archive planets:
+//   log10(M/Me) = 0.0384 + 1.9565 * log10(R/Re),  scatter 0.27 dex (factor ~1.9).
+// A Chen & Kipping (2017) style forecaster for planets with a measured radius
+// but no measured mass. The single power law flattens for giants (R > ~8 Re),
+// so the estimate is flagged as extrapolated there.
+const MR_INTERCEPT = 0.0384;
+const MR_SLOPE = 1.9565;
+const MR_SCATTER_DEX = 0.27;
+export function forecastMassFromRadius(radiusEarth: number | null): MassForecast | null {
+  if (!radiusEarth || radiusEarth <= 0) return null;
+  const logM = MR_INTERCEPT + MR_SLOPE * Math.log10(radiusEarth);
+  const massEarth = Math.pow(10, logM);
+  const notes = [
+    "Mass forecast from the empirical mass-radius relation (QR least-squares fit over 41 archive planets); it is a population estimate, not a measurement.",
+  ];
+  if (radiusEarth > 8) {
+    notes.push("Radius is in the giant regime where radius barely tracks mass (a puffy Saturn and a dense super-Jupiter share a radius), so this single-power-law estimate is unreliable in either direction.");
+  }
+  return {
+    framework: "empirical-mass-radius",
+    massEarth: Number(massEarth.toFixed(3)),
+    lowEarth: Number(Math.pow(10, logM - MR_SCATTER_DEX).toFixed(3)),
+    highEarth: Number(Math.pow(10, logM + MR_SCATTER_DEX).toFixed(3)),
+    scatterDex: MR_SCATTER_DEX,
+    relation: "log10(M) = 0.0384 + 1.9565 log10(R)",
+    notes,
+  };
 }
 
 function averageMagnitudeBounds(bounds: { plus: number | null; minus: number | null }) {
