@@ -6390,8 +6390,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
     setSelectedReferenceStarName(null);
   }
 
-  function selectGuidedTarget(target: GuidedTarget) {
-    setQuery(target.query);
+  function selectGuidedTarget(target: GuidedTarget, options: { keepField?: boolean } = {}) {
+    // keepField selects and flies to the target without applying its search
+    // query, so the surrounding star field stays visible instead of collapsing
+    // to just the chosen system.
+    if (!options.keepField) setQuery(target.query);
     setChartPreset("all");
     setSpectralFilter("all");
     setAdvancedFiltersOpen(false);
@@ -6525,7 +6528,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                       <button
                         key={target.id}
                         type="button"
-                        onClick={() => selectGuidedTarget(target)}
+                        onClick={() => selectGuidedTarget(target, { keepField: true })}
                         className="group max-w-[15rem] rounded-2xl border border-emerald-300/18 bg-emerald-300/[0.06] px-3 py-2 text-left transition hover:border-emerald-300/34 hover:bg-emerald-300/12"
                         title={target.note}
                       >
