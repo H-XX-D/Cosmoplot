@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUniverseSnapshot } from "@/lib/science/catalog/build-universe";
-import { runLockout } from "@/lib/science/optimization/lockout-runner";
 import {
   buildLockoutProblem,
   finalizeLockoutPlan,
+  solveMaxCutAnneal,
   solveMaxCutGreedy,
   type LockoutProblemPacket,
 } from "@/lib/science/optimization/target-plan";
@@ -43,13 +43,13 @@ async function solvePacket(packet: LockoutProblemPacket) {
   validatePacket(packet);
 
   try {
-    const solve = await runLockout(packet);
+    const solve = solveMaxCutAnneal(packet.problem, packet.config);
     return finalizeLockoutPlan(packet, solve);
   } catch (error) {
     const fallback = solveMaxCutGreedy(packet.problem, packet.config.seed, packet.config.shots);
     return finalizeLockoutPlan(packet, {
       ...fallback,
-      warning: error instanceof Error ? error.message : "Lockout failed; local fallback solver used.",
+      warning: error instanceof Error ? error.message : "Anneal solver failed; greedy fallback used.",
     });
   }
 }

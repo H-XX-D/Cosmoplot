@@ -459,6 +459,110 @@ export function solveMaxCutGreedy(problem: LockoutProblem, seed = 73, shots = 40
   };
 }
 
+// In-process simulated-annealing MaxCut solver. This replaces the external
+// Python "lockout" engine so the optimizer runs natively on serverless with no
+// subprocess. Work is bounded to a compute budget so large graphs stay within
+// the request window, and a greedy polish guarantees a local optimum.
+export function solveMaxCutAnneal(
+  problem: LockoutProblem,
+  config: { shots: number; sweeps: number; seed: number },
+): LockoutSolvePacket {
+  const { n, edges } = problem;
+  const shots = Math.max(1, Math.floor(config.shots) || 48);
+  const requestedSweeps = Math.max(1, Math.floor(config.sweeps) || 900);
+  const seed = Number.isFinite(config.seed) ? config.seed : 73;
+  const startedAt = performance.now();
+
+  // Adjacency lets us evaluate a single flip in O(degree) instead of O(edges).
+  const adjacency: Array<Array<[number, number]>> = Array.from({ length: n }, () => []);
+  let totalAbsWeight = 0;
+  for (const [a, b, weight] of edges) {
+    adjacency[a].push([b, weight]);
+    adjacency[b].push([a, weight]);
+    totalAbsWeight += Math.abs(weight);
+  }
+
+  // Gain of moving `node` to the other side: cut goes up by the weight of
+  // same-side neighbors and down by the weight of already-cut neighbors.
+  const flipGain = (assignment: number[], node: number) => {
+    let gain = 0;
+    for (const [neighbor, weight] of adjacency[node]) {
+      gain += assignment[neighbor] === assignment[node] ? weight : -weight;
+    }
+    return gain;
+  };
+
+  // Keep shots * sweeps * work within a fixed neighbor-visit budget so the
+  // largest allowed graphs still return in ~1-2s.
+  const OP_BUDGET = 1.2e8;
+  const workPerSweep = Math.max(1, 2 * edges.length + n);
+  const maxSweeps = Math.max(120, Math.floor(OP_BUDGET / (shots * workPerSweep)));
+  const sweeps = Math.min(requestedSweeps, maxSweeps);
+  const TIME_BUDGET_MS = 9_000;
+
+  const meanWeight = edges.length ? totalAbsWeight / edges.length : 1;
+  const avgDegree = n ? (2 * edges.length) / n : 1;
+  const t0 = Math.max(meanWeight * avgDegree, 1e-6);
+  const tMin = t0 * 1e-3;
+  const cooling = Math.pow(tMin / t0, 1 / Math.max(1, sweeps - 1));
+
+  let bestAssignment = Array.from({ length: n }, (_, index) => index % 2);
+  let bestCut = assignmentCutValue(problem, bestAssignment);
+
+  for (let shot = 0; shot < shots; shot += 1) {
+    const rng = { value: (seed + shot * 1_000_003) >>> 0 || 1 };
+    const assignment = Array.from({ length: n }, () => (nextRand(rng) > 0.5 ? 1 : 0));
+    let temperature = t0;
+    for (let sweep = 0; sweep < sweeps; sweep += 1) {
+      for (let node = 0; node < n; node += 1) {
+        const gain = flipGain(assignment, node);
+        // Always take improving moves; accept worsening moves with the
+        // Metropolis probability exp(gain / T), which shrinks as T cools.
+        if (gain > 0 || nextRand(rng) < Math.exp(gain / temperature)) {
+          assignment[node] ^= 1;
+        }
+      }
+      temperature *= cooling;
+    }
+    const cut = assignmentCutValue(problem, assignment);
+    if (cut > bestCut) {
+      bestCut = cut;
+      bestAssignment = assignment.slice();
+    }
+    if (performance.now() - startedAt > TIME_BUDGET_MS) break;
+  }
+
+  // Greedy polish: drive the best assignment to a local optimum so the result
+  // is never worse than the plain greedy solver.
+  let improved = true;
+  let guard = 0;
+  while (improved && guard < n * 8) {
+    improved = false;
+    guard += 1;
+    for (let node = 0; node < n; node += 1) {
+      if (flipGain(bestAssignment, node) > 1e-9) {
+        bestAssignment[node] ^= 1;
+        improved = true;
+      }
+    }
+  }
+  bestCut = assignmentCutValue(problem, bestAssignment);
+
+  return {
+    assignment: bestAssignment,
+    bestCut: Number(bestCut.toFixed(6)),
+    wallMs: Number((performance.now() - startedAt).toFixed(3)),
+    backend: "typescript",
+    search: "anneal",
+    shots,
+    sweeps,
+    seed,
+    engineName: "cosmoplot anneal",
+    enginePath: null,
+    fallback: false,
+  };
+}
+
 export function finalizeLockoutPlan(packet: LockoutProblemPacket, solve: LockoutSolvePacket): LockoutTargetPlan {
   const selectedAnchorValue = solve.assignment[packet.graph.selectedAnchor] ?? 0;
   const partitioned = packet.candidates.map<LockoutPlanTarget>((candidate, index) => ({
