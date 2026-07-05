@@ -4232,6 +4232,27 @@ function OrbitTrack({
   );
 }
 
+// Scales its children in from zero over ~0.7s the first time it mounts, so
+// stars added by the far-field lazy load grow in instead of popping.
+function SpawnScale({ children }: { children: ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  const startRef = useRef<number | null>(null);
+  const doneRef = useRef(false);
+  useFrame(({ clock }) => {
+    if (doneRef.current) return;
+    if (startRef.current === null) startRef.current = clock.elapsedTime;
+    const t = Math.min(1, (clock.elapsedTime - startRef.current) / 0.7);
+    const eased = t * t * (3 - 2 * t);
+    if (ref.current) ref.current.scale.setScalar(eased);
+    if (t >= 1) doneRef.current = true;
+  });
+  return (
+    <group ref={ref} scale={0}>
+      {children}
+    </group>
+  );
+}
+
 function DistantStarMarker({ style, radius }: { style: StarRenderStyle; radius: number }) {
   const starMeshRef = useRef<THREE.Mesh>(null);
   const haloMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -4990,6 +5011,21 @@ function StageScene({
   const lastReferenceStarClickRef = useRef<{ id: string; at: number } | null>(null);
   const introFlightDoneRef = useRef(false);
   const previousZoomFactorRef = useRef(zoomFactor);
+  // Systems present now but absent from the previous render (the far-field
+  // additions) fade in; the initial set appears immediately.
+  const prevSystemIdsRef = useRef<Set<string> | null>(null);
+  const newSystemIds = useMemo(() => {
+    const prev = prevSystemIdsRef.current;
+    const fresh = new Set<string>();
+    if (prev) {
+      for (const system of systems) if (!prev.has(system.id)) fresh.add(system.id);
+    }
+    return fresh;
+  }, [systems]);
+  useEffect(() => {
+    prevSystemIdsRef.current = new Set(systems.map((system) => system.id));
+  }, [systems]);
+
   const markers = useMemo(() => {
     const preferredSystems = [
       ...systems.slice(0, 220),
@@ -5590,7 +5626,13 @@ function StageScene({
                 handleStarClick(system, new THREE.Vector3(display.x, display.y, display.z), event.timeStamp);
               }}
             >
-              <DistantStarMarker style={style} radius={radius} />
+              {newSystemIds.has(system.id) ? (
+                <SpawnScale>
+                  <DistantStarMarker style={style} radius={radius} />
+                </SpawnScale>
+              ) : (
+                <DistantStarMarker style={style} radius={radius} />
+              )}
               {tagLabel ? <SystemInterestTag label={tagLabel} accent={style.core} offset={radius * 3.4} /> : null}
             </group>
           );
