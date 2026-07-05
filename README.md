@@ -265,3 +265,7 @@ Released under the [MIT License](LICENSE). The astrophysical relations and datas
 ## Acknowledgements
 
 This project relies on the NASA Exoplanet Archive, operated by Caltech/IPAC under contract with NASA, and on data products from the Mikulski Archive for Space Telescopes (MAST) at STScI. The astrophysics is the work of the authors cited above; any misapplication of it here is ours.
+
+## Thanks
+
+Thanks for checking it out. I got carried away because I thought it was cool, and I shared it for the same reason. I hope you enjoy it, find it useful, and learn something, as much as I did building it for you. If you want to help, whether that is a fix, a dataset, or just a bug report, open an issue or a pull request. I would love the help.

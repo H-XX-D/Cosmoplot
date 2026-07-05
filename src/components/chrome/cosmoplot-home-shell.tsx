@@ -312,6 +312,18 @@ export function CosmoplotHomeShell({ snapshot: initialSnapshot }: { snapshot: Un
             ))}
           </div>
         </div>
+        <p className="mx-auto mt-8 max-w-3xl px-2 text-center text-sm leading-7 text-slate-300/70">
+          Thanks for checking it out. I got carried away because I thought it was cool, and I shared it for the same reason. I hope you enjoy it, find it useful, and learn something, as much as I did building it for you. If you want to help, whether a fix, a dataset, or just a bug report, I would love the help:{" "}
+          <a
+            href="https://github.com/H-XX-D/Cosmoplot"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sky-200 underline-offset-2 transition hover:text-white hover:underline"
+          >
+            github.com/H-XX-D/Cosmoplot
+          </a>
+          .
+        </p>
       </footer>
     </div>
   );
