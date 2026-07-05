@@ -1160,7 +1160,14 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     localSource,
   ] =
     await Promise.all([
-      fetchArchivePlanetByName(planetName),
+      fetchArchivePlanetByName(planetName).catch(() => ({
+        row: null,
+        source: buildMissSourceDescriptor(
+          "nasa-exoplanet-archive",
+          "NASA Exoplanet Archive",
+          "https://exoplanetarchive.ipac.caltech.edu/docs/program_interfaces.html",
+        ),
+      })),
       fetchExoMastProperties(planetName).catch(() => ({
         property: null,
         source: buildMissSourceDescriptor("exo-mast-properties", "STScI exo.MAST", "https://exo.mast.stsci.edu/"),
@@ -1174,7 +1181,12 @@ export async function fetchPlanetScienceBundle(planetName: string) {
       getLegacyLocalSource(),
     ]);
 
-  if (!row && !property && !localAnalysis && !localEntry) {
+  // Local deep-dive for a researched system does not depend on any remote fetch,
+  // so a researched planet must still return a bundle even when the NASA archive
+  // and MAST are unreachable.
+  const researchNarrative = await getResearchedNarrative(row?.pl_name ?? planetName);
+
+  if (!row && !property && !localAnalysis && !localEntry && !researchNarrative) {
     return null;
   }
 
@@ -1391,7 +1403,6 @@ export async function fetchPlanetScienceBundle(planetName: string) {
         densityGcc,
       })
     : null;
-  const researchNarrative = await getResearchedNarrative(row?.pl_name ?? planetName);
   const spectrumPoints = await getSpectrumPoints(row?.pl_name ?? planetName);
 
   return {

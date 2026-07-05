@@ -59,6 +59,24 @@ const ARCHIVE_COLUMNS = [
   "disc_year",
 ].join(",");
 
+const ARCHIVE_FETCH_TIMEOUT_MS = 10000;
+
+// Wrap archive fetches with a hard timeout so an unresponsive TAP service fails
+// fast and callers can fall back to local data, instead of hanging the request.
+async function archiveFetch(url: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ARCHIVE_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      headers: { "user-agent": "Cosmoplot/next-rewrite" },
+      next: { revalidate: 60 * 60 * 12 },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function normalizeArchiveInput(value: string | null | undefined) {
   return String(value || "").normalize("NFKC").trim().replace(/\s+/g, " ").slice(0, MAX_ARCHIVE_INPUT_LENGTH);
 }
@@ -108,12 +126,7 @@ export async function fetchNearbyArchivePlanets(params: {
     ].join(" ");
 
     const url = `${NASA_EXOPLANET_ARCHIVE_TAP}?query=${encodeURIComponent(sql)}&format=json`;
-    const response = await fetch(url, {
-      headers: {
-        "user-agent": "Cosmoplot/next-rewrite",
-      },
-      next: { revalidate: 60 * 60 * 12 },
-    });
+    const response = await archiveFetch(url);
 
     if (!response.ok) {
       const text = await response.text();
@@ -154,12 +167,7 @@ export async function fetchArchivePlanetByName(planetName: string) {
     ].join(" ");
 
     const url = `${NASA_EXOPLANET_ARCHIVE_TAP}?query=${encodeURIComponent(sql)}&format=json`;
-    const response = await fetch(url, {
-      headers: {
-        "user-agent": "Cosmoplot/next-rewrite",
-      },
-      next: { revalidate: 60 * 60 * 12 },
-    });
+    const response = await archiveFetch(url);
 
     if (!response.ok) {
       const text = await response.text();
@@ -226,12 +234,7 @@ export async function fetchArchivePlanetsByNames(planetNames: string[]) {
     ].join(" ");
 
     const url = `${NASA_EXOPLANET_ARCHIVE_TAP}?query=${encodeURIComponent(sql)}&format=json`;
-    const response = await fetch(url, {
-      headers: {
-        "user-agent": "Cosmoplot/next-rewrite",
-      },
-      next: { revalidate: 60 * 60 * 12 },
-    });
+    const response = await archiveFetch(url);
 
     if (!response.ok) {
       const text = await response.text();
