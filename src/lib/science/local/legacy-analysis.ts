@@ -8,12 +8,23 @@ import type {
   SourceDescriptor,
 } from "@/lib/science/types";
 
-const LEGACY_ROOT = "/Users/hendrixx./Desktop/EXOPLANET_ANALYSES";
-const LEGACY_INDEX_PATH = path.join(LEGACY_ROOT, "index.html");
-const LEGACY_REGISTRY_PATH = path.join(LEGACY_ROOT, "site/cosmoplot/science_registry.js");
-const JWST_VERBOSE_PLANET_ROOT = "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/planets";
-const JWST_VERBOSE_STAR_ROOT = "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/stars";
+const LEGACY_ROOT_CANDIDATES = [
+  process.env.COSMOPLOT_LEGACY_ROOT,
+  "/Users/hendrixx./Desktop/EXOPLANET_ANALYSES",
+  "/Users/hendrixx./Desktop/desktop over the past 6 months /EXOPLANET_ANALYSES",
+].filter((value): value is string => Boolean(value));
+const JWST_VERBOSE_PLANET_ROOTS = [
+  process.env.COSMOPLOT_JWST_VERBOSE_PLANET_ROOT,
+  "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/planets",
+  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets/verbose_analyses/planets",
+].filter((value): value is string => Boolean(value));
+const JWST_VERBOSE_STAR_ROOTS = [
+  process.env.COSMOPLOT_JWST_VERBOSE_STAR_ROOT,
+  "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/stars",
+  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets/verbose_analyses/stars",
+].filter((value): value is string => Boolean(value));
 const LOCAL_SOURCE_LABEL = "Local EXOPLANET_ANALYSES bundle";
+const LOAD_LEGACY_REGISTRY = process.env.COSMOPLOT_LOAD_LEGACY_REGISTRY === "1";
 
 type LegacyStar = {
   name?: string;
@@ -149,6 +160,54 @@ type LegacyStudiedCatalog = {
 let registryCache: { mtimeMs: number; value: LegacyRegistry } | null = null;
 let systemFolderCache: Map<string, string> | null = null;
 let studiedCatalogCache: { mtimeMs: number; value: LegacyStudiedCatalog } | null = null;
+let legacyRootCache: string | null | undefined;
+
+async function directoryExists(directoryPath: string) {
+  try {
+    const stat = await fs.stat(directoryPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function getLegacyRoot() {
+  if (legacyRootCache !== undefined) return legacyRootCache;
+  for (const candidate of LEGACY_ROOT_CANDIDATES) {
+    if (await directoryExists(candidate)) {
+      legacyRootCache = candidate;
+      return legacyRootCache;
+    }
+  }
+  legacyRootCache = null;
+  return legacyRootCache;
+}
+
+async function getLegacyIndexPath() {
+  const root = await getLegacyRoot();
+  return root ? path.join(root, "index.html") : null;
+}
+
+async function getLegacyRegistryPath() {
+  const root = await getLegacyRoot();
+  return root ? path.join(root, "site/cosmoplot/science_registry.js") : null;
+}
+
+function emptyLegacyRegistry(): LegacyRegistry {
+  return {
+    version: null,
+    planetsByKey: new Map(),
+    systemsByKey: new Map(),
+    spectraByPlanetKey: new Map(),
+  };
+}
+
+function emptyStudiedCatalog(): LegacyStudiedCatalog {
+  return {
+    planetsByKey: new Map(),
+    systemsByKey: new Map(),
+  };
+}
 
 function scienceKey(input: string | null | undefined) {
   return String(input || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -184,25 +243,29 @@ function isInterestingHabitability(text: string | null) {
 }
 
 async function loadLegacyStudiedCatalog() {
-  const stat = await fs.stat(LEGACY_INDEX_PATH);
+  const indexPath = await getLegacyIndexPath();
+  if (!indexPath) {
+    const emptyCatalog = emptyStudiedCatalog();
+    studiedCatalogCache = { mtimeMs: -1, value: emptyCatalog };
+    return emptyCatalog;
+  }
+
+  const stat = await fs.stat(indexPath);
   if (studiedCatalogCache && studiedCatalogCache.mtimeMs === stat.mtimeMs) {
     return studiedCatalogCache.value;
   }
 
-  const source = await fs.readFile(LEGACY_INDEX_PATH, "utf8");
+  const source = await fs.readFile(indexPath, "utf8");
   const match = source.match(/const PLANETS = \[([\s\S]*?)\];\s*const CLASS_COLORS/);
   const planetArraySource = match?.[1] ?? null;
   if (!planetArraySource) {
-    const emptyCatalog: LegacyStudiedCatalog = {
-      planetsByKey: new Map(),
-      systemsByKey: new Map(),
-    };
+    const emptyCatalog = emptyStudiedCatalog();
     studiedCatalogCache = { mtimeMs: stat.mtimeMs, value: emptyCatalog };
     return emptyCatalog;
   }
 
   const sandbox = { module: { exports: [] as Array<Record<string, unknown>> } };
-  const script = new vm.Script(`module.exports = [${planetArraySource}];`, { filename: LEGACY_INDEX_PATH });
+  const script = new vm.Script(`module.exports = [${planetArraySource}];`, { filename: indexPath });
   script.runInNewContext(sandbox);
   const rows = sandbox.module.exports ?? [];
 
@@ -407,24 +470,30 @@ function summaryFromSystemEntry(
 }
 
 async function loadLegacyRegistry() {
-  const stat = await fs.stat(LEGACY_REGISTRY_PATH);
+  if (!LOAD_LEGACY_REGISTRY) {
+    const registry = emptyLegacyRegistry();
+    registryCache = { mtimeMs: -1, value: registry };
+    return registry;
+  }
+
+  const registryPath = await getLegacyRegistryPath();
+  if (!registryPath) {
+    const registry = emptyLegacyRegistry();
+    registryCache = { mtimeMs: -1, value: registry };
+    return registry;
+  }
+
+  const stat = await fs.stat(registryPath);
   if (registryCache && registryCache.mtimeMs === stat.mtimeMs) {
     return registryCache.value;
   }
 
-  const source = await fs.readFile(LEGACY_REGISTRY_PATH, "utf8");
-  const sandbox = {
-    module: { exports: {} as LegacyRegistryRaw },
-    exports: {},
-  };
-
+  const source = await fs.readFile(registryPath, "utf8");
   const script = new vm.Script(
-    `${source}\nmodule.exports = { SCIENCE_REGISTRY_VERSION, SCIENCE_PLANET_MAP, SCIENCE_SYSTEM_MAP, SCIENCE_SPECTRA_SOURCE_MAP };`,
-    { filename: LEGACY_REGISTRY_PATH },
+    `(() => {\n${source}\nreturn { SCIENCE_REGISTRY_VERSION, SCIENCE_PLANET_MAP, SCIENCE_SYSTEM_MAP, SCIENCE_SPECTRA_SOURCE_MAP };\n})()`,
+    { filename: registryPath },
   );
-  script.runInNewContext(sandbox);
-
-  const raw = sandbox.module.exports;
+  const raw = script.runInNewContext({}) as LegacyRegistryRaw;
   const planetsByKey = new Map<string, LegacyPlanetEntry>();
   const systemsByKey = new Map<string, LegacySystemEntry>();
   const spectraByPlanetKey = new Map<string, LegacySpectrumSource[]>();
@@ -470,12 +539,18 @@ async function loadLegacyRegistry() {
 
 async function getSystemFolderMap() {
   if (systemFolderCache) return systemFolderCache;
-  const entries = await fs.readdir(LEGACY_ROOT, { withFileTypes: true });
+  const root = await getLegacyRoot();
+  if (!root) {
+    systemFolderCache = new Map();
+    return systemFolderCache;
+  }
+
+  const entries = await fs.readdir(root, { withFileTypes: true });
   const folders = new Map<string, string>();
   for (const entry of entries) {
     if (!entry.isDirectory() || !entry.name.endsWith("_System")) continue;
     const systemName = entry.name.replace(/_System$/, "");
-    folders.set(scienceKey(systemName), path.join(LEGACY_ROOT, entry.name));
+    folders.set(scienceKey(systemName), path.join(root, entry.name));
   }
   systemFolderCache = folders;
   return folders;
@@ -523,8 +598,8 @@ async function loadPlanetReports(planetName: string, systemName: string | null) 
   }
 
   const fallbackRoots: Array<{ root: string; label: string; priority: number; matchKey: string }> = [
-    { root: JWST_VERBOSE_PLANET_ROOT, label: "Verbose Planet Analysis", priority: 6, matchKey: planetKey },
-    { root: JWST_VERBOSE_STAR_ROOT, label: "Verbose Host Star Analysis", priority: 7, matchKey: systemName ? scienceKey(systemName) : "" },
+    ...JWST_VERBOSE_PLANET_ROOTS.map((root) => ({ root, label: "Verbose Planet Analysis", priority: 6, matchKey: planetKey })),
+    ...JWST_VERBOSE_STAR_ROOTS.map((root) => ({ root, label: "Verbose Host Star Analysis", priority: 7, matchKey: systemName ? scienceKey(systemName) : "" })),
   ];
 
   for (const fallback of fallbackRoots) {
@@ -628,14 +703,14 @@ function sanitizeLegacyNarrative(text: string) {
     .replace(/^(SECTION\s+\d+:\s+.+)$/gm, annotateSectionHeading);
 }
 
-function localSourceDescriptor(accessedAt: string): SourceDescriptor {
+function localSourceDescriptor(accessedAt: string, registryPath: string | null): SourceDescriptor {
   return {
     id: "local-exoplanet-analyses",
     name: LOCAL_SOURCE_LABEL,
     kind: "derived",
-    url: LEGACY_REGISTRY_PATH,
+    url: registryPath ?? "local://exoplanet-analyses/unavailable",
     accessedAt,
-    cache: "hit",
+    cache: registryPath ? "hit" : "miss",
   };
 }
 
@@ -708,7 +783,7 @@ export async function getLegacyPlanetBundle(planetName: string, systemName?: str
 
 export async function getLegacyLocalSource() {
   await loadLegacyRegistry();
-  return localSourceDescriptor(new Date().toISOString());
+  return localSourceDescriptor(new Date().toISOString(), LOAD_LEGACY_REGISTRY ? await getLegacyRegistryPath() : null);
 }
 
 export async function getLegacyPlanetEntry(planetName: string) {

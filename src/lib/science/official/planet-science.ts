@@ -290,6 +290,10 @@ function buildSourceDescriptor(id: string, name: string, url: string, accessedAt
   };
 }
 
+function buildMissSourceDescriptor(id: string, name: string, url: string) {
+  return buildSourceDescriptor(id, name, url, new Date().toISOString(), "miss");
+}
+
 function buildMastDownloadUrl(dataUri: string | null, filename: string) {
   const uri = asString(dataUri) ?? `mast:JWST/product/${filename}`;
   return `https://mast.stsci.edu/api/v0.1/Download/file?uri=${encodeURIComponent(uri)}`;
@@ -1149,8 +1153,14 @@ export async function fetchPlanetScienceBundle(planetName: string) {
   ] =
     await Promise.all([
       fetchArchivePlanetByName(planetName),
-      fetchExoMastProperties(planetName),
-      fetchExoMastSpectraFileList(planetName),
+      fetchExoMastProperties(planetName).catch(() => ({
+        property: null,
+        source: buildMissSourceDescriptor("exo-mast-properties", "STScI exo.MAST", "https://exo.mast.stsci.edu/"),
+      })),
+      fetchExoMastSpectraFileList(planetName).catch(() => ({
+        files: [] as string[],
+        source: buildMissSourceDescriptor("exo-mast-spectra", "STScI exo.MAST Spectra", "https://exo.mast.stsci.edu/docs/"),
+      })),
       getLegacyPlanetBundle(planetName),
       getLegacyPlanetEntry(planetName),
       getLegacyLocalSource(),
@@ -1162,30 +1172,44 @@ export async function fetchPlanetScienceBundle(planetName: string) {
 
   const hostName = row?.hostname ?? asString(property?.star_name) ?? localAnalysis?.systemName ?? localEntry?.systemName ?? null;
   const [{ observations, source: observationsSource }, curatedSpectraResults] = await Promise.all([
-    fetchMastJwstObservations(hostName),
+    fetchMastJwstObservations(hostName).catch(() => ({
+      observations: [] as JwstObservation[],
+      source: buildMissSourceDescriptor("mast-jwst-observations", "MAST JWST Observations", MAST_DOCS),
+    })),
     Promise.all(
       curatedFiles.slice(0, 8).map(async (filename) => {
-        const { text, source } = await fetchExoMastCuratedSpectrumText(planetName, filename);
-        return { filename, source, spectrum: parseCuratedTransmissionSpectrum(text) };
+        try {
+          const { text, source } = await fetchExoMastCuratedSpectrumText(planetName, filename);
+          return { filename, source, spectrum: parseCuratedTransmissionSpectrum(text) };
+        } catch {
+          return null;
+        }
       }),
     ),
   ]);
 
-  const { products, source: productsSource } = await fetchMastProducts(observations.map((observation) => observation.obsid));
+  const { products, source: productsSource } = await fetchMastProducts(observations.map((observation) => observation.obsid)).catch(() => ({
+    products: [] as JwstProduct[],
+    source: buildMissSourceDescriptor("mast-jwst-products", "MAST JWST Products", MAST_DOCS),
+  }));
   const numericProductCandidates = products.filter(isNumericSpectrumProduct).slice(0, 6);
   const mastNumericSeriesResults = await Promise.all(
     numericProductCandidates.map(async (product) => {
-      const spectralDbResolved = await fetchMastSpectralDbSeries(product.productFilename);
-      if (spectralDbResolved) {
-        return { product, ...spectralDbResolved };
+      try {
+        const spectralDbResolved = await fetchMastSpectralDbSeries(product.productFilename);
+        if (spectralDbResolved) {
+          return { product, ...spectralDbResolved };
+        }
+        const directFitsResolved = await fetchMastDirectFitsSeries(product);
+        return directFitsResolved ? { product, ...directFitsResolved } : null;
+      } catch {
+        return null;
       }
-      const directFitsResolved = await fetchMastDirectFitsSeries(product);
-      return directFitsResolved ? { product, ...directFitsResolved } : null;
     }),
   );
 
   const curatedSpectra = curatedSpectraResults
-    .filter((entry) => entry.spectrum)
+    .filter((entry): entry is NonNullable<typeof entry> => !!entry && !!entry.spectrum)
     .map((entry) => ({ filename: entry.filename, source: entry.source, spectrum: entry.spectrum! }));
   const numericSeries = [
     ...curatedSpectra

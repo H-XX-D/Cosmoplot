@@ -185,3 +185,37 @@ Original prompt: refactor and isolate the rendering work into a new /Users/hendr
 - 2026-03-10 focus/export pass: the lower science rail now uses object-specific section titles and downloadable TXT / JSON / CSV exports instead of the old placeholder hook line. The active focus bundle serializes synopsis, status, metrics, chart rows, sources, and full analysis for planets, systems, stars, deep-sky objects, and white dwarfs.
 - 2026-03-10 deep-sky expansion pass: added image-backed galaxy / black-hole / quasar anchors for Whirlpool Galaxy, Sombrero Galaxy, M87 Galaxy, Sagittarius A*, Cygnus X-1, and 3C 273. The deep-sky catalog now carries per-object source/art references and mass anchors where relevant, and the scene renders them with their own tags, hover summaries, and focus cards instead of treating them as generic nebula placeholders.
 - Validation after this pass: npm run lint -- --max-warnings=0 ✅, npm run build ✅, production server restarted ✅ on session 63934.
+
+2026-03-13
+- Replaced the starter README with Cosmoplot-specific project documentation covering architecture, verification, and deployment expectations.
+- Added repo-local [AGENTS.md] guidance with explicit mission, non-negotiables, team model, and working rules so future work is grounded in the project instead of chat memory.
+- Added operational docs:
+  - docs/AGENT_TEAMS.md
+  - docs/PRODUCTION_BURNDOWN.md
+- Added Claude-style slash-command playbooks under .claude/commands for:
+  - /science-hardening
+  - /render-polish
+  - /ux-focus-pass
+  - /deep-sky-pass
+  - /release-readiness
+  - /production-burndown
+- Added package scripts for production-grade verification and local port conflict handling:
+  - npm run typecheck
+  - npm run verify
+  - npm run start:3001
+- Validation after this pass: npm run verify ✅.
+- 2026-03-13 business-ops pass: added a first real commercial path to the app.
+  - New lead intake backend in `src/lib/business/lead-intake.ts` plus `src/app/api/leads/route.ts`.
+  - Lead records are persisted locally to `.cache/business/leads.jsonl` and can fan out to a webhook (`COSMOPLOT_LEAD_WEBHOOK_URL`) and Resend email notifications when configured.
+  - Added `src/components/chrome/lead-capture-form.tsx` and wired it into the landing shell as a visible request-access funnel.
+  - Added `.env.example` for business automation/configuration.
+  - Added `docs/BUSINESS_AUTOMATION.md` describing the recommended automation architecture: lead intake -> webhook/n8n -> CRM/email/finance routing.
+  - Expanded the operational model with a Growth and Revenue Ops team and a `/growth-ops` slash command.
+  - Validation after this pass: `npm run verify` ✅, `/api/leads` smoke POST ✅, Playwright landing-page smoke check ✅.
+- 2026-03-13 donor-ops pass: refactored the new business layer around supporter and donation operations instead of SaaS-style sales language.
+  - Landing page supporter section and form now speak in donor/supporter terms.
+  - Supporter env contract added: `COSMOPLOT_SUPPORTER_WEBHOOK_URL`, `COSMOPLOT_SUPPORTERS_TO`, `COSMOPLOT_SUPPORTERS_FROM`, `NEXT_PUBLIC_DONATION_URL`.
+  - Supporter records now persist to `.cache/business/supporters.jsonl` and emit `supporter.created` events.
+  - Updated the operations docs and agent-team model to use supporter/sustainability language.
+  - Added `/supporter-ops` slash command.
+  - Validation after this pass: `npm run verify` ✅, browser smoke check ✅.

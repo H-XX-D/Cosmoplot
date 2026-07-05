@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cosmoplot
 
-## Getting Started
+Cosmoplot is a science-first universe explorer built on official astronomy data.
+It combines Sun-centered 3D navigation, exoplanet/system/deep-sky exploration, JWST evidence joins, uncertainty-aware summaries, and science-informed visual hypotheses in one React/Next.js application.
 
-First, run the development server:
+## Current Focus
+
+The project is in active hardening on the `codex/science-hardening` branch.
+The highest-value workstreams are:
+- broader JWST product extraction
+- stronger uncertainty propagation across the whole UI
+- tighter provenance and evidence labeling
+- class-specific planet rendering that stays downstream of the science model
+- production-grade release, validation, and deployment readiness
+
+## Project Structure
+
+- `src/app/`: Next.js app router pages and API routes
+- `src/components/universe/`: 3D stage and orchestration logic
+- `src/components/ui/`: shared planet/star/deep-sky visual components
+- `src/lib/science/`: coordinates, physics, archive ingestion, local analysis merge, types
+- `src/lib/cache/`: filesystem-backed caches for internet-fed science data
+- `scripts/`: helpers for JWST FITS extraction and other science ingestion work
+- `docs/`: production burn-down and agent-team operating docs
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the production build locally:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+If port `3000` is occupied on your machine, use:
 
-## Learn More
+```bash
+npm run start:3001
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Strict lint:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run lint -- --max-warnings=0
+```
 
-## Deploy on Vercel
+Typecheck:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run typecheck
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production verification:
+
+```bash
+npm run verify
+```
+
+## Operational Docs
+
+- [AGENTS.md](./AGENTS.md): repo-local working rules, teams, and priorities
+- [docs/AGENT_TEAMS.md](./docs/AGENT_TEAMS.md): team topology and slash-command map
+- [docs/PRODUCTION_BURNDOWN.md](./docs/PRODUCTION_BURNDOWN.md): production exit criteria and burn-down plan
+- [docs/BUSINESS_AUTOMATION.md](./docs/BUSINESS_AUTOMATION.md): lead funnel, workflow, email, finance, and analytics automation architecture
+
+## Product Principles
+
+- Science engine is deterministic
+- Rendering is downstream of a typed appearance model
+- Observed, derived, inferred, proxy, and artistic values stay distinct
+- Provenance should be visible near every claim
+- Visuals are evidence-constrained interpretation, not observation
+
+## Deployment
+
+The app is suitable for Vercel or Render once the production burn-down gates in [docs/PRODUCTION_BURNDOWN.md](./docs/PRODUCTION_BURNDOWN.md) are closed.

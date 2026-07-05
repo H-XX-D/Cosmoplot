@@ -38,6 +38,9 @@ export type ArchivePlanetRow = {
   pl_insol: number | null;
   pl_orbeccen: number | null;
   pl_orbincl: number | null;
+  pl_orblper: number | null;
+  pl_orbtper: number | null;
+  pl_tranmid: number | null;
   pl_trandep: number | null;
   pl_trandur: number | null;
   st_teff: number | null;
@@ -311,6 +314,12 @@ export type UniversePlanet = {
   insolationEarth: number | null;
   eccentricity: number | null;
   inclinationDeg: number | null;
+  inclinationReference?: "sky" | "ecliptic";
+  argumentPeriastronDeg?: number | null;
+  longitudeAscendingNodeDeg?: number | null;
+  meanAnomalyDegAtEpoch?: number | null;
+  orbitEpochJd?: number | null;
+  orbitBasis?: "measured" | "jpl-approx" | "mixed" | "inferred";
   transitDepthPpm: number | null;
   transitDurationHours: number | null;
   uncertainty: {

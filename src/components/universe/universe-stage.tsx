@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { DISPLAY_LOG_SCALE, equatorialToCartesianPc, logScaledVector } from "@/lib/science/coordinates";
+import { deriveMagnetosphereProxy, inferTidalLock } from "@/lib/science/physics";
 import {
   PlanetGlobe,
   materializePlanetReference,
@@ -133,6 +134,29 @@ type StageSelectionCommand =
   | { kind: "whiteDwarf"; key: string; nonce: number }
   | { kind: "referenceStar"; key: string; nonce: number };
 
+type GuidedTarget =
+  | {
+      kind: "planet";
+      id: string;
+      label: string;
+      eyebrow: string;
+      note: string;
+      query: string;
+      systemId: string;
+      planetId: string;
+    }
+  | {
+      kind: "deepSky";
+      id: string;
+      label: string;
+      eyebrow: string;
+      note: string;
+      query: string;
+      name: string;
+    };
+
+type ChartPreset = "all" | "temperateCandidates" | "gasGiants50Ly";
+
 type AdvancedStageFilters = {
   minFlux: number;
   maxFlux: number;
@@ -164,6 +188,29 @@ const DEFAULT_ADVANCED_STAGE_FILTERS: AdvancedStageFilters = {
   requireInteresting: false,
   uncertaintyMode: "median",
 };
+
+const FIFTY_LIGHT_YEARS_PC = 50 / 3.26156;
+
+const CHART_PRESETS: Array<{ id: ChartPreset; label: string; eyebrow: string; note: string }> = [
+  {
+    id: "all",
+    label: "All chart points",
+    eyebrow: "Full chart",
+    note: "Show the complete local snapshot again.",
+  },
+  {
+    id: "temperateCandidates",
+    label: "Temperate candidates",
+    eyebrow: "Possible habitability",
+    note: "Show Earth-size to sub-Neptune worlds with temperate flux or equilibrium temperature. This is a triage view, not a habitability claim.",
+  },
+  {
+    id: "gasGiants50Ly",
+    label: "Gas giants within 50 ly",
+    eyebrow: "Giant worlds",
+    note: "Show giant-planet systems whose host-star centers are within 50 light-years of the Sun.",
+  },
+];
 
 function sanitizeFilenamePart(value: string) {
   return value
@@ -657,6 +704,108 @@ function threeColor(color: Palette["star"], lightnessOffset = 0) {
 
 function scienceKey(value: string | null | undefined) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+function findPlanetTarget(snapshot: UniverseSnapshot, planetName: string) {
+  const targetKey = scienceKey(planetName);
+  for (const system of snapshot.systems) {
+    const planet = system.planets.find((entry) => scienceKey(entry.name) === targetKey);
+    if (planet) {
+      return { system, planet };
+    }
+  }
+  return null;
+}
+
+function buildGuidedTargets(snapshot: UniverseSnapshot): GuidedTarget[] {
+  const targets: GuidedTarget[] = [];
+  const addPlanet = (planetName: string, eyebrow: string, note: string, query: string) => {
+    const found = findPlanetTarget(snapshot, planetName);
+    if (!found) return;
+    targets.push({
+      kind: "planet",
+      id: `planet:${found.planet.id}`,
+      label: found.planet.name,
+      eyebrow,
+      note,
+      query,
+      systemId: found.system.id,
+      planetId: found.planet.id,
+    });
+  };
+
+  addPlanet("Earth", "Home fix", "Start with a known world and see how observed, derived, and inferred labels differ.", "Earth");
+  addPlanet("Proxima Cen b", "Nearest exoplanet fix", "Plot a nearby rocky target with propagated flux, temperature, and archive provenance.", "Proxima");
+  addPlanet("TRAPPIST-1 e", "Compact-system fix", "Plot a well-known temperate target in a crowded M-dwarf system.", "TRAPPIST-1");
+  addPlanet("L 98-59 d", "Optimizer fix", "Plot a nearby candidate that usually appears high in the follow-up shortlist.", "L 98-59");
+
+  const orion = DEEP_SKY_CATALOG.find((entry) => entry.name === "Orion Nebula");
+  if (orion) {
+    targets.push({
+      kind: "deepSky",
+      id: `deepSky:${orion.name}`,
+      label: orion.name,
+      eyebrow: "Deep-sky fix",
+      note: "Switch from exoplanets to a visible nebula and compare how the chart panel changes.",
+      query: "",
+      name: orion.name,
+    });
+  }
+
+  return targets.slice(0, 5);
+}
+
+function planetMedianRadius(planet: UniversePlanet) {
+  return planet.propagation?.radiusEarth.median ?? planet.radiusEarth;
+}
+
+function planetMedianFlux(system: UniverseSystem, planet: UniversePlanet) {
+  return planet.propagation?.fluxEarthMultiple.median ?? insolationEarth(system, planet);
+}
+
+function planetMedianTemperature(planet: UniversePlanet) {
+  return planet.propagation?.equilibriumK.median ?? planet.equilibriumK;
+}
+
+function isTemperateCandidateWorld(system: UniverseSystem, planet: UniversePlanet) {
+  if (system.id === "sun") return false;
+  const radius = planetMedianRadius(planet);
+  const flux = planetMedianFlux(system, planet);
+  const temperature = planetMedianTemperature(planet);
+  const sizeCandidate = radius !== null && radius <= 2.4;
+  const fluxCandidate = flux !== null && flux >= 0.25 && flux <= 2.2;
+  const temperatureCandidate = temperature !== null && temperature >= 180 && temperature <= 340;
+  return sizeCandidate && (fluxCandidate || temperatureCandidate);
+}
+
+function isGasGiantWorld(planet: UniversePlanet) {
+  const radius = planetMedianRadius(planet);
+  return radius !== null ? radius >= 4 : planetClass(planet) === "gas giant";
+}
+
+function planetMatchesChartPreset(system: UniverseSystem, planet: UniversePlanet, preset: ChartPreset) {
+  if (preset === "all") return true;
+  if (preset === "temperateCandidates") return isTemperateCandidateWorld(system, planet);
+  return system.distancePc <= FIFTY_LIGHT_YEARS_PC && isGasGiantWorld(planet);
+}
+
+function systemMatchesChartPreset(system: UniverseSystem, preset: ChartPreset) {
+  if (preset === "all") return true;
+  return system.planets.some((planet) => planetMatchesChartPreset(system, planet, preset));
+}
+
+function firstPlanetForChartPreset(systems: UniverseSystem[], preset: ChartPreset) {
+  const orderedSystems = preset === "all"
+    ? systems
+    : [
+        ...systems.filter((system) => system.id !== "sun"),
+        ...systems.filter((system) => system.id === "sun"),
+      ];
+  for (const system of orderedSystems) {
+    const planet = system.planets.find((entry) => planetMatchesChartPreset(system, entry, preset));
+    if (planet) return { system, planet };
+  }
+  return null;
 }
 
 function easeInOutCubic(t: number) {
@@ -3803,9 +3952,48 @@ function estimatedRotationSeconds(planet: UniversePlanet, appearance: PlanetPrev
   return 34;
 }
 
+function visualMagnetosphere(system: UniverseSystem, planet: UniversePlanet, science?: PlanetScienceBundle | null) {
+  const local = mergedLocalAnalysis(system, planet, science);
+  const semiMajorAxisAu = science?.orbital.semiMajorAxisAu ?? planet.semiMajorAxisAu;
+  const orbitalPeriodDays = science?.orbital.periodDays ?? planet.orbitalPeriodDays;
+  const fluxEarthMultiple =
+    science?.radiation.fluxEarthMultiple
+    ?? local?.fluxEarthMultiple
+    ?? insolationEarth(system, planet);
+  const derived = deriveMagnetosphereProxy({
+    massEarth: science?.physical.massEarth ?? planet.massEarth,
+    radiusEarth: science?.physical.radiusEarth ?? planet.radiusEarth,
+    densityGcc: science?.physical.densityGcc ?? densityGcc(planet),
+    equilibriumK: science?.temperatures.equilibriumK ?? planet.equilibriumK,
+    orbitalPeriodDays,
+    semiMajorAxisAu,
+    fluxEarthMultiple,
+    spectralType: science?.stellar.spectralType ?? system.stellar.spectralType,
+    tidallyLocked: science?.orbital.tidallyLocked ?? inferTidalLock(semiMajorAxisAu, orbitalPeriodDays),
+  });
+  const protection =
+    science?.magnetosphere.protection && science.magnetosphere.protection !== "unresolved"
+      ? science.magnetosphere.protection
+      : derived.protection;
+
+  return {
+    magneticFieldMicroTesla:
+      science?.magnetosphere.surfaceFieldMicroTesla
+      ?? local?.surfaceFieldMicroTesla
+      ?? derived.surfaceFieldMicroTesla,
+    magnetopauseRadii:
+      science?.magnetosphere.magnetopauseRadii
+      ?? local?.magnetopauseRadii
+      ?? derived.magnetopauseRadii,
+    radiationFluxEarth: fluxEarthMultiple ?? derived.stellarWindStress,
+    magneticProtection: protection,
+  };
+}
+
 function planetVisualModel(system: UniverseSystem, planet: UniversePlanet, science?: PlanetScienceBundle | null) {
   const palette = paletteForSelection(system, planet, science);
   const appearance = previewAppearance(system, planet, science);
+  const magnetosphere = visualMagnetosphere(system, planet, science);
   const chemistryTags = Array.from(new Set([
     ...scienceChemistryTags(science),
     ...(mergedLocalAnalysis(system, planet, science)?.moleculeTags ?? []),
@@ -3831,10 +4019,10 @@ function planetVisualModel(system: UniverseSystem, planet: UniversePlanet, scien
       stormCount: appearance.stormCount,
       rotationSeconds: estimatedRotationSeconds(planet, appearance),
       tidalLock: appearance.tidalLock,
-      magneticFieldMicroTesla: science?.magnetosphere.surfaceFieldMicroTesla ?? null,
-      magnetopauseRadii: science?.magnetosphere.magnetopauseRadii ?? null,
-      radiationFluxEarth: science?.radiation.fluxEarthMultiple ?? null,
-      magneticProtection: science?.magnetosphere.protection ?? null,
+      magneticFieldMicroTesla: magnetosphere.magneticFieldMicroTesla,
+      magnetopauseRadii: magnetosphere.magnetopauseRadii,
+      radiationFluxEarth: magnetosphere.radiationFluxEarth,
+      magneticProtection: magnetosphere.magneticProtection,
     } satisfies PlanetGlobeProps,
   };
 }
@@ -5553,7 +5741,7 @@ function VisualFocus({
   );
 }
 
-export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
+export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introArmed?: boolean }) {
   const defaultSystem = useMemo(() => {
     return snapshot.systems.find((system) => system.id === "sun") ?? snapshot.systems[0] ?? null;
   }, [snapshot.systems]);
@@ -5562,6 +5750,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     return defaultSystem.planets.find((planet) => planet.id === "earth") ?? defaultSystem.planets[0] ?? null;
   }, [defaultSystem]);
   const [query, setQuery] = useState("");
+  const [chartPreset, setChartPreset] = useState<ChartPreset>("all");
   const [spectralFilter, setSpectralFilter] = useState("all");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedStageFilters>(DEFAULT_ADVANCED_STAGE_FILTERS);
@@ -5583,6 +5772,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
   const [planetScienceResolvedKey, setPlanetScienceResolvedKey] = useState<string | null>(null);
   const [stageHover, setStageHover] = useState<StageHover | null>(null);
   const planetViewSyncRef = useRef<PlanetGlobeLiveView | null>(null);
+  const guidedTargets = useMemo(() => buildGuidedTargets(snapshot), [snapshot]);
 
   const filteredSystems = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -5591,11 +5781,12 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
         !search ||
         system.name.toLowerCase().includes(search) ||
         system.planets.some((planet) => planet.name.toLowerCase().includes(search));
+      const matchesPreset = systemMatchesChartPreset(system, chartPreset);
       const matchesType = spectralFilter === "all" || spectralBucket(system.stellar.spectralType) === spectralFilter;
       const matchesAdvanced = systemMatchesAdvancedFilters(system, advancedFilters);
-      return matchesSearch && matchesType && matchesAdvanced;
+      return matchesSearch && matchesPreset && matchesType && matchesAdvanced;
     });
-  }, [advancedFilters, query, spectralFilter, snapshot.systems]);
+  }, [advancedFilters, chartPreset, query, spectralFilter, snapshot.systems]);
 
   const selectedSystem = useMemo(() => {
     if (focusKind === "deepSky" || focusKind === "whiteDwarf" || focusKind === "referenceStar") {
@@ -5613,6 +5804,19 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     if (!selectedPlanetId) return null;
     return selectedSystem.planets.find((planet) => planet.id === selectedPlanetId) ?? null;
   }, [focusKind, selectedPlanetId, selectedSystem]);
+  const canFollowSelectedPlanet = !!selectedPlanet;
+  const stageFollowLocked = followLocked && canFollowSelectedPlanet;
+
+  useEffect(() => {
+    if (canFollowSelectedPlanet || !followLocked) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setFollowLocked(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canFollowSelectedPlanet, followLocked]);
 
   const selectedPlanetScience = useMemo(() => {
     if (!planetScience || !selectedPlanet) return null;
@@ -5657,8 +5861,19 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     const targetPlanetName = selectedPlanet?.name;
     if (!targetPlanetName) return;
     const targetKey = scienceKey(targetPlanetName);
-
     let cancelled = false;
+
+    if (selectedSystem?.id === "sun" && targetKey !== "earth") {
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setPlanetScience(null);
+        setPlanetScienceResolvedKey(targetKey);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     fetch(`/api/science/planet?name=${encodeURIComponent(targetPlanetName)}`)
       .then(async (response) => {
         if (!response.ok) return null;
@@ -5678,7 +5893,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedPlanet?.name]);
+  }, [selectedPlanet?.name, selectedSystem?.id]);
 
   const activeFocusKind: FocusKind | null = selectedDeepSky
     ? "deepSky"
@@ -5874,9 +6089,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
         ? "Star context"
         : "Planets in focus";
   const orbitSpeedLabel = `${orbitSpeedMultiplier.toFixed(1)}x`;
+  const activeChartPreset = CHART_PRESETS.find((preset) => preset.id === chartPreset);
 
   function jumpHome() {
     setQuery("");
+    setChartPreset("all");
     setSpectralFilter("all");
     setAdvancedFiltersOpen(false);
     setAdvancedFilters(DEFAULT_ADVANCED_STAGE_FILTERS);
@@ -5892,6 +6109,66 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
     setSelectedReferenceStarName(null);
   }
 
+  function selectGuidedTarget(target: GuidedTarget) {
+    setQuery(target.query);
+    setChartPreset("all");
+    setSpectralFilter("all");
+    setAdvancedFiltersOpen(false);
+    setAdvancedFilters(DEFAULT_ADVANCED_STAGE_FILTERS);
+    setFreeRoam(false);
+    setFollowLocked(false);
+    setZoomFactor(1);
+    setSelectedWhiteDwarfId(null);
+    setSelectedReferenceStarName(null);
+
+    if (target.kind === "planet") {
+      setFocusKind("planet");
+      setSelectedSystemId(target.systemId);
+      setSelectedPlanetId(target.planetId);
+      setSelectedDeepSkyName(null);
+      setSelectionCommand((current) => ({ kind: "system", key: target.systemId, nonce: (current?.nonce ?? 0) + 1 }));
+      return;
+    }
+
+    setFocusKind("deepSky");
+    setSelectedDeepSkyName(target.name);
+    setSelectedSystemId(null);
+    setSelectedPlanetId(null);
+    setSelectionCommand((current) => ({ kind: "deepSky", key: target.name, nonce: (current?.nonce ?? 0) + 1 }));
+  }
+
+  function applyChartPreset(preset: ChartPreset) {
+    if (preset === "all") {
+      jumpHome();
+      return;
+    }
+
+    setChartPreset(preset);
+    setQuery("");
+    setSpectralFilter("all");
+    setAdvancedFiltersOpen(false);
+    setAdvancedFilters(DEFAULT_ADVANCED_STAGE_FILTERS);
+    setFreeRoam(false);
+    setFollowLocked(false);
+    setZoomFactor(1);
+    setSelectedDeepSkyName(null);
+    setSelectedWhiteDwarfId(null);
+    setSelectedReferenceStarName(null);
+
+    const first = firstPlanetForChartPreset(snapshot.systems, preset);
+    if (first) {
+      setFocusKind("planet");
+      setSelectedSystemId(first.system.id);
+      setSelectedPlanetId(first.planet.id);
+      setSelectionCommand((current) => ({ kind: "system", key: first.system.id, nonce: (current?.nonce ?? 0) + 1 }));
+      return;
+    }
+
+    setFocusKind("system");
+    setSelectedSystemId(defaultSystem?.id ?? snapshot.systems[0]?.id ?? null);
+    setSelectedPlanetId(null);
+  }
+
   return (
     <section id="science-deck" className="scroll-mt-28 space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_30rem] xl:items-start">
@@ -5899,33 +6176,91 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(7,16,34,0.82),rgba(3,9,22,0.62))] shadow-[0_30px_120px_rgba(2,8,24,0.42)] backdrop-blur-xl">
             <div className="flex flex-col gap-4 border-b border-white/8 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="text-[0.68rem] uppercase tracking-[0.28em] text-sky-100/52">3D Universe Navigator</div>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">Science coordinates first, renderer second</h2>
+                <div className="text-[0.68rem] uppercase tracking-[0.28em] text-sky-100/52">3D Star Plotter</div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">Star chart plotter</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300/72">
-                  The left stage preserves the previous site organization: star selection, planet selection, coordinate readout, and a full text analysis under the map.
+                  The chart preserves catalog bearing and distance to each host-star center. Stars keep science-informed colors, while point sizes, planets, and deep-sky art are display-scaled so the plot remains readable and clickable.
                 </p>
               </div>
               <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[0.68rem] uppercase tracking-[0.24em] text-slate-200/70">
-                {filteredSystems.length} systems in view · {snapshot.whiteDwarfs.anchors.length} white dwarfs available
+                {filteredSystems.length} systems in view{chartPreset !== "all" && activeChartPreset ? ` · ${activeChartPreset.label}` : ""} · {snapshot.whiteDwarfs.anchors.length} white dwarfs available
+              </div>
+            </div>
+
+            {guidedTargets.length ? (
+              <div className="border-b border-white/8 px-5 py-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-[0.66rem] uppercase tracking-[0.24em] text-sky-100/48">Plot these first</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-300/72">
+                      These fixes are present in the current snapshot, so every button plots a real object instead of an empty search.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {guidedTargets.map((target) => (
+                      <button
+                        key={target.id}
+                        type="button"
+                        onClick={() => selectGuidedTarget(target)}
+                        className="group max-w-[15rem] rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left transition hover:border-sky-300/28 hover:bg-sky-300/10"
+                        title={target.note}
+                      >
+                        <div className="text-[0.58rem] uppercase tracking-[0.18em] text-sky-100/48 group-hover:text-sky-100/72">{target.eyebrow}</div>
+                        <div className="mt-1 text-sm font-medium text-white">{target.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="border-b border-white/8 px-5 py-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-[0.66rem] uppercase tracking-[0.24em] text-sky-100/48">Plot a route view</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-300/72">
+                    Filter the chart to the kinds of worlds people usually want to sail toward: temperate candidates or nearby gas giants.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CHART_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyChartPreset(preset.id)}
+                      title={preset.note}
+                      className={`group max-w-[15rem] rounded-2xl border px-3 py-2 text-left transition ${
+                        chartPreset === preset.id
+                          ? "border-cyan-300/34 bg-cyan-300/12 text-cyan-50"
+                          : "border-white/10 bg-white/[0.04] text-white hover:border-sky-300/28 hover:bg-sky-300/10"
+                      }`}
+                    >
+                      <div className={`text-[0.58rem] uppercase tracking-[0.18em] ${chartPreset === preset.id ? "text-cyan-100/74" : "text-sky-100/48 group-hover:text-sky-100/72"}`}>
+                        {preset.eyebrow}
+                      </div>
+                      <div className="mt-1 text-sm font-medium">{preset.label}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
             <div className="grid gap-3 border-b border-white/8 px-5 py-4 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_16rem_10rem_auto]">
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.24em] text-slate-300/58">
-                  <Search className="h-3.5 w-3.5" /> Search planet / star
+                  <Search className="h-3.5 w-3.5" /> Search chart object
                 </span>
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="e.g. K2-18, Proxima b, TRAPPIST-1"
+                  placeholder="e.g. Earth, Proxima, TRAPPIST-1, L 98-59"
                   className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-300/30 focus:bg-slate-950/58"
                 />
               </label>
 
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.24em] text-slate-300/58">
-                  <Crosshair className="h-3.5 w-3.5" /> Navigator target
+                  <Crosshair className="h-3.5 w-3.5" /> Chart fix
                 </span>
                 <select
                   value={navigatorValue}
@@ -6182,7 +6517,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                   simulationDays={simulationDays}
                   orbitSpeedMultiplier={orbitSpeedMultiplier}
                   zoomFactor={zoomFactor}
-                  followLocked={followLocked}
+                  followLocked={stageFollowLocked}
                   freeRoam={freeRoam}
                   onSelectSystem={(system) => {
                     setFocusKind("system");
@@ -6261,14 +6596,14 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
                     }
                     setFollowLocked((value) => !value);
                   }}
-                  disabled={!selectedPlanet}
+                  disabled={!canFollowSelectedPlanet}
                   className={`w-full rounded-full border px-2 py-1.5 text-[0.54rem] uppercase tracking-[0.18em] transition ${
-                    selectedPlanet
-                      ? (followLocked ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.05] text-slate-100 hover:bg-white/[0.1]")
+                    canFollowSelectedPlanet
+                      ? (stageFollowLocked ? "border-sky-300/34 bg-sky-300/12 text-sky-50" : "border-white/10 bg-white/[0.05] text-slate-100 hover:bg-white/[0.1]")
                       : "cursor-not-allowed border-white/8 bg-white/[0.02] text-slate-500"
                   }`}
                 >
-                  {followLocked ? "Unlock" : "Follow"}
+                  {stageFollowLocked ? "Unlock" : "Follow"}
                 </button>
                 <button
                   type="button"
@@ -6329,7 +6664,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot }) {
             <div className="space-y-4 border-t border-white/8 px-5 py-5">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/30 p-4">
-                  <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Selection Report</div>
+                  <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Chart Fix Report</div>
                   <h3 className="mt-2 text-xl font-semibold text-white">{activeTitle}</h3>
                   {activeStatus ? (
                     <div className="mt-2 text-[0.66rem] uppercase tracking-[0.22em] text-sky-100/48">

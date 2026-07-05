@@ -41,6 +41,9 @@ export type PlanetGlobeProps = {
   daysideK?: number | null;
   nightsideK?: number | null;
   moleculeTags?: string[];
+  atmosphereMetallicity?: number | null;
+  surfaceMoltenness?: number | null;
+  sparkleStrength?: number | null;
   showMagnetosphere?: boolean;
   magneticFieldMicroTesla?: number | null;
   magnetopauseRadii?: number | null;
@@ -91,7 +94,10 @@ type ReferenceAsset = {
 
 type ChemistryProfile = {
   bandBase: HslColor;
+  bandBase2?: HslColor;
+  bandBase3?: HslColor;
   bandAccent: HslColor;
+  bandAccent2?: HslColor;
   stormColor: HslColor;
   bandContrast: number;
   bandVolume: number;
@@ -194,6 +200,62 @@ function mixColor(a: HslColor, b: HslColor, t: number): HslColor {
   };
 }
 
+function hueDistance(a: number, b: number) {
+  return Math.abs(((((a - b) % 360) + 540) % 360) - 180);
+}
+
+function shiftColor(color: HslColor, hueShift = 0, satShift = 0, lightShift = 0): HslColor {
+  return {
+    h: (color.h + hueShift + 360) % 360,
+    s: clamp(color.s + satShift, 0, 100),
+    l: clamp(color.l + lightShift, 0, 100),
+  };
+}
+
+function stellarOptics(starColor: HslColor) {
+  const blueBias = clamp(1 - hueDistance(starColor.h, 214) / 78, 0, 1);
+  const goldBias = clamp(1 - hueDistance(starColor.h, 48) / 56, 0, 1);
+  const redBias = clamp(1 - hueDistance(starColor.h, 18) / 44, 0, 1);
+  const whiteBias = clamp(1 - starColor.s / 90 + starColor.l / 240, 0, 1);
+  const coolScatter = {
+    h: lerp(starColor.h, 210, 0.28 + blueBias * 0.2),
+    s: clamp(starColor.s + 14 + blueBias * 10 - whiteBias * 6, 16, 96),
+    l: clamp(starColor.l + 12 + whiteBias * 8, 38, 92),
+  };
+  const warmScatter = {
+    h: lerp(starColor.h, goldBias > redBias ? 46 : 18, 0.24 + Math.max(goldBias, redBias) * 0.24),
+    s: clamp(starColor.s + 12 + goldBias * 12 + redBias * 8, 18, 98),
+    l: clamp(starColor.l + 6 + goldBias * 8, 28, 88),
+  };
+  return {
+    blueBias,
+    goldBias,
+    redBias,
+    whiteBias,
+    coolScatter,
+    warmScatter,
+    chromaBoost: clamp(0.08 + blueBias * 0.08 + goldBias * 0.06 + redBias * 0.05, 0.06, 0.24),
+    lightLift: clamp(whiteBias * 6 + blueBias * 3 + goldBias * 2, 0, 10),
+  };
+}
+
+function spectralTint(
+  color: HslColor,
+  optics: ReturnType<typeof stellarOptics>,
+  coolMix: number,
+  warmMix: number,
+  satBoost = 0,
+  lightBoost = 0,
+) {
+  const cooled = mixColor(color, optics.coolScatter, clamp(coolMix, 0, 1));
+  const warmed = mixColor(cooled, optics.warmScatter, clamp(warmMix, 0, 1));
+  return {
+    h: warmed.h,
+    s: clamp(warmed.s + satBoost + optics.chromaBoost * 100 * 0.08, 0, 100),
+    l: clamp(warmed.l + lightBoost + optics.lightLift * 0.22, 0, 100),
+  };
+}
+
 function hslToRgb(color: HslColor) {
   const h = ((color.h % 360) + 360) % 360 / 360;
   const s = clamp(color.s / 100, 0, 1);
@@ -221,6 +283,32 @@ function hslToRgb(color: HslColor) {
     Math.round(hueToChannel(h) * 255),
     Math.round(hueToChannel(h - 1 / 3) * 255),
   ] as const;
+}
+
+function surfaceRepaintIntervalSeconds(props: PlanetGlobeProps) {
+  if (props.tidalLock && (props.cloudCover ?? 0) < 0.08 && props.regime === "airless") return 0.9;
+  switch (props.regime) {
+    case "airless":
+      return 0.55;
+    case "desert":
+    case "rocky":
+      return 0.24;
+    case "temperate":
+      return 0.14;
+    case "venusian":
+    case "hycean":
+    case "sub-neptune":
+      return 1 / 12;
+    case "ice-giant":
+    case "saturnian":
+      return 1 / 14;
+    case "gas-giant":
+    case "hot-jupiter":
+    case "lava":
+      return 1 / 18;
+    default:
+      return 1 / 15;
+  }
 }
 
 function rgbToHsl(r: number, g: number, b: number): HslColor {
@@ -363,12 +451,12 @@ function getSurfaceScratchCanvas(size: number) {
 
 function surfaceGradeFilter(props: PlanetGlobeProps) {
   const directReference = isDirectDisplayReferencePlanet(props.seedKey);
-  if (props.regime === "hot-jupiter") return "saturate(185%) contrast(126%) brightness(108%)";
-  if (props.regime === "gas-giant") return "saturate(176%) contrast(122%) brightness(106%)";
-  if (props.regime === "saturnian") return "saturate(158%) contrast(118%) brightness(107%)";
-  if (props.regime === "ice-giant") return "saturate(182%) contrast(122%) brightness(107%)";
-  if (props.regime === "sub-neptune") return "saturate(172%) contrast(120%) brightness(106%)";
-  if (props.regime === "hycean") return "saturate(176%) contrast(121%) brightness(106%)";
+  if (props.regime === "hot-jupiter") return "saturate(196%) contrast(132%) brightness(109%)";
+  if (props.regime === "gas-giant") return "saturate(188%) contrast(128%) brightness(108%)";
+  if (props.regime === "saturnian") return "saturate(168%) contrast(122%) brightness(108%)";
+  if (props.regime === "ice-giant") return "saturate(194%) contrast(128%) brightness(108%)";
+  if (props.regime === "sub-neptune") return "saturate(184%) contrast(126%) brightness(107%)";
+  if (props.regime === "hycean") return "saturate(186%) contrast(126%) brightness(107%)";
   if (props.regime === "venusian") return "saturate(150%) contrast(118%) brightness(107%)";
   if (props.regime === "lava") return "saturate(188%) contrast(130%) brightness(108%)";
   if (props.regime === "desert") return "saturate(162%) contrast(122%) brightness(105%)";
@@ -502,6 +590,18 @@ function buildSatelliteStyleTerrainTexture(
   const seaLevel = tutorialTerrainWaterLevel(regime, densityGcc, equilibriumK);
   const eqBias = clamp(((equilibriumK ?? 285) - 285) / 120, -0.42, 0.62);
   const ruggedness = regime === "lava" ? 1.18 : regime === "desert" ? 0.92 : 0.78;
+  const allowStandingWater =
+    regime === "temperate"
+    || regime === "hycean"
+    || (regime === "rocky" && (equilibriumK ?? 285) < 340);
+  const vegetationStrength =
+    regime === "desert"
+      ? 0.02
+      : regime === "lava"
+        ? 0.04
+        : regime === "venusian"
+          ? 0
+          : 1;
 
   for (let y = 0; y < height; y += 1) {
     const v = y / (height - 1);
@@ -586,13 +686,13 @@ function buildSatelliteStyleTerrainTexture(
         land
         * smoothstep(0.22, 0.78, tempNorm)
         * smoothstep(0.24, 0.72, moisture)
-        * (regime === "desert" ? 0.22 : regime === "lava" ? 0.04 : 1);
+        * vegetationStrength;
       const iceMask = land * (1 - smoothstep(0.16, 0.3, tempNorm));
-      const seaIceMask = (1 - land) * (1 - smoothstep(0.08, 0.2, tempNorm)) * (regime === "lava" ? 0 : 1);
+      const seaIceMask = allowStandingWater ? (1 - land) * (1 - smoothstep(0.08, 0.2, tempNorm)) : 0;
 
       let color = hslToRgb(mixColor(bedrockLow, bedrockHigh, clamp(h * 1.04, 0, 1)));
 
-      if (land < 0.1 && regime !== "lava") {
+      if (allowStandingWater && land < 0.1) {
         const oceanDepth = 1 - smoothstep(0.02, 0.18, h);
         const oceanColor = mixColor(
           { h: 206, s: 70, l: 22 },
@@ -612,6 +712,11 @@ function buildSatelliteStyleTerrainTexture(
         const emberField = smoothstep(0.7, 0.9, fbm2D(seed + 571, u * 14.2, v * 8.8, 4));
         const lavaGlow = emberField * (1 - smoothstep(0.24, 0.58, h));
         color = mixRgb(color, [255, 124, 48], lavaGlow * 0.5);
+      }
+
+      if (regime === "desert") {
+        const oxideMask = smoothstep(0.38, 0.88, ridgedFbm2D(seed + 617, u * 9.8, v * 9.2, 3)) * 0.24;
+        color = mixRgb(color, [182, 78, 42], oxideMask);
       }
 
       const iceRgb = hslToRgb(iceColor);
@@ -653,12 +758,22 @@ function buildBandedSwirlTexture(
     props.bandCount ?? 0,
     props.stormCount ?? 0,
     props.equilibriumK ?? "na",
+    props.atmosphereMetallicity ?? "na",
     chemistry.bandBase.h,
     chemistry.bandBase.s,
     chemistry.bandBase.l,
+    chemistry.bandBase2?.h ?? "na",
+    chemistry.bandBase2?.s ?? "na",
+    chemistry.bandBase2?.l ?? "na",
+    chemistry.bandBase3?.h ?? "na",
+    chemistry.bandBase3?.s ?? "na",
+    chemistry.bandBase3?.l ?? "na",
     chemistry.bandAccent.h,
     chemistry.bandAccent.s,
     chemistry.bandAccent.l,
+    chemistry.bandAccent2?.h ?? "na",
+    chemistry.bandAccent2?.s ?? "na",
+    chemistry.bandAccent2?.l ?? "na",
     chemistry.stormColor.h,
     chemistry.stormColor.s,
     chemistry.stormColor.l,
@@ -678,27 +793,31 @@ function buildBandedSwirlTexture(
   const height = size;
   const image = ctx.createImageData(width, height);
   const gasGiantLike = props.regime === "gas-giant" || props.regime === "hot-jupiter" || props.regime === "saturnian";
+  const metallicity = clamp(props.atmosphereMetallicity ?? 0, 0, 1);
   const bandCount = props.bandCount ?? (props.regime === "hot-jupiter" ? 13 : props.regime === "saturnian" ? 7 : gasGiantLike ? 11 : props.regime === "ice-giant" ? 8 : 9);
   const stormCount = props.stormCount ?? 6;
   const bandContrast = chemistry.bandContrast;
   const bandVolume = chemistry.bandVolume;
+  const bandBase2 = chemistry.bandBase2 ?? mixColor(chemistry.bandBase, chemistry.bandAccent, 0.34);
+  const bandBase3 = chemistry.bandBase3 ?? shiftColor(mixColor(bandBase2, chemistry.bandAccent, 0.18), -4, 2, -18);
+  const bandAccent2 = chemistry.bandAccent2 ?? shiftColor(mixColor(chemistry.bandAccent, chemistry.stormColor, 0.42), 6, 10, 6);
   const planetId = props.seedKey.trim().toLowerCase();
   const style =
     planetId === "jupiter"
-      ? { bandMultiplier: 1.04, shear: 1.18, turbulence: 1.1, softness: 0.14, haze: 0.05, storm: 0.82, polarHaze: 0.04, equatorHaze: 0.02 }
+      ? { bandMultiplier: 1.08, shear: 1.22, turbulence: 1.14, softness: 0.04, haze: 0.02, storm: 0.86, polarHaze: 0.02, equatorHaze: 0.01 }
       : planetId === "saturn"
-        ? { bandMultiplier: 0.72, shear: 0.54, turbulence: 0.42, softness: 0.34, haze: 0.22, storm: 0.22, polarHaze: 0.1, equatorHaze: 0.12 }
+        ? { bandMultiplier: 0.76, shear: 0.58, turbulence: 0.46, softness: 0.18, haze: 0.1, storm: 0.24, polarHaze: 0.05, equatorHaze: 0.06 }
         : props.regime === "saturnian"
-          ? { bandMultiplier: 0.68, shear: 0.48, turbulence: 0.36, softness: 0.38, haze: 0.24, storm: 0.18, polarHaze: 0.1, equatorHaze: 0.14 }
+          ? { bandMultiplier: 0.72, shear: 0.56, turbulence: 0.42, softness: 0.18, haze: 0.1, storm: 0.24, polarHaze: 0.05, equatorHaze: 0.07 }
           : props.regime === "hot-jupiter"
-            ? { bandMultiplier: 1.18, shear: 1.34, turbulence: 1.28, softness: 0.1, haze: 0.04, storm: 0.66, polarHaze: 0.02, equatorHaze: 0.02 }
+            ? { bandMultiplier: 1.24, shear: 1.38, turbulence: 1.34, softness: 0.03, haze: 0.02, storm: 0.72, polarHaze: 0.01, equatorHaze: 0.01 }
         : planetId === "uranus"
           ? { bandMultiplier: 0.48, shear: 0.2, turbulence: 0.18, softness: 0.42, haze: 0.18, storm: 0.12, polarHaze: 0.18, equatorHaze: 0.04 }
           : planetId === "neptune"
             ? { bandMultiplier: 0.68, shear: 0.46, turbulence: 0.34, softness: 0.24, haze: 0.1, storm: 0.52, polarHaze: 0.08, equatorHaze: 0.04 }
             : props.regime === "ice-giant"
               ? { bandMultiplier: 0.7, shear: 0.34, turbulence: 0.28, softness: 0.28, haze: 0.12, storm: 0.24, polarHaze: 0.1, equatorHaze: 0.04 }
-              : { bandMultiplier: 0.9, shear: 0.74, turbulence: 0.62, softness: 0.2, haze: 0.08, storm: 0.42, polarHaze: 0.06, equatorHaze: 0.04 };
+              : { bandMultiplier: 0.96, shear: 0.84, turbulence: 0.72, softness: 0.06, haze: 0.03, storm: 0.5, polarHaze: 0.03, equatorHaze: 0.02 };
   const effectiveBandCount = Math.max(3.2, bandCount * style.bandMultiplier);
 
   const storms = Array.from({ length: stormCount }, (_, index) => ({
@@ -731,26 +850,38 @@ function buildBandedSwirlTexture(
       const eddyField = (fbm2D(seed + 853, u * 10.6, v * 11.4, 4) - 0.5) * 0.14 * style.turbulence;
       const ridgeField = ridgedFbm2D(seed + 907, u * 18.2, v * 8.6, 3) * (0.78 + style.turbulence * 0.4);
       const plumeField = fbm2D(seed + 941, u * 24.5, v * 13.2, 3);
+      const bandWidthNoise = 0.86 + (fbm2D(seed + 971, u * 3.8, v * 7.4, 4) - 0.5) * 0.38 + (ridgedFbm2D(seed + 1007, u * 5.4, v * 11.2, 3) - 0.5) * 0.22;
       const jetWave = Math.sin((u * Math.PI * 2 * 3.4) + lat * 4.4 + macroShear * 8.2) * 0.08 * bandVolume * (0.72 + style.turbulence * 0.4);
       const displacedLat = lat + macroShear + eddyField + jetWave;
-      const primaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * effectiveBandCount);
-      const secondaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * (effectiveBandCount + 2) + plumeField * 2.6);
-      const tertiaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * (effectiveBandCount * 0.55 + 1.4) - ridgeField * 1.8);
+      const primaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * effectiveBandCount * bandWidthNoise + plumeField * 0.55);
+      const secondaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * (effectiveBandCount + 2.4) * (1.02 + (bandWidthNoise - 1) * 0.46) + plumeField * 2.6);
+      const tertiaryBands = 0.5 + 0.5 * Math.sin(displacedLat * Math.PI * (effectiveBandCount * 0.55 + 1.4) * (0.92 + (bandWidthNoise - 1) * 0.28) - ridgeField * 1.8);
       const rawBandMix = clamp(primaryBands * 0.56 + secondaryBands * 0.28 + tertiaryBands * 0.16 + (plumeField - 0.5) * 0.18, 0, 1);
       const bandMix = lerp(rawBandMix, 0.5 + 0.5 * primaryBands, style.softness);
-      const baseColor = mixColor(
+      const crispBandMix = smoothstep(0.18, 0.82, bandMix);
+      const bandBoundary = Math.exp(-Math.pow(primaryBands - 0.5, 2) / lerp(0.0018, 0.001, metallicity));
+      const zoneColor = mixColor(
         chemistry.bandBase,
-        chemistry.bandAccent,
-        smoothstep(0.16 + style.softness * 0.12, 0.84 - style.softness * 0.08, bandMix),
+        bandBase2,
+        crispBandMix,
       );
+      const laneBlend = smoothstep(0.42, 0.82, ridgeField * 0.9 + (1 - primaryBands) * 0.48 + (1 - bandWidthNoise) * 0.34 + bandBoundary * 0.24);
+      const laneColor = mixColor(zoneColor, bandBase3, laneBlend);
+      const accentColor = mixColor(
+        chemistry.bandAccent,
+        bandAccent2,
+        smoothstep(0.18, 0.9, secondaryBands * 0.72 + plumeField * 0.28),
+      );
+      const accentBlend = smoothstep(0.52, 0.84, plumeField * 0.56 + secondaryBands * 0.28 + ridgeField * 0.22 + Math.abs(jetWave) * 3.8 + bandBoundary * 0.28);
+      const baseColor = mixColor(laneColor, accentColor, accentBlend * (0.36 + bandContrast * 0.28 + metallicity * 0.08));
       let rgb = hslToRgb({
         h: baseColor.h,
-        s: clamp(baseColor.s + (plumeField - 0.5) * 24 * bandContrast + ridgeField * 5, 22, 100),
-        l: clamp(baseColor.l + (ridgeField - 0.5) * 24 * bandContrast - (primaryBands - 0.5) * 6, 14, 94),
+        s: clamp(baseColor.s + (plumeField - 0.5) * 34 * bandContrast + ridgeField * 12 + accentBlend * 18 + bandBoundary * (14 + metallicity * 8), 22, 100),
+        l: clamp(baseColor.l + (ridgeField - 0.5) * 32 * bandContrast - (primaryBands - 0.5) * (14 + metallicity * 6) + accentBlend * 8 - laneBlend * (5 + metallicity * 3), 8, 96),
       });
 
-      const beltShadow = clamp(0.76 + primaryBands * 0.14 - ridgeField * 0.16, 0.56, 1.08);
-      const beltDodge = clamp(0.92 + plumeField * 0.12 + secondaryBands * 0.08, 0.82, 1.18);
+      const beltShadow = clamp(0.52 + primaryBands * 0.14 - ridgeField * (0.34 + metallicity * 0.08) - laneBlend * (0.18 + metallicity * 0.08) - bandBoundary * (0.18 + metallicity * 0.08), 0.22, 1.02);
+      const beltDodge = clamp(1.08 + plumeField * 0.24 + secondaryBands * 0.22 + accentBlend * (0.18 + metallicity * 0.08) + bandBoundary * (0.26 + metallicity * 0.08), 0.9, 1.62);
       rgb = [rgb[0] * beltShadow * beltDodge, rgb[1] * beltShadow * beltDodge, rgb[2] * beltShadow * beltDodge] as const;
 
       let stormMask = 0;
@@ -773,13 +904,13 @@ function buildBandedSwirlTexture(
 
       const hazeMask =
         planetId === "saturn"
-          ? 0.18
+          ? 0.1
           : props.regime === "saturnian"
-            ? 0.2
+            ? 0.12
           : props.regime === "ice-giant"
-            ? 0.08 + (1 - absLat) * 0.08
-            : 0.06 + (1 - absLat) * 0.04;
-      rgb = mixRgb(rgb, hazeRgb, hazeMask + style.haze + smoothstep(0.55, 1, absLat) * style.polarHaze + (1 - absLat) * style.equatorHaze);
+            ? 0.06 + (1 - absLat) * 0.06
+            : 0.03 + (1 - absLat) * 0.03;
+      rgb = mixRgb(rgb, hazeRgb, (hazeMask + style.haze * 0.52 + smoothstep(0.55, 1, absLat) * style.polarHaze + (1 - absLat) * style.equatorHaze) * 0.56);
 
       if (planetId === "neptune" || planetId === "uranus") {
         const methaneClouds = smoothstep(0.74, 0.9, plumeField) * (1 - absLat) * (planetId === "neptune" ? 0.2 : 0.12);
@@ -943,7 +1074,7 @@ function buildAirlessTerrainTexture(
 }
 
 function buildGasGiantTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  const cacheKey = ["gas-giant-special", size, seed, props.regime, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na"].join("|");
+  const cacheKey = ["gas-giant-special", size, seed, props.regime, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na", props.atmosphereMetallicity ?? "na"].join("|");
   const cached = GAS_TEXTURE_CACHE.get(cacheKey);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
@@ -1004,7 +1135,7 @@ function buildGasGiantTexture(size: number, seed: number, props: PlanetGlobeProp
 }
 
 function buildIceGiantTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  const cacheKey = ["ice-giant-special", size, seed, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na"].join("|");
+  const cacheKey = ["ice-giant-special", size, seed, props.planetColor.h, props.accentColor.h, props.equilibriumK ?? "na", props.atmosphereMetallicity ?? "na"].join("|");
   const cached = CLOUDWORLD_TEXTURE_CACHE.get(cacheKey);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
@@ -1046,7 +1177,7 @@ function buildIceGiantTexture(size: number, seed: number, props: PlanetGlobeProp
 }
 
 function buildSubNeptuneTexture(size: number, seed: number, props: PlanetGlobeProps, chemistry: ChemistryProfile) {
-  const cacheKey = ["sub-neptune-special", size, seed, props.planetColor.h, props.accentColor.h, props.cloudCover ?? "na"].join("|");
+  const cacheKey = ["sub-neptune-special", size, seed, props.planetColor.h, props.accentColor.h, props.cloudCover ?? "na", props.atmosphereMetallicity ?? "na"].join("|");
   const cached = CLOUDWORLD_TEXTURE_CACHE.get(cacheKey);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
@@ -1354,105 +1485,186 @@ function inferredChemistryProfile(props: PlanetGlobeProps): ChemistryProfile {
   const sulfur = tags.includes("SO2");
   const carbon = tags.includes("CO2") || tags.includes("CO");
   const hot = (props.daysideK ?? props.equilibriumK ?? 500) > 900;
+  const metallicity = clamp(props.atmosphereMetallicity ?? 0, 0, 1);
+  const optics = stellarOptics(props.starColor);
+
+  const gasBaseLight = spectralTint(
+    {
+      h: methane ? 202 : sulfur ? 44 : hot ? 18 : carbon ? 34 : 40,
+      s: methane ? 74 : sulfur ? 60 : hot ? 78 : carbon ? 56 : 54,
+      l: ammonia ? 76 : water ? 72 : hot ? 58 : 66,
+    },
+    optics,
+    methane ? 0.34 : 0.14 + optics.blueBias * 0.12,
+    sulfur || hot ? 0.24 : 0.12 + optics.goldBias * 0.08,
+    8,
+    2,
+  );
+  const gasBaseMid = spectralTint(
+    {
+      h: methane ? 214 : sodium ? 24 : sulfur ? 34 : hot ? 14 : 28,
+      s: methane ? 82 : hot ? 78 : sulfur ? 70 : 66,
+      l: methane ? 52 : water ? 58 : hot ? 50 : 54,
+    },
+    optics,
+    methane ? 0.28 : 0.12 + optics.blueBias * 0.08,
+    sulfur || sodium || hot ? 0.18 : 0.08 + optics.goldBias * 0.06,
+    10,
+    -2,
+  );
+  const gasBaseDeep = spectralTint(
+    {
+      h: methane ? 226 : sulfur ? 22 : sodium ? 18 : carbon ? 20 : 16,
+      s: methane ? 78 : hot ? 70 : 54,
+      l: methane ? 34 : hot ? 32 : 38,
+    },
+    optics,
+    methane ? 0.22 : 0.06 + optics.blueBias * 0.05,
+    sulfur || sodium || hot ? 0.16 : 0.06 + optics.redBias * 0.06,
+    6,
+    -6,
+  );
+  const gasAccentPrimary = spectralTint(
+    {
+      h: methane ? 192 : sulfur ? 48 : sodium ? 14 : hot ? 344 : 24,
+      s: methane ? 88 : hot ? 82 : 78,
+      l: methane ? 70 : sulfur ? 66 : 60,
+    },
+    optics,
+    methane ? 0.26 : 0.08 + optics.blueBias * 0.08,
+    sulfur || sodium || hot ? 0.2 : 0.08 + optics.goldBias * 0.08,
+    12,
+    6,
+  );
+  const gasAccentSecondary = spectralTint(
+    {
+      h: methane ? 212 : sulfur ? 32 : sodium ? 8 : hot ? 22 : props.accentColor.h,
+      s: methane ? 94 : sulfur ? 80 : hot ? 86 : clamp(props.accentColor.s + 16, 34, 98),
+      l: methane ? 52 : sulfur ? 58 : hot ? 62 : clamp(props.accentColor.l + 8, 26, 90),
+    },
+    optics,
+    methane ? 0.34 : 0.12 + optics.blueBias * 0.1,
+    sulfur || sodium || hot ? 0.24 : 0.1 + optics.redBias * 0.08,
+    14,
+    4,
+  );
+  const metallicDarken = mixColor(
+    gasBaseDeep,
+    { h: 18, s: clamp(18 + metallicity * 24, 18, 46), l: clamp(20 - metallicity * 6, 10, 24) },
+    metallicity * 0.42,
+  );
+
   if (id === "jupiter") {
     return {
-      bandBase: { h: 38, s: 46, l: 70 },
-      bandAccent: { h: 24, s: 68, l: 55 },
-      stormColor: { h: 18, s: 74, l: 50 },
+      bandBase: spectralTint({ h: 42, s: 42, l: 74 }, optics, 0.06, 0.12, 6, 2),
+      bandBase2: spectralTint({ h: 30, s: 58, l: 60 }, optics, 0.04, 0.14, 10, 0),
+      bandBase3: spectralTint({ h: 20, s: 42, l: 42 }, optics, 0.02, 0.18, 6, -4),
+      bandAccent: spectralTint({ h: 18, s: 76, l: 54 }, optics, 0.02, 0.2, 10, 4),
+      bandAccent2: spectralTint({ h: 50, s: 74, l: 76 }, optics, 0.04, 0.16, 8, 6),
+      stormColor: spectralTint({ h: 18, s: 74, l: 50 }, optics, 0.02, 0.18, 10, 2),
       bandContrast: 1.18,
       bandVolume: 1.22,
     };
   }
   if (id === "saturn") {
     return {
-      bandBase: { h: 44, s: 28, l: 80 },
-      bandAccent: { h: 34, s: 34, l: 68 },
-      stormColor: { h: 30, s: 26, l: 66 },
+      bandBase: spectralTint({ h: 46, s: 24, l: 82 }, optics, 0.04, 0.12, 4, 3),
+      bandBase2: spectralTint({ h: 38, s: 28, l: 70 }, optics, 0.02, 0.1, 6, 1),
+      bandBase3: spectralTint({ h: 30, s: 24, l: 56 }, optics, 0.02, 0.08, 4, -3),
+      bandAccent: spectralTint({ h: 30, s: 30, l: 66 }, optics, 0.02, 0.12, 6, 3),
+      bandAccent2: spectralTint({ h: 52, s: 34, l: 82 }, optics, 0.06, 0.1, 6, 5),
+      stormColor: spectralTint({ h: 30, s: 26, l: 66 }, optics, 0.02, 0.1, 4, 2),
       bandContrast: 0.46,
       bandVolume: 0.54,
     };
   }
   if (id === "uranus") {
     return {
-      bandBase: { h: 190, s: 40, l: 74 },
-      bandAccent: { h: 196, s: 44, l: 66 },
-      stormColor: { h: 186, s: 36, l: 82 },
+      bandBase: spectralTint({ h: 190, s: 42, l: 76 }, optics, 0.18, 0.02, 8, 4),
+      bandBase2: spectralTint({ h: 196, s: 46, l: 68 }, optics, 0.22, 0.02, 8, 1),
+      bandBase3: spectralTint({ h: 204, s: 48, l: 58 }, optics, 0.28, 0.02, 6, -4),
+      bandAccent: spectralTint({ h: 182, s: 40, l: 84 }, optics, 0.16, 0.02, 8, 6),
+      bandAccent2: spectralTint({ h: 206, s: 62, l: 66 }, optics, 0.28, 0.02, 12, 2),
+      stormColor: spectralTint({ h: 186, s: 36, l: 82 }, optics, 0.18, 0.02, 6, 4),
       bandContrast: 0.24,
       bandVolume: 0.32,
     };
   }
   if (id === "neptune") {
     return {
-      bandBase: { h: 206, s: 70, l: 55 },
-      bandAccent: { h: 220, s: 82, l: 46 },
-      stormColor: { h: 195, s: 90, l: 70 },
+      bandBase: spectralTint({ h: 206, s: 72, l: 56 }, optics, 0.22, 0.02, 8, 2),
+      bandBase2: spectralTint({ h: 214, s: 84, l: 48 }, optics, 0.3, 0.02, 10, -2),
+      bandBase3: spectralTint({ h: 224, s: 78, l: 36 }, optics, 0.34, 0.02, 8, -6),
+      bandAccent: spectralTint({ h: 195, s: 90, l: 70 }, optics, 0.22, 0.02, 10, 6),
+      bandAccent2: spectralTint({ h: 222, s: 92, l: 56 }, optics, 0.32, 0.02, 12, 2),
+      stormColor: spectralTint({ h: 195, s: 90, l: 70 }, optics, 0.2, 0.02, 8, 4),
       bandContrast: 0.86,
       bandVolume: 0.72,
     };
   }
   if (props.regime === "saturnian") {
     return {
-      bandBase: { h: 44, s: 28, l: 80 },
-      bandAccent: { h: 34, s: 34, l: 68 },
-      stormColor: { h: 30, s: 24, l: 70 },
+      bandBase: spectralTint({ h: 46, s: 26, l: 80 }, optics, 0.04, 0.12, 4, 2),
+      bandBase2: spectralTint({ h: 36, s: 32, l: 70 }, optics, 0.02, 0.1, 6, 0),
+      bandBase3: spectralTint({ h: 28, s: 28, l: 56 }, optics, 0.02, 0.08, 4, -4),
+      bandAccent: spectralTint({ h: 32, s: 28, l: 70 }, optics, 0.02, 0.12, 6, 3),
+      bandAccent2: spectralTint({ h: 52, s: 34, l: 82 }, optics, 0.06, 0.1, 6, 6),
+      stormColor: spectralTint({ h: 30, s: 24, l: 70 }, optics, 0.02, 0.08, 4, 2),
       bandContrast: clamp(0.42 + (carbon ? 0.06 : 0) - cloudiness * 0.14, 0.24, 0.72),
       bandVolume: clamp(0.54 + (ammonia ? 0.06 : 0) + (water ? 0.04 : 0), 0.42, 0.84),
     };
   }
   if (props.regime === "hot-jupiter") {
     return {
-      bandBase: {
-        h: sodium ? 18 : sulfur ? 30 : carbon ? 22 : 16,
-        s: sodium ? 82 : sulfur ? 72 : 70,
-        l: 56,
-      },
-      bandAccent: {
-        h: sulfur ? 346 : sodium ? 10 : methane ? 214 : 334,
-        s: 78,
-        l: methane ? 44 : 54,
-      },
-      stormColor: {
-        h: sulfur ? 40 : sodium ? 12 : 20,
-        s: 84,
-        l: 64,
-      },
+      bandBase: gasBaseLight,
+      bandBase2: shiftColor(gasBaseMid, sodium ? -2 : 0, 4, 0),
+      bandBase3: shiftColor(metallicDarken, sulfur ? -6 : 0, 6, -4),
+      bandAccent: gasAccentPrimary,
+      bandAccent2: mixColor(gasAccentSecondary, { h: gasAccentSecondary.h, s: clamp(gasAccentSecondary.s + 6, 0, 100), l: clamp(gasAccentSecondary.l + 6, 0, 100) }, metallicity * 0.24),
+      stormColor: spectralTint({ h: sulfur ? 40 : sodium ? 12 : 20, s: 84, l: 64 }, optics, 0.04, 0.22, 12, 4),
       bandContrast: clamp(1.18 + (sodium ? 0.12 : 0) + (sulfur ? 0.08 : 0) - cloudiness * 0.12, 0.88, 1.5),
       bandVolume: clamp(1.12 + (props.radiationFluxEarth && props.radiationFluxEarth > 20 ? 0.16 : 0) + (water ? 0.04 : 0), 0.92, 1.5),
     };
   }
   if (props.regime === "gas-giant") {
     return {
-      bandBase: {
-        h: methane ? 204 : sulfur ? 42 : hot ? 18 : carbon ? 30 : 40,
-        s: methane ? 72 : sulfur ? 68 : hot ? 82 : carbon ? 58 : 54,
-        l: ammonia ? 76 : water ? 72 : hot ? 58 : 66,
-      },
-      bandAccent: {
-        h: methane ? 216 : sodium ? 18 : sulfur ? 54 : hot ? 338 : 24,
-        s: methane ? 84 : hot ? 74 : sulfur ? 72 : 66,
-        l: methane ? 46 : water ? 62 : hot ? 54 : 54,
-      },
-      stormColor: {
+      bandBase: gasBaseLight,
+      bandBase2: gasBaseMid,
+      bandBase3: metallicDarken,
+      bandAccent: gasAccentPrimary,
+      bandAccent2: mixColor(gasAccentSecondary, { h: gasAccentSecondary.h, s: clamp(gasAccentSecondary.s + 4, 0, 100), l: clamp(gasAccentSecondary.l + 4, 0, 100) }, metallicity * 0.18),
+      stormColor: spectralTint({
         h: methane ? 194 : sulfur ? 46 : hot ? 20 : 18,
         s: methane ? 82 : 74,
         l: methane ? 68 : water ? 62 : 54,
-      },
-      bandContrast: clamp((hot ? 1.22 : methane ? 1.08 : 0.98) + (sodium ? 0.08 : 0) - cloudiness * 0.18, 0.52, 1.32),
+      }, optics, methane ? 0.16 : 0.04, sulfur || hot ? 0.18 : 0.06, 10, 4),
+      bandContrast: clamp((hot ? 1.22 : methane ? 1.08 : 0.98) + (sodium ? 0.08 : 0) + metallicity * 0.14 - cloudiness * 0.18, 0.52, 1.42),
       bandVolume: clamp((props.radiationFluxEarth && props.radiationFluxEarth > 5 ? 1.18 : hot ? 1.1 : 1) + (ammonia ? 0.08 : 0) + (water ? 0.06 : 0), 0.6, 1.34),
     };
   }
   if (props.regime === "hycean") {
     return {
-      bandBase: {
+      bandBase: spectralTint({
         h: water ? 194 : methane ? 186 : props.planetColor.h,
         s: clamp(props.planetColor.s + 14 + (water ? 8 : 0), 34, 94),
         l: clamp(props.planetColor.l + 6, 28, 78),
-      },
-      bandAccent: {
-        h: water ? 172 : methane ? 202 : props.accentColor.h,
-        s: clamp(props.accentColor.s + 12, 34, 96),
-        l: clamp(props.accentColor.l + 8, 28, 86),
-      },
+      }, optics, water ? 0.18 : 0.12, 0.06, 8, 2),
+      bandBase2: spectralTint({
+        h: water ? 182 : methane ? 198 : props.accentColor.h,
+        s: clamp(props.accentColor.s + 14, 34, 96),
+        l: clamp(props.accentColor.l + 4, 24, 82),
+      }, optics, 0.2, 0.04, 10, 0),
+      bandBase3: spectralTint({
+        h: water ? 206 : methane ? 210 : props.accentColor.h,
+        s: clamp(props.accentColor.s + 8, 30, 90),
+        l: clamp(props.accentColor.l - 12, 16, 60),
+      }, optics, 0.24, 0.04, 8, -6),
+      bandAccent: spectralTint({
+        h: water ? 168 : methane ? 202 : props.accentColor.h,
+        s: clamp(props.accentColor.s + 18, 36, 98),
+        l: clamp(props.accentColor.l + 10, 28, 88),
+      }, optics, 0.18, 0.04, 12, 6),
+      bandAccent2: spectralTint({ h: 188, s: 42, l: 92 }, optics, 0.2, 0.02, 8, 4),
       stormColor: { h: 188, s: 36, l: 92 },
       bandContrast: clamp(0.42 + (water ? 0.08 : 0) - cloudiness * 0.08, 0.2, 0.72),
       bandVolume: clamp(0.48 + (cloudiness > 0.65 ? 0.08 : 0), 0.3, 0.82),
@@ -1461,7 +1673,10 @@ function inferredChemistryProfile(props: PlanetGlobeProps): ChemistryProfile {
   if (props.regime === "venusian") {
     return {
       bandBase: { h: 46, s: 18, l: 84 },
+      bandBase2: { h: 38, s: 30, l: 72 },
+      bandBase3: { h: 30, s: 26, l: 58 },
       bandAccent: { h: 34, s: 44, l: 70 },
+      bandAccent2: { h: 46, s: 20, l: 90 },
       stormColor: { h: 28, s: 24, l: 82 },
       bandContrast: 0.32,
       bandVolume: 0.44,
@@ -1469,94 +1684,153 @@ function inferredChemistryProfile(props: PlanetGlobeProps): ChemistryProfile {
   }
   if (props.regime === "ice-giant" || props.regime === "sub-neptune") {
     return {
-      bandBase: {
+      bandBase: spectralTint({
         h: methane ? 202 : sulfur ? 48 : water ? 188 : props.planetColor.h,
         s: clamp((methane ? 84 : props.planetColor.s + 8) + (sulfur ? 8 : 0), 30, 96),
         l: clamp((methane ? 56 : props.planetColor.l + 8) + (water ? 4 : 0), 30, 84),
-      },
-      bandAccent: {
-        h: methane ? 222 : sulfur ? 28 : water ? 176 : props.accentColor.h,
-        s: clamp((methane ? 92 : props.accentColor.s + 10) + (carbon ? 6 : 0), 30, 98),
-        l: clamp((methane ? 44 : props.accentColor.l - 2) + (water ? 3 : 0), 20, 80),
-      },
-      stormColor: { h: methane ? 192 : props.starColor.h, s: methane ? 62 : 30, l: methane ? 78 : 88 },
+      }, optics, methane ? 0.26 : 0.12, sulfur ? 0.08 : 0.04, 10, 2),
+      bandBase2: spectralTint({
+        h: methane ? 214 : sulfur ? 32 : water ? 180 : props.accentColor.h,
+        s: clamp((methane ? 90 : props.accentColor.s + 12) + (carbon ? 6 : 0), 30, 98),
+        l: clamp((methane ? 48 : props.accentColor.l + 2) + (water ? 2 : 0), 22, 84),
+      }, optics, methane ? 0.3 : 0.12, sulfur ? 0.12 : 0.04, 10, 0),
+      bandBase3: mixColor(spectralTint({
+        h: methane ? 224 : sulfur ? 22 : water ? 196 : props.accentColor.h,
+        s: clamp((methane ? 82 : props.accentColor.s + 6), 26, 96),
+        l: clamp((methane ? 36 : props.accentColor.l - 14), 14, 66),
+      }, optics, methane ? 0.34 : 0.1, sulfur ? 0.14 : 0.06, 8, -6), metallicDarken, metallicity * 0.2),
+      bandAccent: spectralTint({
+        h: methane ? 188 : sulfur ? 30 : water ? 172 : props.accentColor.h,
+        s: clamp((methane ? 82 : props.accentColor.s + 14), 34, 98),
+        l: clamp((methane ? 72 : props.accentColor.l + 10), 26, 90),
+      }, optics, methane ? 0.24 : 0.08, sulfur ? 0.12 : 0.04, 12, 6),
+      bandAccent2: spectralTint({
+        h: methane ? 216 : sulfur ? 42 : water ? 188 : props.starColor.h,
+        s: methane ? 92 : 40,
+        l: methane ? 58 : 88,
+      }, optics, methane ? 0.32 : 0.08, sulfur ? 0.1 : 0.02, 10, 4),
+      stormColor: spectralTint({ h: methane ? 192 : props.starColor.h, s: methane ? 62 : 30, l: methane ? 78 : 88 }, optics, methane ? 0.2 : 0.04, 0.02, 8, 4),
       bandContrast: clamp(0.72 + (methane ? 0.12 : 0) + (carbon ? 0.08 : 0) - cloudiness * 0.16, 0.3, 1.04),
       bandVolume: clamp(0.74 + (water ? 0.08 : 0) + (cloudiness > 0.65 ? 0.04 : 0), 0.42, 1.04),
     };
   }
   return {
     bandBase: props.planetColor,
+    bandBase2: shiftColor(props.planetColor, 8, 8, 0),
+    bandBase3: shiftColor(props.accentColor, -6, 4, -12),
     bandAccent: props.accentColor,
+    bandAccent2: shiftColor(props.starColor, 6, 8, 8),
     stormColor: props.accentColor,
     bandContrast: 1,
     bandVolume: 1,
   };
 }
 
-function drawMagnetosphere(ctx: CanvasRenderingContext2D, size: number, props: PlanetGlobeProps) {
+function drawMagnetosphere(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  centerX: number,
+  centerY: number,
+  planetRadius: number,
+  props: Pick<
+    PlanetGlobeProps,
+    | "showMagnetosphere"
+    | "magneticFieldMicroTesla"
+    | "magnetopauseRadii"
+    | "radiationFluxEarth"
+    | "insolationEarth"
+    | "magneticProtection"
+  >,
+) {
   if (!props.showMagnetosphere) return;
   const field = props.magneticFieldMicroTesla;
   const standoff = props.magnetopauseRadii;
   const flux = props.radiationFluxEarth ?? props.insolationEarth ?? 1;
   if (field === null || field === undefined || standoff === null || standoff === undefined) return;
 
-  const centerX = size / 2;
-  const centerY = size / 2;
-  const planetRadius = size * 0.48;
-  const fieldStrength = clamp(field / 50, 0.08, 4);
-  const compression = clamp(1 / Math.pow(Math.max(flux, 0.08), 0.16), 0.42, 1.1);
-  const tailStretch = clamp(Math.pow(Math.max(flux, 0.08), 0.22), 0.9, 3.2);
-  const bowScale = clamp((standoff / 10) * fieldStrength, 0.72, 2.8);
-  const leftExtent = planetRadius * (1.1 + bowScale * compression * 0.34);
-  const rightExtent = planetRadius * (1.65 + bowScale * tailStretch * 0.9);
-  const verticalExtent = planetRadius * (1.15 + bowScale * 0.42);
-  const protectionTone =
+  const fieldStrength = clamp(field / 42, 0.08, 4.8);
+  const fieldNorm = clamp(Math.log10(1 + fieldStrength) / Math.log10(1 + 4.8), 0, 1);
+  const pressure = clamp(Math.max(flux, 0.04), 0.04, 40);
+  const pressureNorm = clamp(Math.log10(1 + pressure) / Math.log10(41), 0, 1);
+  const standoffScale = clamp(standoff / 10, 0.36, 2.6);
+  const pressureScale = lerp(1.1, 0.72, pressureNorm);
+  const fieldScale = 0.8 + fieldNorm * 1.35;
+  const thicknessScale = lerp(3.4, 12.8, clamp(fieldNorm * 1.08, 0, 1));
+  const shellRadiusX = Math.min(width * 0.56, planetRadius * (1.86 + standoffScale * fieldScale * pressureScale * 1.42));
+  const shellRadiusY = Math.min(height * 0.52, planetRadius * (1.52 + standoffScale * (0.9 + fieldNorm * 0.72) * pressureScale * 1.16));
+  const blueTone =
     props.magneticProtection === "strong"
-      ? { h: 188, s: 88, l: 68 }
+      ? { h: 206, s: 96, l: 68 }
       : props.magneticProtection === "moderate"
-        ? { h: 196, s: 74, l: 64 }
+        ? { h: 210, s: 88, l: 66 }
         : props.magneticProtection === "weak"
-          ? { h: 210, s: 68, l: 60 }
-          : { h: 12, s: 78, l: 62 };
+          ? { h: 214, s: 78, l: 62 }
+          : { h: 210, s: 72, l: 60 };
+  const redTone =
+    props.magneticProtection === "strong"
+      ? { h: 6, s: 96, l: 66 }
+      : props.magneticProtection === "moderate"
+        ? { h: 10, s: 88, l: 64 }
+        : props.magneticProtection === "weak"
+          ? { h: 14, s: 78, l: 60 }
+          : { h: 12, s: 72, l: 58 };
+  const clipPath = new Path2D();
+  clipPath.rect(0, 0, width, height);
+  clipPath.arc(centerX, centerY, planetRadius * 1.003, 0, Math.PI * 2, true);
 
   ctx.save();
+  ctx.clip(clipPath, "evenodd");
   ctx.lineCap = "round";
-  for (let line = 0; line < 7; line += 1) {
-    const t = line / 6;
-    const offset = (t - 0.5) * verticalExtent * 1.45;
-    const alpha = 0.1 + (1 - Math.abs(t - 0.5) * 1.7) * 0.18;
-    ctx.strokeStyle = hsla(protectionTone, alpha);
-    ctx.lineWidth = 1 + (1 - Math.abs(t - 0.5) * 1.5) * 1.6;
-    ctx.beginPath();
-    ctx.moveTo(centerX - leftExtent, centerY + offset * 0.92);
-    ctx.bezierCurveTo(
-      centerX - leftExtent * 0.42,
-      centerY + offset * 0.2,
-      centerX - planetRadius * 0.76,
-      centerY + offset * 0.08,
-      centerX - planetRadius * 0.98,
-      centerY + offset * 0.04,
-    );
-    ctx.bezierCurveTo(
-      centerX + planetRadius * 0.92,
-      centerY + offset * 0.02,
-      centerX + rightExtent * 0.34,
-      centerY + offset * 0.38,
-      centerX + rightExtent,
-      centerY + offset * 0.24,
-    );
-    ctx.stroke();
-  }
+  ctx.lineJoin = "round";
+  ctx.globalCompositeOperation = "screen";
 
-  const tailGradient = ctx.createLinearGradient(centerX + planetRadius * 0.2, centerY, centerX + rightExtent, centerY);
-  tailGradient.addColorStop(0, hsla(protectionTone, 0.08));
-  tailGradient.addColorStop(1, hsla(protectionTone, 0));
-  ctx.strokeStyle = tailGradient;
-  ctx.lineWidth = 10;
-  ctx.beginPath();
-  ctx.moveTo(centerX + planetRadius * 0.82, centerY);
-  ctx.lineTo(centerX + rightExtent, centerY);
-  ctx.stroke();
+  // Dipole proxy: mirrored pole-to-pole field lines, without a magnetotail.
+  for (let loop = 0; loop < 8; loop += 1) {
+    const t = loop / 7;
+    const loopMix = lerp(0.14, 1, t);
+    const capSpread = planetRadius * lerp(0.01, 0.12, loopMix);
+    const topPoleY = centerY - planetRadius * lerp(1, 0.88, loopMix);
+    const bottomPoleY = centerY + planetRadius * lerp(1, 0.88, loopMix);
+    const controlX = shellRadiusX * lerp(0.34, 1.14, smoothstep(0.08, 1, loopMix));
+    const shoulderY = shellRadiusY * lerp(0.3, 1.03, loopMix);
+    const waistY = planetRadius * lerp(0.58, 0.16, loopMix);
+    const alpha = lerp(0.34, 0.74, 1 - Math.abs(loopMix - 0.44) * 0.72);
+    const lineWidth = thicknessScale * lerp(0.78, 0.18, loopMix);
+
+    for (const side of [-1, 1] as const) {
+      const startX = centerX + side * capSpread;
+      const endX = centerX + side * capSpread;
+      const outerX = centerX + side * controlX;
+      const shoulderX = centerX + side * controlX * lerp(0.62, 0.78, loopMix);
+      const gradient = ctx.createLinearGradient(startX, topPoleY, endX, bottomPoleY);
+      gradient.addColorStop(0, hsla(redTone, alpha));
+      gradient.addColorStop(0.5, "rgba(255,255,255,0.05)");
+      gradient.addColorStop(1, hsla(blueTone, alpha));
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(startX, topPoleY);
+      ctx.bezierCurveTo(
+        shoulderX,
+        centerY - shoulderY,
+        outerX,
+        centerY - waistY,
+        outerX,
+        centerY,
+      );
+      ctx.bezierCurveTo(
+        outerX,
+        centerY + waistY,
+        shoulderX,
+        centerY + shoulderY,
+        endX,
+        bottomPoleY,
+      );
+      ctx.stroke();
+    }
+  }
   ctx.restore();
 }
 
@@ -1620,28 +1894,28 @@ function paintPhotographicPolish(
 
   if (isGasRegime(props.regime) || props.regime === "hycean") {
     const bandTotal = Math.max(props.bandCount ?? 6, props.regime === "hycean" ? 4 : 6);
-    const darkLaneColor = { h: chemistry.bandAccent.h, s: clamp(chemistry.bandAccent.s - 24, 10, 84), l: clamp(chemistry.bandAccent.l - 26, 8, 62) };
-    const highlightColor = { h: chemistry.bandBase.h, s: clamp(chemistry.bandBase.s + 8, 20, 98), l: clamp(chemistry.bandBase.l + 18, 26, 94) };
+    const deepLane = chemistry.bandBase3 ?? { h: chemistry.bandAccent.h, s: clamp(chemistry.bandAccent.s - 24, 10, 84), l: clamp(chemistry.bandAccent.l - 26, 8, 62) };
+    const brightAccent = chemistry.bandAccent2 ?? { h: chemistry.bandBase.h, s: clamp(chemistry.bandBase.s + 8, 20, 98), l: clamp(chemistry.bandBase.l + 18, 26, 94) };
 
     for (let band = 0; band < bandTotal; band += 1) {
       const y = size * ((band + 0.5) / bandTotal) + Math.sin(band * 0.8 + phase * 0.28) * size * 0.01;
       const bandHeight = size * (props.regime === "saturnian" ? 0.09 : props.regime === "hycean" ? 0.06 : 0.07);
 
       ctx.globalCompositeOperation = "multiply";
-      ctx.globalAlpha = props.regime === "saturnian" ? 0.07 : 0.11;
+      ctx.globalAlpha = props.regime === "saturnian" ? 0.08 : 0.12;
       const lane = ctx.createLinearGradient(0, y - bandHeight, 0, y + bandHeight);
-      lane.addColorStop(0, hsla(darkLaneColor, 0));
-      lane.addColorStop(0.5, hsla(darkLaneColor, 0.9));
-      lane.addColorStop(1, hsla(darkLaneColor, 0));
+      lane.addColorStop(0, hsla(deepLane, 0));
+      lane.addColorStop(0.5, hsla(deepLane, 0.92));
+      lane.addColorStop(1, hsla(deepLane, 0));
       ctx.fillStyle = lane;
       ctx.fillRect(0, y - bandHeight, size, bandHeight * 2);
 
       ctx.globalCompositeOperation = "soft-light";
-      ctx.globalAlpha = props.regime === "hot-jupiter" ? 0.14 : 0.09;
+      ctx.globalAlpha = props.regime === "hot-jupiter" ? 0.16 : 0.1;
       const highlight = ctx.createLinearGradient(0, y - bandHeight * 0.84, 0, y + bandHeight * 0.84);
-      highlight.addColorStop(0, hsla(highlightColor, 0));
-      highlight.addColorStop(0.5, hsla(highlightColor, 0.86));
-      highlight.addColorStop(1, hsla(highlightColor, 0));
+      highlight.addColorStop(0, hsla(brightAccent, 0));
+      highlight.addColorStop(0.5, hsla(brightAccent, 0.9));
+      highlight.addColorStop(1, hsla(brightAccent, 0));
       ctx.fillStyle = highlight;
       ctx.fillRect(0, y - bandHeight, size, bandHeight * 2);
     }
@@ -1653,7 +1927,7 @@ function paintPhotographicPolish(
       const radius = size * (props.regime === "hycean" ? 0.05 : 0.04 + seeded(seed, 6300 + i * 29) * 0.05);
 
       ctx.globalCompositeOperation = "screen";
-      ctx.globalAlpha = props.regime === "hot-jupiter" ? 0.16 : 0.1;
+      ctx.globalAlpha = props.regime === "hot-jupiter" ? 0.18 : 0.11;
       const glow = ctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius);
       glow.addColorStop(0, hsla({ ...chemistry.stormColor, l: clamp(chemistry.stormColor.l + 8, 30, 96) }, 0.92));
       glow.addColorStop(0.65, hsla(chemistry.stormColor, 0.3));
@@ -1709,6 +1983,129 @@ function paintPhotographicPolish(
   ctx.restore();
 }
 
+function paintLavaSurfaceResponse(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  seed: number,
+  phase: number,
+  props: PlanetGlobeProps,
+  chemistry: ChemistryProfile,
+) {
+  if (props.regime !== "lava") return;
+  const moltenness = clamp(props.surfaceMoltenness ?? 0.7, 0, 1);
+  const metallicity = clamp(props.atmosphereMetallicity ?? 0, 0, 1);
+  const fractureCount = 16 + Math.round(moltenness * 24);
+  const emberColor = mixColor(chemistry.bandAccent2 ?? chemistry.bandAccent, { h: 14, s: 98, l: 72 }, 0.42 + moltenness * 0.2);
+  const basaltColor = mixColor(chemistry.bandBase3 ?? chemistry.bandBase, { h: 14, s: 28, l: 12 }, 0.68 + metallicity * 0.18);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = 0.18 + moltenness * 0.18;
+  const basaltWash = ctx.createLinearGradient(0, 0, size, size);
+  basaltWash.addColorStop(0, hsla({ ...basaltColor, l: clamp(basaltColor.l - 8, 4, 24) }, 0.82));
+  basaltWash.addColorStop(0.5, hsla(basaltColor, 0.64));
+  basaltWash.addColorStop(1, hsla({ ...basaltColor, l: clamp(basaltColor.l + 6, 6, 32) }, 0.72));
+  ctx.fillStyle = basaltWash;
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.globalCompositeOperation = "color-burn";
+  ctx.globalAlpha = 0.22 + moltenness * 0.24;
+  ctx.lineCap = "round";
+  for (let i = 0; i < fractureCount; i += 1) {
+    const y = size * (0.08 + seeded(seed, 20800 + i * 17) * 0.84);
+    const amplitude = 4 + seeded(seed, 20900 + i * 19) * 12;
+    const cycles = 2 + Math.floor(seeded(seed, 21000 + i * 23) * 4);
+    ctx.strokeStyle = hsla({ ...basaltColor, l: clamp(basaltColor.l - 8, 2, 18), s: clamp(basaltColor.s + 10, 16, 70) }, 0.72);
+    ctx.lineWidth = 1.1 + seeded(seed, 21100 + i * 29) * 2.8;
+    ctx.beginPath();
+    for (let x = 0; x <= size; x += 4) {
+      const wave = Math.sin((x / size) * Math.PI * 2 * cycles + phase * 0.34 + i * 0.42) * amplitude;
+      const warping = (fbm2D(seed + 21200 + i, x / size * 6.8, y / size * 4.2, 3) - 0.5) * amplitude * 0.7;
+      const py = y + wave + warping;
+      if (x === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = 0.18 + moltenness * 0.24;
+  for (let i = 0; i < fractureCount; i += 1) {
+    const y = size * (0.1 + seeded(seed, 21300 + i * 17) * 0.8);
+    const amplitude = 2 + seeded(seed, 21400 + i * 19) * 8;
+    const cycles = 2 + Math.floor(seeded(seed, 21500 + i * 23) * 4);
+    ctx.strokeStyle = hsla({ ...emberColor, s: clamp(emberColor.s + 6, 0, 100), l: clamp(emberColor.l + 6, 0, 100) }, 0.54);
+    ctx.lineWidth = 0.8 + seeded(seed, 21600 + i * 29) * 1.6;
+    ctx.beginPath();
+    for (let x = 0; x <= size; x += 4) {
+      const wave = Math.sin((x / size) * Math.PI * 2 * cycles + phase * 0.32 + i * 0.37) * amplitude;
+      const py = y + wave;
+      if (x === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function paintMetallicAtmosphereSparkles(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  seed: number,
+  phase: number,
+  props: PlanetGlobeProps,
+  chemistry: ChemistryProfile,
+) {
+  const metallicity = clamp(props.atmosphereMetallicity ?? 0, 0, 1);
+  const sparkleStrength = clamp(props.sparkleStrength ?? metallicity * 0.8, 0, 1);
+  if (metallicity < 0.08 && sparkleStrength < 0.08) return;
+  if (props.regime === "airless" || props.regime === "temperate" || props.regime === "rocky" || props.regime === "desert") return;
+
+  const veilColor = mixColor(
+    chemistry.bandBase3 ?? chemistry.bandBase,
+    { h: 20, s: 18, l: 14 },
+    0.62,
+  );
+  const sparkleColor = mixColor(
+    chemistry.bandAccent2 ?? chemistry.bandAccent,
+    { h: props.starColor.h, s: clamp(props.starColor.s + 10, 0, 100), l: 92 },
+    0.58,
+  );
+
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = 0.08 + metallicity * 0.16;
+  for (let i = 0; i < 12; i += 1) {
+    const y = size * (0.1 + seeded(seed, 21700 + i * 13) * 0.8);
+    const height = size * (0.04 + seeded(seed, 21800 + i * 17) * 0.08);
+    const band = ctx.createLinearGradient(0, y - height, 0, y + height);
+    band.addColorStop(0, hsla(veilColor, 0));
+    band.addColorStop(0.5, hsla(veilColor, 0.88));
+    band.addColorStop(1, hsla(veilColor, 0));
+    ctx.fillStyle = band;
+    ctx.fillRect(0, y - height, size, height * 2);
+  }
+
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = 0.18 + sparkleStrength * 0.26;
+  const sparkleCount = 20 + Math.round(sparkleStrength * 44);
+  for (let i = 0; i < sparkleCount; i += 1) {
+    const cx = size * (0.06 + seeded(seed, 21900 + i * 19) * 0.88);
+    const cy = size * (0.08 + seeded(seed, 22000 + i * 23) * 0.84);
+    const radius = 0.8 + seeded(seed, 22100 + i * 29) * (1.8 + sparkleStrength * 1.4);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 3.4);
+    glow.addColorStop(0, hsla(sparkleColor, 0.92));
+    glow.addColorStop(0.4, hsla(sparkleColor, 0.32));
+    glow.addColorStop(1, hsla(sparkleColor, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 3.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function paintGasMicroDetail(
   ctx: CanvasRenderingContext2D,
   size: number,
@@ -1739,7 +2136,7 @@ function paintGasMicroDetail(
       },
       (0.1 + contrast * 0.08) * opacityScale,
     );
-    ctx.lineWidth = 0.55 + seeded(seed, i + 1520) * 1.3;
+    ctx.lineWidth = 0.5 + seeded(seed, i + 1520) * 1.8 + Math.abs(lat) * 0.5 + contrast * 0.18;
     ctx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const longitude = (x / size) * Math.PI * 2 * cycles;
@@ -1760,7 +2157,7 @@ function paintGasMicroDetail(
     const radius = 4 + seeded(seed, i + 1610) * 12;
     const tint = i % 2 === 0 ? accent : base;
     ctx.strokeStyle = hsla({ ...tint, l: clamp(tint.l + 14, 22, 98), s: clamp(tint.s + 10, 18, 100) }, (0.12 + contrast * 0.06) * opacityScale);
-    ctx.lineWidth = 0.8 + seeded(seed, i + 1640) * 1.1;
+    ctx.lineWidth = 0.75 + seeded(seed, i + 1640) * 1.4 + coriolisStrength * 0.45;
     ctx.beginPath();
     for (let step = 0; step <= 18; step += 1) {
       const t = step / 18;
@@ -1845,7 +2242,9 @@ function paintCloudFiligree(
       { ...cloudColor, l: clamp(cloudColor.l + 8, 72, 99), s: clamp(cloudColor.s - 4, 0, 16) },
       (0.03 + cloudCover * 0.04) * dynamics.filigreeMultiplier,
     );
-    ctx.lineWidth = (0.9 + seeded(seed, i + 2050) * 1.2) * (0.82 + dynamics.filigreeMultiplier * 0.42);
+    const latWeight = 0.82 + Math.abs(y / size - 0.5) * 1.1;
+    const thicknessJitter = 0.78 + seeded(seed, i + 2050) * 1.7;
+    ctx.lineWidth = thicknessJitter * latWeight * (0.76 + dynamics.filigreeMultiplier * 0.5 + terminatorBoost * 0.16);
     ctx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const u = x / size;
@@ -1972,8 +2371,12 @@ function paintFracturedCloudFront(
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  ctx.lineWidth = Math.max(1.2, thickness * 0.18);
+  const strokeWeight = Math.max(1.1, thickness * (0.14 + 0.04 * ((streamIndex % 3) + 1) + coriolisStrength * 0.04));
+  ctx.lineWidth = strokeWeight;
   ctx.strokeStyle = hsla({ ...cloudColor, l: clamp(cloudColor.l + 16, 84, 100), s: clamp(cloudColor.s - 14, 0, 8) }, opacity * 0.44);
+  ctx.stroke();
+  ctx.lineWidth = Math.max(0.6, strokeWeight * 0.46);
+  ctx.strokeStyle = hsla({ ...cloudColor, l: clamp(cloudColor.l + 4, 74, 96), s: clamp(cloudColor.s - 4, 0, 16) }, opacity * 0.28);
   ctx.stroke();
 }
 
@@ -1992,35 +2395,47 @@ function cloudLayerColor(props: PlanetGlobeProps, chemistry: ChemistryProfile): 
   const ammonia = tags.includes("NH3");
   const methane = tags.includes("CH4");
   const hot = (props.daysideK ?? props.equilibriumK ?? 0) > 1200;
+  const metallicity = clamp(props.atmosphereMetallicity ?? 0, 0, 1);
+
+  const metallicDarken = (color: HslColor): HslColor =>
+    mixColor(
+      color,
+      {
+        h: sulfur ? 28 : chemistry.bandBase3?.h ?? chemistry.bandBase.h,
+        s: clamp((chemistry.bandBase3?.s ?? chemistry.bandBase.s) * 0.56, 4, 32),
+        l: clamp((chemistry.bandBase3?.l ?? chemistry.bandBase.l) - 38, 10, 54),
+      },
+      metallicity * 0.42,
+    );
 
   switch (props.regime) {
     case "airless":
       return { h: 0, s: 0, l: 0 };
     case "lava":
-      return sulfur
+      return metallicDarken(sulfur
         ? { h: 42, s: 42, l: 76 }
         : hot
           ? { h: 24, s: 18, l: 72 }
-          : { h: 34, s: 20, l: 78 };
+          : { h: 34, s: 20, l: 78 });
     case "venusian":
-      return { h: 46, s: 24, l: 88 };
+      return metallicDarken({ h: 46, s: 24, l: 88 });
     case "temperate":
     case "rocky":
       return { h: 0, s: 0, l: 96 };
     case "hycean":
-      return { h: methane ? 192 : 200, s: methane ? 10 : 6, l: 97 };
+      return metallicDarken({ h: methane ? 192 : 200, s: methane ? 10 : 6, l: 97 });
     case "sub-neptune":
     case "ice-giant":
-      return { h: methane ? 198 : 210, s: methane ? 8 : 4, l: 96 };
+      return metallicDarken({ h: methane ? 198 : 210, s: methane ? 8 : 4, l: 96 });
     case "saturnian":
-      return ammonia ? { h: 46, s: 10, l: 94 } : { h: 40, s: 6, l: 95 };
+      return metallicDarken(ammonia ? { h: 46, s: 10, l: 94 } : { h: 40, s: 6, l: 95 });
     case "gas-giant":
     case "hot-jupiter":
-      return {
+      return metallicDarken({
         h: sulfur ? 42 : chemistry.bandBase.h,
         s: sulfur ? 14 : 6,
         l: sulfur ? 88 : 95,
-      };
+      });
     default:
       return { h: 0, s: 0, l: 95 };
   }
@@ -2054,13 +2469,13 @@ function cloudDynamicsProfile(props: PlanetGlobeProps): CloudDynamicsProfile {
 
   switch (props.regime) {
     case "hot-jupiter":
-      return { massMultiplier: 0.52, frontMultiplier: 1.72, swirlMultiplier: 1.26, filigreeMultiplier: 1.12, amplitudeScale: 1.34, frontThicknessScale: 1.2, massOpacityScale: 0.82, frontOpacityScale: 1.18, swirlOpacityScale: 1.1, equatorialBias: 0.78, polarBias: 0.12, terminatorBias: props.tidalLock ? 0.88 : 0.18, terminatorCenter: 0.57, terminatorWidth: 0.11, stretchX: 1.3, stretchY: 0.62 };
+      return { massMultiplier: 0.42, frontMultiplier: 1.94, swirlMultiplier: 1.34, filigreeMultiplier: 1.28, amplitudeScale: 1.42, frontThicknessScale: 1.26, massOpacityScale: 0.72, frontOpacityScale: 1.26, swirlOpacityScale: 1.12, equatorialBias: 0.78, polarBias: 0.12, terminatorBias: props.tidalLock ? 0.88 : 0.18, terminatorCenter: 0.57, terminatorWidth: 0.11, stretchX: 1.34, stretchY: 0.58 };
     case "gas-giant":
-      return { massMultiplier: 0.72, frontMultiplier: 1.42, swirlMultiplier: 1.18, filigreeMultiplier: 0.94, amplitudeScale: 1.16, frontThicknessScale: 1.08, massOpacityScale: 0.94, frontOpacityScale: 1.02, swirlOpacityScale: 1.02, equatorialBias: 0.62, polarBias: 0.18, terminatorBias: props.tidalLock ? 0.38 : 0.08, terminatorCenter: 0.56, terminatorWidth: 0.12, stretchX: 1.2, stretchY: 0.68 };
+      return { massMultiplier: 0.54, frontMultiplier: 1.68, swirlMultiplier: 1.26, filigreeMultiplier: 1.18, amplitudeScale: 1.22, frontThicknessScale: 1.16, massOpacityScale: 0.8, frontOpacityScale: 1.12, swirlOpacityScale: 1.06, equatorialBias: 0.66, polarBias: 0.16, terminatorBias: props.tidalLock ? 0.38 : 0.08, terminatorCenter: 0.56, terminatorWidth: 0.12, stretchX: 1.24, stretchY: 0.64 };
     case "saturnian":
-      return { massMultiplier: 0.44, frontMultiplier: 1.56, swirlMultiplier: 0.42, filigreeMultiplier: 0.72, amplitudeScale: 0.86, frontThicknessScale: 0.86, massOpacityScale: 0.62, frontOpacityScale: 0.76, swirlOpacityScale: 0.54, equatorialBias: 0.68, polarBias: 0.1, terminatorBias: props.tidalLock ? 0.24 : 0.05, terminatorCenter: 0.56, terminatorWidth: 0.14, stretchX: 1.56, stretchY: 0.5 };
+      return { massMultiplier: 0.34, frontMultiplier: 1.74, swirlMultiplier: 0.46, filigreeMultiplier: 0.86, amplitudeScale: 0.92, frontThicknessScale: 0.92, massOpacityScale: 0.52, frontOpacityScale: 0.84, swirlOpacityScale: 0.56, equatorialBias: 0.7, polarBias: 0.08, terminatorBias: props.tidalLock ? 0.24 : 0.05, terminatorCenter: 0.56, terminatorWidth: 0.14, stretchX: 1.68, stretchY: 0.46 };
     case "ice-giant":
-      return { massMultiplier: methane ? 0.38 : 0.5, frontMultiplier: 0.64, swirlMultiplier: 0.62, filigreeMultiplier: 0.48, amplitudeScale: 0.72, frontThicknessScale: 0.64, massOpacityScale: 0.72, frontOpacityScale: 0.62, swirlOpacityScale: 0.82, equatorialBias: 0.24, polarBias: methane ? 0.72 : 0.54, terminatorBias: props.tidalLock ? 0.24 : 0.04, terminatorCenter: 0.56, terminatorWidth: 0.13, stretchX: 0.92, stretchY: 0.86 };
+      return { massMultiplier: methane ? 0.32 : 0.42, frontMultiplier: 0.86, swirlMultiplier: 0.72, filigreeMultiplier: 0.62, amplitudeScale: 0.78, frontThicknessScale: 0.72, massOpacityScale: 0.62, frontOpacityScale: 0.72, swirlOpacityScale: 0.86, equatorialBias: 0.24, polarBias: methane ? 0.72 : 0.54, terminatorBias: props.tidalLock ? 0.24 : 0.04, terminatorCenter: 0.56, terminatorWidth: 0.13, stretchX: 0.9, stretchY: 0.82 };
     case "sub-neptune":
       return { massMultiplier: 0.88, frontMultiplier: 1.02, swirlMultiplier: 0.84, filigreeMultiplier: 0.78, amplitudeScale: 0.94, frontThicknessScale: 1.02, massOpacityScale: 0.96, frontOpacityScale: 0.94, swirlOpacityScale: 0.84, equatorialBias: 0.48, polarBias: methane ? 0.34 : 0.18, terminatorBias: props.tidalLock ? 0.58 : 0.1, terminatorCenter: 0.56, terminatorWidth: 0.12, stretchX: 1.14, stretchY: 0.76 };
     case "hycean":
@@ -2283,7 +2698,7 @@ function paintClouds(
     : regime === "venusian" || regime === "hycean"
       ? Math.round(9 + cloudCover * 11)
       : Math.round(5 + cloudCover * 8);
-  const cloudMassCount = Math.max(1, Math.round(count * dynamics.massMultiplier));
+  const cloudMassCount = Math.max(1, Math.round(count * dynamics.massMultiplier * (gasRegime ? 0.78 : 1)));
 
   for (let i = 0; i < cloudMassCount; i += 1) {
     const cy = size * biasedCloudLatitude(seeded(seed, i + 230), dynamics.equatorialBias, dynamics.polarBias);
@@ -2307,7 +2722,7 @@ function paintClouds(
       ry,
       rot,
       cloudColor,
-      ((gasRegime ? 0.22 : 0.28) + cloudCover * (regime === "venusian" || regime === "hycean" ? 0.24 : 0.18)) * dynamics.massOpacityScale,
+      ((gasRegime ? 0.16 : 0.28) + cloudCover * (regime === "venusian" || regime === "hycean" ? 0.24 : gasRegime ? 0.12 : 0.18)) * dynamics.massOpacityScale,
     );
   }
 
@@ -2317,7 +2732,7 @@ function paintClouds(
       : regime === "venusian"
         ? Math.max(5, Math.round(4 + cloudCover * 7))
       : Math.max(4, Math.round(3 + cloudCover * 6));
-  const frontCount = Math.max(1, Math.round(jetStreamCount * dynamics.frontMultiplier));
+  const frontCount = Math.max(1, Math.round(jetStreamCount * dynamics.frontMultiplier * (gasRegime ? 1.16 : 1)));
   for (let stream = 0; stream < frontCount; stream += 1) {
     const bandY = size * biasedCloudLatitude(0.16 + seeded(seed, stream + 780) * 0.68, dynamics.equatorialBias, dynamics.polarBias);
     const hemisphere = bandY < size * 0.5 ? -1 : 1;
@@ -2333,7 +2748,7 @@ function paintClouds(
       amplitude * (gasRegime ? 0.52 : 0.68) * dynamics.frontThicknessScale,
       cycles,
       cloudColor,
-      ((gasRegime ? 0.14 : 0.18) + cloudCover * 0.12) * dynamics.frontOpacityScale,
+      ((gasRegime ? 0.18 : 0.18) + cloudCover * (gasRegime ? 0.14 : 0.12)) * dynamics.frontOpacityScale,
       coriolisStrength,
       stream,
       props.tidalLock,
@@ -2526,13 +2941,13 @@ function paintPlanetSurface(
       case "saturnian":
       case "gas-giant":
         ctx.drawImage(buildGasGiantTexture(size, seed, renderProps, chemistry), 0, 0, size, size);
-        paintJetFilaments(ctx, size, seed, phase, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? (renderProps.regime === "hot-jupiter" ? 13 : renderProps.regime === "saturnian" ? 7 : 11), coriolisStrength, eddyStrength, renderProps.regime === "saturnian" ? 0.16 : 0.28);
-        paintGasMicroDetail(ctx, size, seed, phase, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? (renderProps.regime === "hot-jupiter" ? 13 : renderProps.regime === "saturnian" ? 7 : 11), coriolisStrength, chemistry.bandContrast, renderProps.regime === "saturnian" ? 0.12 : 0.22);
+        paintJetFilaments(ctx, size, seed, phase, chemistry.bandBase2 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? (renderProps.regime === "hot-jupiter" ? 13 : renderProps.regime === "saturnian" ? 7 : 11), coriolisStrength, eddyStrength, renderProps.regime === "saturnian" ? 0.18 : 0.32);
+        paintGasMicroDetail(ctx, size, seed, phase, chemistry.bandBase3 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? (renderProps.regime === "hot-jupiter" ? 13 : renderProps.regime === "saturnian" ? 7 : 11), coriolisStrength, chemistry.bandContrast, renderProps.regime === "saturnian" ? 0.16 : 0.26);
         break;
       case "ice-giant":
         ctx.drawImage(buildIceGiantTexture(size, seed, renderProps, chemistry), 0, 0, size, size);
-        paintJetFilaments(ctx, size, seed, phase * 0.6, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? 8, coriolisStrength, eddyStrength, 0.22);
-        paintGasMicroDetail(ctx, size, seed, phase * 0.6, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? 8, coriolisStrength, chemistry.bandContrast, 0.16);
+        paintJetFilaments(ctx, size, seed, phase * 0.6, chemistry.bandBase2 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? 8, coriolisStrength, eddyStrength, 0.24);
+        paintGasMicroDetail(ctx, size, seed, phase * 0.6, chemistry.bandBase3 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? 8, coriolisStrength, chemistry.bandContrast, 0.18);
         break;
       case "hycean":
         ctx.drawImage(buildHyceanTexture(size, seed, renderProps.planetColor, renderProps.accentColor, renderProps.cloudCover ?? 0.6, renderProps.equilibriumK), 0, 0, size, size);
@@ -2543,8 +2958,8 @@ function paintPlanetSurface(
         break;
       case "sub-neptune":
         ctx.drawImage(buildSubNeptuneTexture(size, seed, renderProps, chemistry), 0, 0, size, size);
-        paintJetFilaments(ctx, size, seed, phase * 0.75, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? 9, coriolisStrength, eddyStrength, 0.18);
-        paintGasMicroDetail(ctx, size, seed, phase * 0.75, chemistry.bandBase, chemistry.bandAccent, renderProps.bandCount ?? 9, coriolisStrength, chemistry.bandContrast, 0.14);
+        paintJetFilaments(ctx, size, seed, phase * 0.75, chemistry.bandBase2 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? 9, coriolisStrength, eddyStrength, 0.2);
+        paintGasMicroDetail(ctx, size, seed, phase * 0.75, chemistry.bandBase3 ?? chemistry.bandBase, chemistry.bandAccent2 ?? chemistry.bandAccent, renderProps.bandCount ?? 9, coriolisStrength, chemistry.bandContrast, 0.16);
         break;
       default:
         paintRockySurface(ctx, size, seed, phase, renderProps.seedKey, renderProps.regime, renderProps.planetColor, renderProps.accentColor, renderProps.densityGcc, renderProps.equilibriumK);
@@ -2579,6 +2994,15 @@ function paintPlanetSurface(
     chemistry,
   );
 
+  paintLavaSurfaceResponse(
+    ctx,
+    size,
+    seed,
+    phase,
+    renderProps,
+    chemistry,
+  );
+
   paintClouds(
     ctx,
     size,
@@ -2597,6 +3021,14 @@ function paintPlanetSurface(
     cloudLayerColor(renderProps, chemistry),
     renderProps,
     coriolisStrength,
+  );
+  paintMetallicAtmosphereSparkles(
+    ctx,
+    size,
+    seed,
+    phase,
+    renderProps,
+    chemistry,
   );
 }
 
@@ -2703,22 +3135,47 @@ function drawPlanet(
     }
   }
 
-  const lightX = clamp(liveView?.lightDirectionX ?? props.lightDirectionX ?? -0.72, -1, 1);
-  const lightY = clamp(liveView?.lightDirectionY ?? props.lightDirectionY ?? -0.26, -1, 1);
-  const lightZ = clamp(liveView?.lightDirectionZ ?? props.lightDirectionZ ?? 0.4, -1, 1);
-  const daysideFactor = clamp((lightZ + 1) * 0.5, 0, 1);
-  const nightsideFactor = 1 - daysideFactor;
-  const startX = size * (0.5 - lightX * 0.44);
-  const startY = size * (0.5 - lightY * 0.34);
-  const endX = size * (0.5 + lightX * 0.44);
-  const endY = size * (0.5 + lightY * 0.34);
-  const lightOverlay = ctx.createLinearGradient(startX, startY, endX, endY);
-  lightOverlay.addColorStop(0, hsla({ ...props.starColor, l: clamp(84 + daysideFactor * 10, 78, 96), s: clamp(props.starColor.s - 8 + daysideFactor * 12, 24, 98) }, lerp(props.regime === "lava" ? 0.12 : 0.08, props.regime === "lava" ? 0.24 : 0.28, daysideFactor)));
-  lightOverlay.addColorStop(0.24, hsla({ ...props.planetColor, l: clamp(props.planetColor.l + 8 + daysideFactor * 18, 18, 92), s: clamp(props.planetColor.s + daysideFactor * 10, 12, 100) }, lerp(0.03, 0.12, daysideFactor)));
-  lightOverlay.addColorStop(0.56, `rgba(0,0,0,${lerp(0.04, 0.01, daysideFactor).toFixed(3)})`);
-  lightOverlay.addColorStop(1, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 22 - nightsideFactor * 18, 4, 44), s: clamp(props.accentColor.s + nightsideFactor * 6, 12, 100) }, lerp(0.22, 0.52, nightsideFactor)));
-  ctx.fillStyle = lightOverlay;
-  ctx.fillRect(0, 0, size, size);
+  if (props.tidalLock) {
+    const lockGradient = ctx.createLinearGradient(size * 0.06, size * 0.5, size * 0.94, size * 0.5);
+    lockGradient.addColorStop(0, hsla({ ...props.starColor, l: clamp(90 + ((props.daysideK ?? props.equilibriumK ?? 700) > 1000 ? 4 : 0), 84, 96), s: clamp(props.starColor.s + 8, 28, 100) }, props.regime === "lava" ? 0.28 : 0.24));
+    lockGradient.addColorStop(0.24, hsla({ ...props.planetColor, l: clamp(props.planetColor.l + 18, 24, 94), s: clamp(props.planetColor.s + 12, 18, 100) }, 0.14));
+    lockGradient.addColorStop(0.46, "rgba(255,255,255,0.02)");
+    lockGradient.addColorStop(0.5, "rgba(0,0,0,0.12)");
+    lockGradient.addColorStop(0.54, "rgba(0,0,0,0.28)");
+    lockGradient.addColorStop(0.74, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 14, 6, 42), s: clamp(props.accentColor.s + 4, 12, 100) }, 0.32));
+    lockGradient.addColorStop(1, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 28, 4, 30), s: clamp(props.accentColor.s + 6, 12, 100) }, 0.58));
+    ctx.fillStyle = lockGradient;
+    ctx.fillRect(0, 0, size, size);
+
+    const terminatorGlow = ctx.createLinearGradient(size * 0.42, 0, size * 0.58, 0);
+    terminatorGlow.addColorStop(0, "rgba(255,255,255,0)");
+    terminatorGlow.addColorStop(0.5, "rgba(255,255,255,0.11)");
+    terminatorGlow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = terminatorGlow;
+    ctx.fillRect(size * 0.36, 0, size * 0.28, size);
+  } else {
+    const lightX = clamp(liveView?.lightDirectionX ?? props.lightDirectionX ?? -0.72, -1, 1);
+    const lightZ = clamp(liveView?.lightDirectionZ ?? props.lightDirectionZ ?? 0.4, -1, 1);
+    const daysideFactor = clamp((lightZ + 1) * 0.5, 0, 1);
+    const nightsideFactor = 1 - daysideFactor;
+    const horizontalLight = lightX >= 0 ? Math.max(lightX, 0.18) : Math.min(lightX, -0.18);
+    const startX = size * (0.5 - horizontalLight * 0.52);
+    const endX = size * (0.5 + horizontalLight * 0.52);
+    const lightOverlay = ctx.createLinearGradient(startX, size * 0.5, endX, size * 0.5);
+    lightOverlay.addColorStop(0, hsla({ ...props.starColor, l: clamp(84 + daysideFactor * 10, 78, 96), s: clamp(props.starColor.s - 8 + daysideFactor * 12, 24, 98) }, lerp(props.regime === "lava" ? 0.12 : 0.08, props.regime === "lava" ? 0.24 : 0.28, daysideFactor)));
+    lightOverlay.addColorStop(0.24, hsla({ ...props.planetColor, l: clamp(props.planetColor.l + 8 + daysideFactor * 18, 18, 92), s: clamp(props.planetColor.s + daysideFactor * 10, 12, 100) }, lerp(0.03, 0.12, daysideFactor)));
+    lightOverlay.addColorStop(0.56, `rgba(0,0,0,${lerp(0.04, 0.01, daysideFactor).toFixed(3)})`);
+    lightOverlay.addColorStop(1, hsla({ ...props.accentColor, l: clamp(props.accentColor.l - 22 - nightsideFactor * 18, 4, 44), s: clamp(props.accentColor.s + nightsideFactor * 6, 12, 100) }, lerp(0.22, 0.52, nightsideFactor)));
+    ctx.fillStyle = lightOverlay;
+    ctx.fillRect(0, 0, size, size);
+
+    const terminatorGlow = ctx.createLinearGradient(size * 0.42, 0, size * 0.58, 0);
+    terminatorGlow.addColorStop(0, "rgba(255,255,255,0)");
+    terminatorGlow.addColorStop(0.5, "rgba(255,255,255,0.07)");
+    terminatorGlow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = terminatorGlow;
+    ctx.fillRect(size * 0.34, 0, size * 0.32, size);
+  }
 
   ctx.restore();
 
@@ -2729,14 +3186,17 @@ function drawPlanet(
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size * 0.5, 0, Math.PI * 2);
   ctx.fill();
-  drawMagnetosphere(ctx, size, props);
 }
 
 export function PlanetGlobe(props: PlanetGlobeProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const globeShellRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const magnetosphereCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const surfaceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const calibrationImageRef = useRef<CanvasImageSource | null>(null);
   const directImageRef = useRef<CanvasImageSource | null>(null);
+  const lastSurfacePaintRef = useRef(-1);
   const directReferenceAsset = useMemo(
     () =>
       resolvePlanetReferenceAsset({
@@ -2756,6 +3216,24 @@ export function PlanetGlobe(props: PlanetGlobeProps) {
         densityGcc: props.densityGcc,
       }),
     [props.seedKey, props.regime, props.equilibriumK, props.densityGcc],
+  );
+  const magnetosphereProps = useMemo(
+    () => ({
+      showMagnetosphere: props.showMagnetosphere,
+      magneticFieldMicroTesla: props.magneticFieldMicroTesla,
+      magnetopauseRadii: props.magnetopauseRadii,
+      radiationFluxEarth: props.radiationFluxEarth,
+      insolationEarth: props.insolationEarth,
+      magneticProtection: props.magneticProtection,
+    }),
+    [
+      props.showMagnetosphere,
+      props.magneticFieldMicroTesla,
+      props.magnetopauseRadii,
+      props.radiationFluxEarth,
+      props.insolationEarth,
+      props.magneticProtection,
+    ],
   );
 
   useEffect(() => {
@@ -2808,20 +3286,69 @@ export function PlanetGlobe(props: PlanetGlobeProps) {
     const size = canvas.width;
     const surfaceSize = surfaceCanvas.width;
     const start = performance.now();
+    const repaintInterval = surfaceRepaintIntervalSeconds(props);
 
     const render = (now: number) => {
       const time = (now - start) / 1000;
-      renderPlanetSurface(surfaceCtx, surfaceSize, time, props, calibrationImageRef.current);
+      if (lastSurfacePaintRef.current < 0 || time - lastSurfacePaintRef.current >= repaintInterval) {
+        renderPlanetSurface(surfaceCtx, surfaceSize, time, props, calibrationImageRef.current);
+        lastSurfacePaintRef.current = time;
+      }
       drawPlanet(ctx, size, time, props, surfaceCanvasRef.current, directImageRef.current, directReferenceAsset?.mode ?? null);
       frameId = requestAnimationFrame(render);
     };
 
+    lastSurfacePaintRef.current = -1;
     render(start);
     return () => {
       cancelAnimationFrame(frameId);
       surfaceCanvasRef.current = null;
+      lastSurfacePaintRef.current = -1;
     };
   }, [props, calibrationAsset, directReferenceAsset]);
+
+  useEffect(() => {
+    const magnetosphereCanvas = magnetosphereCanvasRef.current;
+    const magnetosphereCtx = magnetosphereCanvas?.getContext("2d") ?? null;
+    const container = containerRef.current;
+    const shell = globeShellRef.current;
+    if (!magnetosphereCanvas || !magnetosphereCtx || !container || !shell) return undefined;
+
+    const redraw = () => {
+      const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+      const targetWidth = Math.max(1, Math.round(container.clientWidth * dpr));
+      const targetHeight = Math.max(1, Math.round(container.clientHeight * dpr));
+      if (magnetosphereCanvas.width !== targetWidth || magnetosphereCanvas.height !== targetHeight) {
+        magnetosphereCanvas.width = targetWidth;
+        magnetosphereCanvas.height = targetHeight;
+      }
+      const shellLeft = shell.offsetLeft * dpr;
+      const shellTop = shell.offsetTop * dpr;
+      const shellWidth = shell.clientWidth * dpr;
+      const shellHeight = shell.clientHeight * dpr;
+      const centerX = shellLeft + shellWidth * 0.5;
+      const centerY = shellTop + shellHeight * 0.5;
+      const planetRadius = Math.min(shellWidth, shellHeight) * 0.47;
+      magnetosphereCtx.clearRect(0, 0, magnetosphereCanvas.width, magnetosphereCanvas.height);
+      drawMagnetosphere(
+        magnetosphereCtx,
+        magnetosphereCanvas.width,
+        magnetosphereCanvas.height,
+        centerX,
+        centerY,
+        planetRadius,
+        magnetosphereProps,
+      );
+    };
+
+    redraw();
+    const resizeObserver = new ResizeObserver(() => redraw());
+    resizeObserver.observe(container);
+    resizeObserver.observe(shell);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [magnetosphereProps]);
 
   return (
     <>
@@ -2836,14 +3363,18 @@ export function PlanetGlobe(props: PlanetGlobeProps) {
           }
         }
       `}</style>
-      <div className={cn("relative flex min-h-[18rem] items-center justify-center overflow-hidden rounded-[1.5rem]", props.className)}>
+      <div ref={containerRef} className={cn("relative flex min-h-[18rem] items-center justify-center overflow-hidden rounded-[1.5rem]", props.className)}>
         <div className="absolute left-[8%] top-[10%] h-20 w-20 rounded-full blur-3xl" style={{ background: hsla(props.starColor, 0.24) }} />
         <div className="absolute right-[8%] top-[16%] h-1 w-1 rounded-full bg-white/70" style={{ animation: "twinkling 3s ease-in-out infinite" }} />
         <div className="absolute left-[12%] top-[22%] h-1 w-1 rounded-full bg-white/70" style={{ animation: "twinkling 2.2s ease-in-out infinite" }} />
         <div className="absolute right-[20%] bottom-[22%] h-1 w-1 rounded-full bg-white/70" style={{ animation: "twinkling 4.2s ease-in-out infinite" }} />
         <div className="absolute left-[18%] bottom-[14%] h-1 w-1 rounded-full bg-white/70" style={{ animation: "twinkling 1.8s ease-in-out infinite" }} />
+        <canvas
+          ref={magnetosphereCanvasRef}
+          className="pointer-events-none absolute inset-0 z-20 h-full w-full"
+        />
 
-        <div className="relative h-[15rem] w-[15rem] rounded-full">
+        <div ref={globeShellRef} className="relative z-10 h-[15rem] w-[15rem] rounded-full">
           <div
             className="absolute inset-[-4%] rounded-full"
             style={{

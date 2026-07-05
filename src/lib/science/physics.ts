@@ -1,12 +1,14 @@
 import type {
   CatalogPropagation,
   MeasurementBounds,
+  PlanetMagnetosphere,
   RetentionAudit,
 } from "@/lib/science/types";
 
 const EARTH_FLUX_WM2 = 1361;
 const G = 6.674e-11;
 const KB = 1.381e-23;
+const EV = 1.602e-19;
 const M_EARTH = 5.972e24;
 const R_EARTH = 6.371e6;
 const R_SUN = 6.957e8;
@@ -48,6 +50,94 @@ export function estimateMeanMolecularWeightKg(massEarth: number | null, densityG
   if ((equilibriumK ?? 0) > 900) return 20 * AMU;
   if ((densityGcc ?? 5.5) > 5.3) return 28 * AMU;
   return 18 * AMU;
+}
+
+export function spectralClassBucket(spectralType: string | null) {
+  const letter = String(spectralType || "").trim().charAt(0).toUpperCase();
+  return /[OBAFGKM]/.test(letter) ? letter : "G";
+}
+
+export function inferTidalLock(semiMajorAxisAu: number | null, orbitalPeriodDays: number | null) {
+  return !!semiMajorAxisAu && !!orbitalPeriodDays && semiMajorAxisAu < 0.08 && orbitalPeriodDays < 12;
+}
+
+export function deriveMagnetosphereProxy(input: {
+  massEarth: number | null;
+  radiusEarth: number | null;
+  densityGcc: number | null;
+  equilibriumK: number | null;
+  orbitalPeriodDays: number | null;
+  semiMajorAxisAu: number | null;
+  fluxEarthMultiple: number | null;
+  spectralType: string | null;
+  tidallyLocked: boolean;
+}): PlanetMagnetosphere {
+  const massEarth = input.massEarth;
+  const radiusEarth = input.radiusEarth;
+  const equilibriumK = input.equilibriumK ?? 280;
+  const densityGcc = input.densityGcc;
+  const orbitalPeriodDays = input.orbitalPeriodDays ?? 30;
+  const semiMajorAxisAu = input.semiMajorAxisAu;
+  const fluxEarthMultiple = input.fluxEarthMultiple ?? null;
+
+  if (!massEarth || !radiusEarth) {
+    return {
+      magneticFactor: null,
+      stellarWindStress: fluxEarthMultiple,
+      correctedBindingRatio: null,
+      surfaceFieldMicroTesla: null,
+      magnetopauseRadii: null,
+      protection: "unresolved",
+      protected: null,
+    };
+  }
+
+  const rotationProxyDays = input.tidallyLocked ? orbitalPeriodDays : Math.max(0.3, orbitalPeriodDays * 0.2);
+  const fRot = rotationProxyDays < 3 ? 0.3 : rotationProxyDays < 10 ? 0.5 : rotationProxyDays < 30 ? 0.7 : 1.0;
+  const coreFrac =
+    densityGcc !== null && densityGcc !== undefined
+      ? densityGcc >= 5.4
+        ? 0.62
+        : densityGcc >= 4.0
+          ? 0.48
+          : massEarth > 20
+            ? 0.2
+            : 0.34
+      : massEarth > 10
+        ? 0.2
+        : 0.5;
+  const fCore = Math.max(0.25, Math.min(1, 0.35 + coreFrac));
+  const magneticFactor = fRot * fCore;
+  const starStressFactor = { O: 6, B: 4.5, A: 2.5, F: 1.4, G: 1, K: 1.7, M: 3.6 }[spectralClassBucket(input.spectralType)] ?? 1;
+  const stellarWindStress = semiMajorAxisAu ? starStressFactor / (semiMajorAxisAu * semiMajorAxisAu) : Math.max(fluxEarthMultiple ?? 1, 1);
+  const swPenalty = 1 + Math.log10(Math.max(stellarWindStress, 1));
+  const mu = estimateMeanMolecularWeightKg(massEarth, densityGcc, equilibriumK);
+  const massKg = massEarth * M_EARTH;
+  const radiusM = radiusEarth * R_EARTH;
+  const particleBindingEv = (G * massKg * mu / radiusM) / EV;
+  const thermalEv = (KB * equilibriumK) / EV;
+  const bindingRatio = thermalEv > 0 ? particleBindingEv / thermalEv : null;
+  const correctedBindingRatio =
+    bindingRatio === null ? null : bindingRatio * (0.7 + 0.6 * magneticFactor) / Math.sqrt(swPenalty);
+  const dynamoScale = Math.pow(Math.max(massEarth / (radiusEarth * radiusEarth), 0.08), 0.38);
+  const irradiationPenalty = Math.pow(Math.max(fluxEarthMultiple ?? stellarWindStress, 0.12), 0.18);
+  const surfaceFieldMicroTesla = 50 * magneticFactor * dynamoScale * (input.tidallyLocked ? 0.72 : 1) / irradiationPenalty;
+  const magnetopauseRadii = 10 * Math.pow(Math.max(surfaceFieldMicroTesla, 0.08) / 50, 1 / 3) / Math.pow(Math.max(swPenalty, 1), 0.48);
+
+  let protection: PlanetMagnetosphere["protection"] = "stressed";
+  if (magnetopauseRadii > 14 && (correctedBindingRatio ?? 0) > 28) protection = "strong";
+  else if (magnetopauseRadii > 7 && (correctedBindingRatio ?? 0) > 16) protection = "moderate";
+  else if (magnetopauseRadii > 3 && (correctedBindingRatio ?? 0) > 8) protection = "weak";
+
+  return {
+    magneticFactor,
+    stellarWindStress,
+    correctedBindingRatio,
+    surfaceFieldMicroTesla,
+    magnetopauseRadii,
+    protection,
+    protected: protection === "strong" || protection === "moderate",
+  };
 }
 
 export function deriveSurfaceGravityMs2(massEarth: number | null, radiusEarth: number | null) {

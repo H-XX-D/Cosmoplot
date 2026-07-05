@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import type { Stats } from "node:fs";
 import path from "node:path";
 import { equatorialToCartesianPc } from "@/lib/science/coordinates";
 import type { SourceDescriptor, WhiteDwarfAnchor, WhiteDwarfCatalog, WhiteDwarfRecord, WhiteDwarfSummary } from "@/lib/science/types";
@@ -8,9 +9,14 @@ const SOLAR_MASS_KG = 1.98847e30;
 const SOLAR_RADIUS_M = 6.957e8;
 const C = 299792458;
 
-const ROOT = "/Users/hendrixx./Desktop/jwst_exoplanets";
-const SYNTHETIC_CSV = path.join(ROOT, "synthetic_wd_sample.csv");
-const TREMBLAY_CSV = path.join(ROOT, "white_dwarf_data", "tremblay2019_sample.csv");
+const ROOT_CANDIDATES = [
+  process.env.COSMOPLOT_JWST_ROOT,
+  "/Users/hendrixx./Desktop/jwst_exoplanets",
+  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets",
+].filter((value): value is string => Boolean(value));
+const SYNTHETIC_RELATIVE_PATH = "synthetic_wd_sample.csv";
+const TREMBLAY_RELATIVE_PATH = "white_dwarf_data/tremblay2019_sample.csv";
+const LOAD_LOCAL_WHITE_DWARF_CSV = process.env.COSMOPLOT_LOAD_WHITE_DWARF_CSV === "1";
 
 const CURATED_WHITE_DWARFS: Array<Omit<WhiteDwarfAnchor, "cartesianPc" | "provenance"> & { sourceUrl: string }> = [
   {
@@ -87,6 +93,19 @@ function localSource(id: string, name: string, url: string): SourceDescriptor {
     accessedAt: new Date().toISOString(),
     cache: "hit",
   };
+}
+
+async function firstExistingFile(relativePath: string): Promise<{ filePath: string; stat: Stats } | null> {
+  for (const root of ROOT_CANDIDATES) {
+    const filePath = path.join(root, relativePath);
+    try {
+      const stat = await fs.stat(filePath);
+      if (stat.isFile()) return { filePath, stat };
+    } catch {
+      // Try the next known local bundle location.
+    }
+  }
+  return null;
 }
 
 function toNumber(value: string | undefined) {
@@ -223,14 +242,23 @@ function buildAnchors(source: SourceDescriptor): WhiteDwarfAnchor[] {
 }
 
 export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
-  const [syntheticStat, tremblayStat] = await Promise.all([fs.stat(SYNTHETIC_CSV), fs.stat(TREMBLAY_CSV)]);
-  const key = `${syntheticStat.mtimeMs}:${tremblayStat.mtimeMs}`;
+  const [syntheticFile, tremblayFile] = LOAD_LOCAL_WHITE_DWARF_CSV
+    ? await Promise.all([
+        firstExistingFile(SYNTHETIC_RELATIVE_PATH),
+        firstExistingFile(TREMBLAY_RELATIVE_PATH),
+      ])
+    : [null, null];
+  const key = `${syntheticFile?.stat.mtimeMs ?? "missing"}:${tremblayFile?.stat.mtimeMs ?? "missing"}`;
   if (cache?.key === key) {
     return cache.catalog;
   }
 
-  const syntheticSource = localSource("local-wd-synthetic", "Local synthetic white dwarf sample", SYNTHETIC_CSV);
-  const tremblaySource = localSource("local-wd-tremblay", "Local Tremblay white dwarf sample", TREMBLAY_CSV);
+  const syntheticSource = syntheticFile
+    ? localSource("local-wd-synthetic", "Local synthetic white dwarf sample", syntheticFile.filePath)
+    : null;
+  const tremblaySource = tremblayFile
+    ? localSource("local-wd-tremblay", "Local Tremblay white dwarf sample", tremblayFile.filePath)
+    : null;
   const anchorSource = {
     id: "nearby-white-dwarf-anchors",
     name: "Curated nearby white dwarf anchors",
@@ -240,10 +268,13 @@ export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
     cache: "miss" as const,
   };
 
-  const [syntheticRows, tremblayRows] = await Promise.all([loadCsv(SYNTHETIC_CSV), loadCsv(TREMBLAY_CSV)]);
+  const [syntheticRows, tremblayRows] = await Promise.all([
+    syntheticFile ? loadCsv(syntheticFile.filePath) : Promise.resolve([]),
+    tremblayFile ? loadCsv(tremblayFile.filePath) : Promise.resolve([]),
+  ]);
   const records = [
-    ...syntheticRows.map((row) => syntheticRecord(row, syntheticSource)),
-    ...tremblayRows.map((row) => tremblayRecord(row, tremblaySource)),
+    ...(syntheticSource ? syntheticRows.map((row) => syntheticRecord(row, syntheticSource)) : []),
+    ...(tremblaySource ? tremblayRows.map((row) => tremblayRecord(row, tremblaySource)) : []),
   ];
 
   const catalog: WhiteDwarfCatalog = {
@@ -251,7 +282,7 @@ export async function getWhiteDwarfCatalog(): Promise<WhiteDwarfCatalog> {
     summary: buildSummary(records),
     records,
     anchors: buildAnchors(anchorSource),
-    sources: [syntheticSource, tremblaySource, anchorSource],
+    sources: [syntheticSource, tremblaySource, anchorSource].filter((source): source is SourceDescriptor => Boolean(source)),
   };
 
   cache = { key, catalog };

@@ -15,7 +15,7 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Cosmoplot",
-  description: "Science-first universe navigation and evidence engine.",
+  description: "Science-first star chart plotter and evidence engine.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
