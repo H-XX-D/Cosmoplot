@@ -3571,9 +3571,9 @@ function buildAnalysis(system: UniverseSystem, planet: UniversePlanet | null, sc
         })]),
     "",
     "SCIENCE INTERPRETATION",
-    planet
-      ? `${planet.name} is being organized as a science-first target card rather than a raw catalog row. The rewrite now pulls the selected target through official internet services, keeping the wide-field universe snapshot lightweight while enriching the active planet with archive uncertainties, exo.MAST references, radiation context, and a magnetosphere proxy tied to the same observed orbit/host data.${local?.interestingReason ? ` Local analysis also flags: ${local.interestingReason}.` : ""}`
-      : `${system.name} is already usable as a system-level navigation object. The host position, stellar context, and planet inventory are live from the official archive path, which means the renderer can now be treated as a downstream science view instead of a source of truth.${local?.interestingReason ? ` Local analysis highlight: ${local.interestingReason}.` : ""}`,
+    system.researched && system.researchSummary
+      ? `${system.researchSummary} ${buildSynopsis(system, planet, science)}`
+      : buildSynopsis(system, planet, science),
     "",
     "PROVENANCE",
     ...dedupeSources(system, planet, science).map((source) => `- ${source.name} (${source.kind}) | cache=${source.cache} | ${source.url}`),

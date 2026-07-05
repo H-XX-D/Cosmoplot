@@ -95,7 +95,7 @@
    "planets": [
     "K2-141 b"
    ],
-   "summary": "**System:** K2-141 **Host Star:** K2-141 (Unknown) **Stellar Temperature:** 4570.0 K **Stellar Mass:** 0.708 M\u2609 **Stellar Age:** 6.3 Gyr **Planet Classification:** Super-Earth",
+   "summary": "The formation of K2-141b was shaped by the initial conditions in the K2-141 protoplanetary disk approximately 6.3-5.8 billion years ago. This massive exoplanet, with a mass of 0.02 M_J (5.0 M_\u2295), likely underwent one of two primary formation mechanisms:",
    "files": [
     "K2-141b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
     "K2-141b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
@@ -119,7 +119,7 @@
    "planets": [
     "KELT-9 b"
    ],
-   "summary": "**System:** KELT-9 **Host Star:** KELT-9 (B9.5-A0) **Stellar Temperature:** 10170.0 K **Stellar Mass:** 2.52 M\u2609 **Stellar Age:** 0.3 Gyr **Planet Classification:** Gas Giant",
+   "summary": "The formation of KELT-9b was shaped by the initial conditions in the KELT-9 protoplanetary disk approximately 0.3-0.1 billion years ago. This massive exoplanet, with a mass of 2.88 M_J (915.4 M_\u2295), likely underwent one of two primary formation mechanisms:",
    "files": [
     "KELT-9b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
     "KELT-9b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
@@ -157,7 +157,7 @@
     "Kepler-51 b",
     "Kepler-51 d"
    ],
-   "summary": "**System:** Kepler-51 **Host Star:** Kepler-51 (Unknown) **Stellar Temperature:** 6018.0 K **Stellar Mass:** 1.04 M\u2609 **Stellar Age:** 0.3 Gyr **Planet Classification:** Neptune-like",
+   "summary": "The formation of Kepler-51b was shaped by the initial conditions in the Kepler-51 protoplanetary disk approximately 0.3-0.1 billion years ago. This massive exoplanet, with a mass of 0.01 M_J (2.1 M_\u2295), likely underwent one of two primary formation mechanisms:",
    "files": [
     "Kepler-51b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
     "Kepler-51b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
@@ -185,7 +185,7 @@
    "planets": [
     "TOI-1468 b"
    ],
-   "summary": "**System:** TOI-1468 **Host Star:** TOI-1468 (Unknown) **Stellar Temperature:** 3376.0 K **Stellar Mass:** 0.3527 M\u2609 **Stellar Age:** 5.0 Gyr **Planet Classification:** Rocky",
+   "summary": "The formation of TOI-1468b was shaped by the initial conditions in the TOI-1468 protoplanetary disk approximately 5.0-4.5 billion years ago. This massive exoplanet, with a mass of 0.01 M_J (3.0 M_\u2295), likely underwent one of two primary formation mechanisms:",
    "files": [
     "TOI-1468b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
     "TOI-1468b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
