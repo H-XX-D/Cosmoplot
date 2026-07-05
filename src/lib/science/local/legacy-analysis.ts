@@ -8,20 +8,16 @@ import type {
   SourceDescriptor,
 } from "@/lib/science/types";
 
+// Local analysis roots are environment-only so the public source carries no
+// machine-specific paths. Point these at the bundle location in .env.local.
 const LEGACY_ROOT_CANDIDATES = [
   process.env.COSMOPLOT_LEGACY_ROOT,
-  "/Users/hendrixx./Desktop/EXOPLANET_ANALYSES",
-  "/Users/hendrixx./Desktop/desktop over the past 6 months /EXOPLANET_ANALYSES",
 ].filter((value): value is string => Boolean(value));
 const JWST_VERBOSE_PLANET_ROOTS = [
   process.env.COSMOPLOT_JWST_VERBOSE_PLANET_ROOT,
-  "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/planets",
-  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets/verbose_analyses/planets",
 ].filter((value): value is string => Boolean(value));
 const JWST_VERBOSE_STAR_ROOTS = [
   process.env.COSMOPLOT_JWST_VERBOSE_STAR_ROOT,
-  "/Users/hendrixx./Desktop/jwst_exoplanets/verbose_analyses/stars",
-  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets/verbose_analyses/stars",
 ].filter((value): value is string => Boolean(value));
 const LOCAL_SOURCE_LABEL = "Local EXOPLANET_ANALYSES bundle";
 const LOAD_LEGACY_REGISTRY = process.env.COSMOPLOT_LOAD_LEGACY_REGISTRY === "1";

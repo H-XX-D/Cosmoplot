@@ -9,10 +9,10 @@ const SOLAR_MASS_KG = 1.98847e30;
 const SOLAR_RADIUS_M = 6.957e8;
 const C = 299792458;
 
+// Environment-only root so the public source carries no machine-specific
+// paths. Point COSMOPLOT_JWST_ROOT at the bundle location in .env.local.
 const ROOT_CANDIDATES = [
   process.env.COSMOPLOT_JWST_ROOT,
-  "/Users/hendrixx./Desktop/jwst_exoplanets",
-  "/Users/hendrixx./Desktop/desktop over the past 6 months /jwst_exoplanets",
 ].filter((value): value is string => Boolean(value));
 const SYNTHETIC_RELATIVE_PATH = "synthetic_wd_sample.csv";
 const TREMBLAY_RELATIVE_PATH = "white_dwarf_data/tremblay2019_sample.csv";

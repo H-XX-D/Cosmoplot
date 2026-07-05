@@ -462,15 +462,21 @@ export async function getUniverseSnapshot(params?: {
     cache: "miss",
   };
   const legacySource = await getLegacyLocalSource();
+  // Science-first provenance: the local analysis bundle is only citable when it
+  // actually contributed claims to this snapshot. On hosts without the local
+  // files (production) this stays 0 and the source is omitted entirely.
+  let legacyContributionCount = 0;
 
   if (matchesSolarSearch(search)) {
     const solarSystem = buildSolarSystem(solarSource);
     const solarSummary = await getLegacySystemSummary(solarSystem.name);
+    if (solarSummary) legacyContributionCount += 1;
     solarSystem.localAnalysis = solarSummary;
     solarSystem.provenance = solarSummary ? [...solarSystem.provenance, legacySource] : solarSystem.provenance;
     solarSystem.planets = await Promise.all(
       solarSystem.planets.map(async (planet) => {
         const localAnalysis = await getLegacyPlanetSummary(planet.name);
+        if (localAnalysis) legacyContributionCount += 1;
         return {
           ...planet,
           localAnalysis,
@@ -485,6 +491,7 @@ export async function getUniverseSnapshot(params?: {
     const key = row.hostname;
     const localSystem = await getLegacySystemEntry(row.hostname);
     const localSystemSummary = await getLegacySystemSummary(row.hostname);
+    if (localSystem || localSystemSummary) legacyContributionCount += 1;
     const provenance = localSystemSummary ? [archive.source, legacySource] : [archive.source];
     let system = systems.get(key);
 
@@ -528,6 +535,7 @@ export async function getUniverseSnapshot(params?: {
 
     const localPlanet = await getLegacyPlanetEntry(row.pl_name);
     const localPlanetSummary = await getLegacyPlanetSummary(row.pl_name);
+    if (localPlanet || localPlanetSummary) legacyContributionCount += 1;
     const orbitalPeriodDays = row.pl_orbper ?? localPlanet?.orbital?.periodDays ?? null;
     const semiMajorAxisAu = row.pl_orbsmax ?? localPlanet?.orbital?.semiMajorAxisAu ?? null;
     const eccentricity = row.pl_orbeccen ?? localPlanet?.orbital?.eccentricity ?? null;
@@ -609,7 +617,11 @@ export async function getUniverseSnapshot(params?: {
       limit,
       search,
     },
-    sources: matchesSolarSearch(search) ? [solarSource, archive.source, legacySource] : [archive.source, legacySource],
+    sources: [
+      ...(matchesSolarSearch(search) ? [solarSource] : []),
+      archive.source,
+      ...(legacyContributionCount > 0 ? [legacySource] : []),
+    ],
     systems: Array.from(systems.values()).sort((a, b) => a.distancePc - b.distancePc),
     whiteDwarfs: {
       summary: whiteDwarfs.summary,
