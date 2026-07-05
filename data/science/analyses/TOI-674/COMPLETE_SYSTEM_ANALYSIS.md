@@ -16,8 +16,7 @@ TOI-674 is an M2V (intermediate M-dwarf):
 - Luminosity (L*): 0.0243 L☉
 - Surface Gravity (log g): 4.8-5.0
 
-**Binding Energy Coupling Parameter:**
-- β = +1.31 (M-dwarf, same as all M-types)
+**M-dwarf EUV / UV photochemistry:**
 - Photochemical Intensity: Moderate (between M3V's low and M0V's high)
 - Expected Effect: Enhanced H₂O/CH₄, similar to other M-dwarfs
 
@@ -83,7 +82,7 @@ TOI-674 is an M2V (intermediate M-dwarf):
 - H₂: 68-72% (primordial)
 - He: 24-28% (primordial)
 - H₂O: 1-3% (condensing, cloud-former)
-- CH₄: 0.2-0.5% (enhanced by M-dwarf positive β)
+- CH₄: 0.2-0.5% (enhanced by the M-dwarf's strong UV field)
 - CO: 5-20 ppm (photochemical product)
 - SO₂: 0.01-0.1% (temperature-dependent, marginal)
 - CO₂: 0.1-1 ppm (oxidation product)
@@ -155,14 +154,14 @@ Reason: Low surface gravity (0.85 m/s²) dominates over moderate temperature
 
 ### Temperature-Dependent Classification
 
-At 635 K with M-dwarf β = +1.31:
+At 635 K with strong M-dwarf UV:
 
 **Photochemical Regime:**
 - Temperature: 635 K (moderately active photochemistry)
 - Stellar Intensity: Moderate (M2V)
 - Result: ACTIVE photochemistry with moderate timescales
 
-### M-Dwarf β = +1.31 at 635 K
+### M-dwarf UV photochemistry at 635 K
 
 **Water-Hydroxyl Cycle (Enhanced):**
 ```
@@ -253,7 +252,7 @@ TOI-674b is an **INTERMEDIATE CALIBRATION POINT** in the analysis:
 
 1. **Bridging Systems**: Temperature and properties between TOI-1231b (cool, 329.6 K) and TOI-3757b (hot, 759 K)
 
-2. **M-dwarf Framework**: Demonstrates M-dwarf positive β at intermediate radiation intensity
+2. **M-dwarf Framework**: Demonstrates the M-dwarf's strong UV field at intermediate radiation intensity
 
 3. **JWST Accessibility**: Excellent candidate for transmission spectroscopy with strong H₂O and CH₄ features
 

@@ -181,7 +181,7 @@ The primary heating of TOI-1231b's upper atmosphere comes from stellar EUV/UV ab
 
 ---
 
-## 4. Photochemistry (M-Dwarf Positive β Framework)
+## 4. Photochemistry (M-dwarf UV photochemistry)
 
 ### Photochemical Active/Frozen Boundary
 
@@ -193,11 +193,11 @@ The primary heating of TOI-1231b's upper atmosphere comes from stellar EUV/UV ab
 
 At 329.6 K, TOI-1231b's photochemistry is SLOW but ACTIVE. Reactions proceed but on timescales of days-to-years rather than minutes-to-hours.
 
-### M-Dwarf Positive β Network (β = +1.31)
+### M-dwarf UV photochemistry (strong M-dwarf UV)
 
 **Fundamental M-Dwarf Photochemical Feature**: Stellar EUV produces reactive species (OH, HO₂) that STABILIZE rather than DESTROY H₂O and CH₄.
 
-**Production Pathways (Positive β Feedback):**
+**Production Pathways (UV-driven feedback):**
 
 1. **Water Channel (Primary):**
    ```
@@ -266,7 +266,7 @@ At 329.6 K, TOI-1231b's photochemistry is SLOW but ACTIVE. Reactions proceed but
 
 ### M-Dwarf Effect on Photochemistry
 
-**Contrast: M-Dwarf (β = +1.31) vs K-Dwarf (β = -0.22):**
+**Contrast: M-Dwarf (UV-rich) vs K-dwarf (weaker UV):**
 
 | Aspect | M-Dwarf (TOI-1231b) | K-Dwarf (TOI-4010b) |
 |--------|-------------------|-------------------|
@@ -566,7 +566,7 @@ At 329.6 K, aerosol production is SLOW:
 
 ### Comparison to K-Dwarf System (TOI-4010b)
 
-**TOI-1231b (M-dwarf, β = +1.31) vs TOI-4010b (K-dwarf, β = -0.22):**
+**TOI-1231b (M-dwarf, strong M-dwarf UV) vs TOI-4010b (K-dwarf, weaker UV):**
 
 | Species | TOI-1231b (329.6K) | TOI-4010b (1441K) | Ratio |
 |---------|-------------------|------------------|-------|
@@ -576,8 +576,8 @@ At 329.6 K, aerosol production is SLOW:
 | O₂ | 0.05 ppm | 10 ppm | 200× higher on K-dwarf |
 
 **Physical Reason:**
-- M-dwarf (β = +1.31): Enhanced EUV produces recycling feedback → HIGH H₂O/CH₄
-- K-dwarf (β = -0.22): EUV destroys molecules → LOW H₂O/CH₄, HIGH CO/O₂
+- M-dwarf (UV-rich): Enhanced EUV produces recycling feedback → HIGH H₂O/CH₄
+- K-dwarf (weaker UV): EUV destroys molecules → LOW H₂O/CH₄, HIGH CO/O₂
 
 ---
 
@@ -644,12 +644,12 @@ Transmission Depth (%)
 **Secondary Goals:**
 1. Search for CO at 4.67 μm (marginal, requires 6 transits)
 2. Constrain atmospheric metallicity (water/hydrogen ratio)
-3. Test M-dwarf positive β framework predictions
+3. Test M-dwarf UV photochemistry predictions
 
 ### Expected Outcomes
 
 **Most Likely Result:**
-- Strong H₂O and CH₄ detection, consistent with M-dwarf β = +1.31 prediction
+- Strong H₂O and CH₄ detection, consistent with strong M-dwarf UV prediction
 - Cloud optical depth τ ~ 0.8-1.2 (confirmed water clouds)
 - Aerosol optical depth τ ~ 0.1-0.3 (confirmed organic tholins)
 - Temperature constraints: 320-340 K (from feature strength matching)
@@ -694,8 +694,8 @@ TOI-1231b's magnetosphere, radiation, and chemistry reflect a unique balance of 
 
 **Magnetosphere**: Likely unmagnetized or weakly magnetized; ionosphere directly exposed to stellar wind; escape is moderate (2.1×10⁸ H/cm² s) and sustained
 
-**Chemistry**: M-dwarf positive β coupling (β = +1.31) stabilizes H₂O and CH₄, creating an atmosphere rich in volatiles; photochemistry is ACTIVE but SLOW (timescales of years)
+**Chemistry**: enhanced M-dwarf UV photochemistry (strong M-dwarf UV) stabilizes H₂O and CH₄, creating an atmosphere rich in volatiles; photochemistry is ACTIVE but SLOW (timescales of years)
 
 **Observable Signatures**: STRONG H₂O transmission feature, GOOD CH₄ feature, water clouds dominate, minor organic aerosol contribution
 
-This system offers an excellent opportunity to test the Binding Energy Framework in a cool, M-dwarf environment and understand volatile-rich sub-Neptune atmospheres.
+This system offers an excellent opportunity to test standard atmospheric-escape physics in a cool, M-dwarf environment and understand volatile-rich sub-Neptune atmospheres.

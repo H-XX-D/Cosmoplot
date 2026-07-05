@@ -86,7 +86,7 @@ At 635 K (intermediate temperature):
 
 ### Temperature + Star Classification
 
-At 635 K with M-dwarf β = +1.31 and MODERATE intensity:
+At 635 K with strong M-dwarf UV and MODERATE intensity:
 
 **Photochemical Regime**: MODERATELY ACTIVE
 - Temperature enables photochemical reactions
@@ -272,4 +272,4 @@ TOI-674b represents the **INTERMEDIATE CALIBRATION POINT**:
 - Escape: Moderate loss rate, secure atmosphere
 - Observable: Excellent JWST target with strong H₂O and CH₄
 
-This planet validates the Binding Energy Framework and M-dwarf photochemistry models at intermediate conditions.
+This planet is a clean test of standard atmospheric-escape physics.

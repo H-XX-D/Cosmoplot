@@ -376,5 +376,5 @@ JWST observations will provide the first high-precision characterization of this
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-52 literature; K-dwarf systems; comparative hot Jupiter studies**

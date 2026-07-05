@@ -318,5 +318,5 @@ The combination of low stellar UV, cool planetary temperature, large scale heigh
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-69 literature; warm Neptune studies; K-dwarf exoplanet chemistry**

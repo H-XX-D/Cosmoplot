@@ -244,5 +244,5 @@ This makes WASP-25b an ideal **bridge system** between ultra-hot Jupiters and ty
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **Note: Estimated parameters require observational confirmation**

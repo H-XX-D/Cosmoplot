@@ -299,5 +299,5 @@ WASP-25b occupies a unique niche in the hot Jupiter population: warm enough to s
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **Note: This analysis relies on estimated parameters; dedicated observations are essential for confirmation**

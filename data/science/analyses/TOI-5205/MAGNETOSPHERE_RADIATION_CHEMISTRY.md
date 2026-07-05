@@ -103,7 +103,7 @@ At 737 K with LOWEST photochemical flux in sample:
 - Stellar EUV: LOWEST (cool star, limited intensity)
 - Result: Photochemistry is SLOW but ACTIVE
 
-### M-Dwarf β = +1.31 with Limited Intensity
+### M-dwarf UV photochemistry (limited intensity)
 
 **Water Chemistry (Slow):**
 ```
@@ -320,4 +320,4 @@ TOI-5205b's atmosphere is **MAXIMALLY BOUND and SLOW-EVOLVING**:
 - Result: Extremely stable atmosphere with long timescales
 - Framework Implication: Tests extreme binding energy limit
 
-This planet validates the Binding Energy Framework at the MAXIMUM binding extreme.
+This planet is a clean test of standard atmospheric-escape physics.

@@ -249,5 +249,5 @@ The system's young age, extreme orbital parameters, and observable evolution mak
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-76 TiO/VO detection literature; F-dwarf ultra-hot systems; refractory chemistry studies**

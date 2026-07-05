@@ -45,7 +45,7 @@ Transit Chord:           ~150-200 km (H/R_p ≈ 0.20-0.27)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       700-2228 K
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   1.73 × 10⁸ J/kg
 Calculation Method:      BE = GM/R
@@ -122,7 +122,7 @@ SCIENTIFIC PRIORITIES
 5. Determine atmospheric wind speeds from spectral line broadening
 6. Quantify stratospheric inversion (TiO heating signature)
 7. Compare with WASP-19b and WASP-103b for temperature dependence
-8. Study F-dwarf atmospheric coupling effects
+8. Study F-dwarf host-atmosphere effects
 
 CHALLENGES & OPPORTUNITIES
 ================================================================================
@@ -172,5 +172,5 @@ F-dwarf ultra-hot context: HAT-P-7b, HAT-P-1b comparative literature
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 ================================================================================

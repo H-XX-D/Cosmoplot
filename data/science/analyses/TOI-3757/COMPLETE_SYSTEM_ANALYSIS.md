@@ -16,9 +16,8 @@ TOI-3757 is an M0V (early M-dwarf) with enhanced luminosity compared to later M-
 - Luminosity (L*): 0.087 L☉ (8.7% Solar)
 - Surface Gravity (log g): 4.7-4.9
 
-**Binding Energy Coupling Parameter for M-Dwarf:**
-- β = +1.31 (same as all M-dwarfs)
-- Sign Interpretation: Positive coupling indicates stellar EUV photochemistry strengthens H₂O/CH₄ opacity
+**M-dwarf EUV / UV photochemistry:**
+- M-dwarf EUV / soft X-ray photochemistry stellar EUV photochemistry strengthens H₂O/CH₄ opacity
 - Photochemical Efficiency: 38-45% of EUV drives molecule-producing reactions
 - Effect at Higher T: At 759 K, photochemistry becomes more complex with SO₂ channels
 
@@ -104,7 +103,7 @@ Despite strong binding (Eg/Et = 221), the higher temperature and stronger XUV fl
 - H₂: 68-72% (primordial)
 - He: 22-28% (primordial)
 - H₂O: 0.5-2% (condensing, but only at cloud level ~300 K)
-- CH₄: 1-3% (enhanced by M-dwarf positive β at high temperature)
+- CH₄: 1-3% (enhanced by the M-dwarf's strong UV field at high temperature)
 - SO₂: 0.1-1% (activated at this higher temperature!)
 - H₂S: <0.1% (trace, reducing agent)
 
@@ -198,9 +197,9 @@ At 759 K, TOI-3757b sits in the **PHOTOCHEMICALLY ACTIVE** regime where:
 - Radical timescales: milliseconds-to-seconds
 - Chemical networks: Complex branching
 
-### M-Dwarf β = +1.31 at High Temperature
+### M-dwarf UV photochemistry at high temperature
 
-**Same positive β as cooler TOI-1231b, but effects are different:**
+**Same strong UV as cooler TOI-1231b, but effects are different:**
 
 **Water Chemistry (same as cooler planets):**
 - H₂O + hν → H + OH (photolysis remains primary)
@@ -308,7 +307,7 @@ TOI-3757b represents a **UNIQUE SYSTEM** bridging cool sub-Neptunes and ultra-ho
 
 3. **Density Paradox**: Lowest density (0.58 g/cm³) combined with ultra-hot environment suggests unique interior structure or evolutionary history
 
-4. **M-Dwarf Positive β at High T**: Tests whether β = +1.31 coupling remains valid at 759 K (prediction: CH₄ and H₂O remain enhanced)
+4. **M-dwarf UV photochemistry at high T**: Tests whether M-dwarf UV photochemistry remains valid at 759 K (prediction: CH₄ and H₂O remain enhanced)
 
 5. **JWST Accessibility**: Despite shorter scale height than TOI-1231b, SO₂ feature at 7.3 μm provides unique observable not present in cooler planets
 

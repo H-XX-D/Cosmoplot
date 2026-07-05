@@ -245,5 +245,5 @@ JWST observations of WASP-69b have the potential to establish a new paradigm for
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-69 literature; warm Neptune analog systems; K-dwarf exoplanet studies**

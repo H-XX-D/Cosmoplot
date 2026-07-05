@@ -691,5 +691,5 @@ The observable signatures—CO absorption, absence of water, TiO/VO opacity, and
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-19 discovery & characterization literature; comparative ultra-hot Jupiter systems**

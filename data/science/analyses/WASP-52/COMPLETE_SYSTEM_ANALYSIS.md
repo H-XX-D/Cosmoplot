@@ -169,7 +169,7 @@ The ionosphere is dominated by:
 
 ### Key Physical Characteristics
 
-1. **K-Dwarf Host Effect (β = -0.22):**
+1. **K-Dwarf Host Effect (weaker UV):**
    - Reduced UV flux compared to solar analogs
    - Altered photochemistry; water preservation enhanced
    - Lower ionospheric densities possible
@@ -231,5 +231,5 @@ The system bridges three important regimes: hot Jupiters around solar-type stars
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-52 literature; K-dwarf hot Jupiter context; comparative system studies**

@@ -18,8 +18,7 @@ HOST STAR PROPERTIES (M3V CLASS)
 - Spectral Type: M3V (mid-late M-dwarf)
 - Distance (Earth): ~73 pc (typical TESS discovery distance)
 - Rotation Period: ~30-50 days (M-dwarf typical)
-- Binding Energy Coupling Parameter β: +1.31 (M-dwarf positive coupling)
-  * This positive β means stellar photochemistry strengthens atmospheric
+  * This strong UV field means stellar photochemistry strengthens atmospheric
     opacity, STABILIZING H₂O and CH₄ clouds and producing abundant O₂ via
     photolysis, creating net photochemical opacity/retention advantage
   * M-dwarf positive feedback produces high CH₃/CH₄ abundance ratios
@@ -46,7 +45,7 @@ ATMOSPHERIC COMPOSITION (ESTIMATED)
 - Tertiary: CH₄ (5-15%, stable under M-dwarf photochemistry)
 - Trace: CO, CO₂, O₂ (photochemical production)
 - Stratospheric Haze: Organic aerosols and water clouds
-- Production Mechanism: M-dwarf positive β drives H₂O photolysis stability
+- Production Mechanism: the M-dwarf's strong UV field drives H₂O photolysis stability
 
 BINDING ENERGY ANALYSIS (M-Dwarf Environment)
 - Gravitational Binding Energy: Eg = 6.74×10⁹ J/kg
@@ -128,7 +127,7 @@ DISCOVERABLE ATMOSPHERIC FEATURES
 
 KEY SCIENTIFIC INTERESTS
 1. Sub-Neptune atmosphere composition around cooler M-dwarf
-2. M-dwarf positive β framework validation (enhanced H₂O/CH₄ stability)
+2. M-dwarf UV photochemistry validation (enhanced H₂O/CH₄ stability)
 3. Photochemistry in low-radiation environment
 4. Atmospheric erosion timescale at moderate insolation
 5. Formation history: primordial H₂/He or secondary accretion?
@@ -142,7 +141,7 @@ MISSION COMPATIBILITY
 
 SPECIAL NOTES
 - Coldest planet in analysis set: Extended atmosphere beneficial for JWST
-- M-dwarf positive coupling (β = +1.31) stabilizes photochemistry
+- enhanced M-dwarf UV photochemistry stabilizes photochemistry
 - Low escape rate favors volatiles despite young stellar age
 - Best candidate for detailed atmospheric characterization in this sample
 - TOI-1231 system: Clean environment, no nearby stellar companions known

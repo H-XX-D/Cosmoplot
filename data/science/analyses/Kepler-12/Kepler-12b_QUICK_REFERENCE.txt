@@ -45,7 +45,7 @@ Transit Chord:           ~220-280 km (H/R_p ≈ 0.28-0.36, LARGEST in sample!)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       600-1480 K
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   1.37 × 10⁸ J/kg (lowest mass, lowest BE in sample)
 Calculation Method:      BE = GM/R
@@ -170,10 +170,10 @@ FILES REFERENCED / DATA SOURCES
 ================================================================================
 Kepler-12 discovery paper: Fortney et al. 2011 (Kepler discovery paper)
 Hot Jupiter context: HAT-P-1b literature; similar system comparisons
-Binding Energy Framework: Standard exoplanet physics
+Atmospheric escape: standard exoplanet physics (Jeans + energy-limited)
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 Note: Kepler-12b is exceptional for scale height measurements and sensitivity
 ================================================================================

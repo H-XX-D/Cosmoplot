@@ -33,9 +33,9 @@ WASP-69b's current atmosphere represents the primordial or evolved state dependi
 - **Escape Status**: Actively eroding - significant atmospheric loss
 - **Mach Number** (at exobase): 0.7-1.5 (controls flow regime)
 
-### Binding Energy Framework and Escape Parameter
+### Atmospheric Escape Parameter (Jeans and energy-limited)
 
-The Binding Energy Framework provides the fundamental physics governing atmospheric retention. This framework calculates how easily stellar XUV radiation can strip hydrogen from the planetary atmosphere.
+Atmospheric retention is set by the standard balance between gravitational binding and thermal / XUV-driven escape, i.e. how easily stellar XUV radiation can strip hydrogen from the atmosphere.
 
 **Escape Parameter Calculations:**
 
@@ -47,13 +47,13 @@ Thermal velocity at 971 K: v_th = √(3k_B T/m_H) = **4.906 km/s**
 
 **Escape Parameter**: λ = v_esc / v_th = **6.3**
 
-This escape parameter is the critical diagnostic. When λ > 10, the planet is gravity-dominated and retains its atmosphere. When λ < 5, the planet is energy-limited and susceptible to photoevaporation.
+The physically meaningful thermal-escape diagnostic is the Jeans parameter lambda_J = (3/2)(v_esc/v_th)^2 = **59**. Jeans escape is negligible for lambda_J >~ 15 (thermally bound) and only becomes hydrodynamic blow-off for lambda_J <~ 2-3. Close-in giants therefore lose mass mainly through XUV-driven energy-limited escape, not thermal Jeans escape.
 
-**Binding Energy per H Atom**: E_b ≈ **2952489718448976297984 meV**
+**Escape energy per H atom**: E_b = 1/2 m_H v_esc^2 = **4939 meV** (4.94 eV)
 
-This binding energy directly opposes the thermal energy provided by stellar heating: E_th = 3k_B T ≈ 0 meV at exobase temperatures.
+For comparison the mean thermal energy is E_th = 3k_B T = 251 meV, far below the escape energy, confirming the atmosphere is thermally bound.
 
-WASP-69b's escape parameter of 6.3 indicates weak gravitational binding, meaning the planet's gravity cannot adequately retain its hydrogen envelope.
+WASP-69b's Jeans escape parameter is lambda_J = (3/2)(v_esc/v_th)^2 = 59 (>> 15), so thermal (Jeans) escape is negligible and the planet retains its hydrogen envelope; any loss proceeds through XUV-driven energy-limited escape and is modest over Gyr timescales.
 
 ---
 
@@ -84,7 +84,7 @@ The planet operates in a energy-limited photoevaporation regime. In this regime:
 $$\dot{M} = \epsilon \frac{F_{XUV}}{E_b} \times 4\pi R_p^2$$
 
 Substituting values:
-$$\dot{M} \approx 0.10 \times \frac{180 \times 6.24 \times 10^{11}}{{be:.0f}} \times 4\pi \times (0.996 R_J)^2$$
+$$\dot{M} \approx 0.10 \times \frac{180 \times 6.24 \times 10^{11}}{4.9} \times 4\pi \times (0.996 R_J)^2$$
 
 **Estimated Mass Loss Rate**: **0.15% of envelope per Gyr**
 
@@ -187,7 +187,7 @@ This classification indicates:
 
 ---
 
-## 5. Evolution Mechanism: The Binding Energy Framework Applied
+## 5. Evolution Mechanism: Energy-Limited Atmospheric Escape
 
 ### Physical Process: XUV Photoevaporation
 
@@ -210,12 +210,12 @@ Hydrogen atoms with sufficient velocity escape to space, removing 0.15% of the a
 
 ### Why Binding Energy Controls Evolution
 
-The binding energy E_b = 2952489718448976297984 meV represents the gravitational potential well depth per hydrogen atom. This determines how much thermal energy is needed to escape:
+The binding energy E_b = 1/2 m_H v_esc^2 ≈ 4939 meV represents the gravitational potential well depth per hydrogen atom. This determines how much thermal energy is needed to escape:
 
 **Energy Balance:**
-- Thermal energy available: E_th = 3k_B T_exobase ≈ 0 meV
-- Binding energy required: E_b = 2952489718448976297984 meV
-- Ratio: E_th/E_b = 0.000 (<<1 strongly bound)
+- Thermal energy available: E_th = 3k_B T ≈ 251 meV
+- Escape energy per H: E_b = 1/2 m_H v_esc^2 ≈ 4939 meV
+- Ratio: E_th/E_b = 0.051 (<<1 strongly bound)
 
 Lower binding energy (less dense planets) → faster evolution
 Higher binding energy (denser planets) → slower evolution

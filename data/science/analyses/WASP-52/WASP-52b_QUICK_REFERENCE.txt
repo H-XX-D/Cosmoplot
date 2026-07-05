@@ -45,7 +45,7 @@ Transit Chord:           ~80-100 km (H/R_p ≈ 0.14-0.17)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       500-1315 K (nightside to dayside equator)
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   1.96 × 10⁸ J/kg
 Calculation Method:      BE = GM/R = (6.67×10⁻¹¹ × 9.26×10²⁶)/(1.80×10⁷)
@@ -110,7 +110,7 @@ Signal-to-Noise Ratio:  Moderate-to-good (fainter star than solar analogs)
 COMPARATIVE CONTEXT
 ================================================================================
 Similar Systems:        WASP-31b, HAT-P-7b (both hot Jupiters)
-K-Dwarf Coupling:      β = -0.22 (strong atmospheric response to host)
+K-dwarf host:      weaker UV (strong atmospheric response to host)
 Key Distinction:        K-dwarf host significantly affects UV environment
 Temperature Bridge:     Bridge between ultra-hots and cool hot Jupiters
 
@@ -135,7 +135,7 @@ Challenges:
 
 Opportunities:
   - Ideal for detecting multiple molecular species simultaneously
-  - K-dwarf coupling allows testing host star effects
+  - the K-dwarf host allows testing host-star effects
   - Water detection more likely than in ultra-hots
   - Possible methane detection would be novel for hot Jupiter
   - Lower temperature allows testing of chemical models at intermediate regime
@@ -171,9 +171,9 @@ FILES REFERENCED / DATA SOURCES
 ================================================================================
 WASP-52 discovery paper: Hellier et al. 2012 (ApJ Letter)
 K-dwarf hot Jupiter context: Comparative HAT-P-7b, WASP-31b literature
-Binding Energy Framework: Standard exoplanet physics derivation
+Atmospheric escape: standard exoplanet physics (Jeans + energy-limited)
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 ================================================================================

@@ -18,8 +18,7 @@ HOST STAR PROPERTIES (M0V CLASS)
 - Spectral Type: M0V (early M-dwarf)
 - Distance (Earth): ~65 pc (typical TESS discovery distance)
 - Rotation Period: ~25-40 days (M0V typical)
-- Binding Energy Coupling Parameter β: +1.31 (M-dwarf positive coupling)
-  * Same positive β as M3V, reinforces photochemical H₂O/CH₄ stability
+  * Same strong UV as M3V, reinforces photochemical H₂O/CH₄ stability
   * Enhanced production of H₂O₂, O₂, and organic aerosols
   * Higher absolute radiation flux (0.087 L☉ vs 0.0326 L☉)
 
@@ -42,11 +41,11 @@ THERMAL PROPERTIES
 ATMOSPHERIC COMPOSITION (ESTIMATED)
 - Primary: H₂, He (bulk carriers)
 - Secondary: H₂O vapor (30-50%, but hotter cloud layer)
-- Tertiary: CH₄ (1-3%, enhanced by M-dwarf β)
+- Tertiary: CH₄ (1-3%, enhanced by M-dwarf UV)
 - Additional: SO₂ (0.1-1%, higher T enables chemistry)
 - Trace: CO, CO₂, H₂S (temperature-dependent)
 - Stratospheric Haze: Organic aerosols and sulfur compounds
-- Production Mechanism: M-dwarf positive β + high T chemistry
+- Production Mechanism: the M-dwarf's strong UV field + high T chemistry
 
 BINDING ENERGY ANALYSIS (M-Dwarf, Hot Neptune)
 - Gravitational Binding Energy: Eg = 1.82×10¹⁰ J/kg
@@ -129,7 +128,7 @@ DISCOVERABLE ATMOSPHERIC FEATURES
 
 KEY SCIENTIFIC INTERESTS
 1. Ultra-hot mini-Neptune atmosphere around M0V star
-2. M-dwarf positive β framework at higher temperatures
+2. M-dwarf UV photochemistry at higher temperatures
 3. Sulfur chemistry activation and abundance
 4. Atmospheric erosion timescale at high insolation (2.36 S₀)
 5. Comparison of hot and cool sub-Neptunes (TOI-1231b vs TOI-3757b)
@@ -144,7 +143,7 @@ MISSION COMPATIBILITY
 SPECIAL NOTES
 - Second hottest planet in analysis set: 759 K
 - Lowest density planet: 0.58 g/cm³ (extremely volatile-rich)
-- M-dwarf positive coupling (β = +1.31) at high-temperature regime
+- enhanced M-dwarf UV photochemistry at high-temperature regime
 - Unique SO₂ chemistry requires specialized analysis
 - Ultra-short period (3.55 days) enables frequent observations
 - Strong tidal forces: Possible tidal dissipation contribution to heat

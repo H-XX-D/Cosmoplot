@@ -102,9 +102,9 @@ The low core mass estimate suggests formation in a high-metallicity disk with ef
 - Helium (He): ~1-2% by volume (≈3-4% by mass)
 - Trace Species: CO, CO₂, H₂O (dissociated), TiO, VO, SO₂
 
-**Chemistry from Binding Energy Framework:**
+**Equilibrium chemistry:**
 
-The binding energy analysis reveals the equilibrium composition:
+Thermochemical equilibrium gives the composition:
 
 BE = GM/R = (6.67 × 10⁻¹¹ J·m/kg²) × (2.31 × 10²⁷ kg) / (2.00 × 10⁷ m)
    = 1.54 × 10¹⁴ J·m / (2.00 × 10⁷ m)
@@ -648,11 +648,11 @@ As the planet cools from initial ~3000 K to equilibrium 2113 K:
 
 ### 10.4 Conclusion
 
-WASP-19b represents an extreme laboratory for atmospheric physics and chemistry. At 2113 K, the planet occupies a regime where water dissociation is complete, hydrogen escape is maximal, and refractory oxides become observable opacities. The Binding Energy Framework analysis confirms that while thermal energy remains far below escape velocity (T/T_BE ≈ 0.01%), photochemical processes and stellar wind interaction efficiently remove atmospheric hydrogen.
+WASP-19b represents an extreme laboratory for atmospheric physics and chemistry. At 2113 K, the planet occupies a regime where water dissociation is complete, hydrogen escape is maximal, and refractory oxides become observable opacities. Standard escape physics confirms that while thermal energy remains far below escape velocity (T/T_BE ≈ 0.01%), photochemical processes and stellar wind interaction efficiently remove atmospheric hydrogen.
 
 Future JWST observations will refine our understanding of this extreme world, bridging the gap between hot Jupiters and ultra-hot Jupiters while providing crucial tests for atmospheric escape theory. WASP-19b remains among the most interesting exoplanets for studying the ultimate fate of gas giants in close orbits around solar-type stars.
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-19b discovery (Hebb et al. 2009); comparative systems (HAT-P-1b, WASP-76b literature)**

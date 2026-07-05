@@ -45,7 +45,7 @@ Transit Chord:           ~200-250 km (excellent for spectroscopy!)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       400-971 K (nightside to dayside equator)
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   1.61 × 10⁸ J/kg (lower mass, lower BE)
 Calculation Method:      BE = GM/R
@@ -110,7 +110,7 @@ Signal-to-Noise Ratio:  Excellent (large scale height, relatively bright star fo
 COMPARATIVE CONTEXT
 ================================================================================
 Similar Systems:        HAT-P-18b (cooler hot Jupiter), warm Neptunes
-K-Dwarf Coupling:      Very strong (low UV dramatically changes chemistry)
+K-dwarf host:      Very strong (low UV dramatically changes chemistry)
 Key Distinction:        Coolest analyzed; richest molecular chemistry expected
 Temperature Bridge:     Between hot Jupiters and cool Neptunes
 
@@ -171,10 +171,10 @@ FILES REFERENCED / DATA SOURCES
 ================================================================================
 WASP-69b discovery: Anderson et al. 2014
 K-dwarf warm Jupiter context: Warm Neptune literature
-Binding Energy Framework: Standard exoplanet physics
+Atmospheric escape: standard exoplanet physics (Jeans + energy-limited)
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 Note: WASP-69b is exceptional for detailed molecular characterization
 ================================================================================

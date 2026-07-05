@@ -213,5 +213,5 @@ Future observations may reveal direct evidence of atmospheric erosion and core e
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-103 literature; extreme atmosphere modeling; tidal evolution studies**

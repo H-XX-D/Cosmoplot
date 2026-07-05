@@ -17,10 +17,9 @@ HOST STAR PROPERTIES (M4V CLASS - EXTREME DWARF)
 - Radius: ~0.34 R☉ (SMALLEST star in sample)
 - Spectral Type: M4V (late M-dwarf, nearly brown dwarf)
 - Distance (Earth): ~70 pc (typical TESS distance)
-- Binding Energy Coupling Parameter β: +1.31 (M-dwarf)
-  * Same positive β as other M-dwarfs
+  * Same strong UV as other M-dwarfs
   * But lowest absolute photochemical flux (cool star)
-  * Unique combination: High β but low intensity
+  * Unique combination: UV-rich but low intensity
 
 PLANET BASIC PROPERTIES - THE OUTLIER
 - Mass: 343.0 M_E (1.08 M_J) - HEAVIEST in sample!
@@ -42,7 +41,7 @@ THERMAL PROPERTIES - THE PARADOX
 ATMOSPHERIC COMPOSITION (ESTIMATED)
 - Primary: H₂, He (bulk atmosphere, but compressed by high gravity)
 - Secondary: H₂O (condensed into cloud/ice layers, high pressure ice)
-- Tertiary: CH₄ (detectable, M-dwarf positive β enhances)
+- Tertiary: CH₄ (detectable, the M-dwarf's strong UV field enhances)
 - Trace: CO, CO₂, NH₃ (pressure-dependent chemistry)
 - Cloud/Aerosol Structure: Multi-layer clouds from H₂O + NH₃ condensation
 - Unusual Feature: High gravity compresses atmosphere, affects chemistry
@@ -129,7 +128,7 @@ DISCOVERABLE ATMOSPHERIC FEATURES
 
 KEY SCIENTIFIC INTERESTS
 1. Jupiter-mass planet on close orbit - formation mechanism puzzle
-2. M-dwarf positive β at high radiation (low-intensity but long-wavelength shift)
+2. the M-dwarf's strong UV field at high radiation (low-intensity but long-wavelength shift)
 3. Atmospheric compression effects from high gravity
 4. Paradoxical composition: Near-Jupiter mass on close orbit around M-dwarf
 5. Possible tidal dissipation contribution to heat
@@ -167,8 +166,8 @@ OBSERVATIONAL STATUS
 - Photometric Monitoring: Useful for activity
 - Current Age: Unknown (no rotation period constraint)
 
-FRAMEWORK IMPLICATIONS
-- Tests Binding Energy Framework at MAXIMUM binding (Eg/Et = 323)
+ESCAPE PHYSICS IMPLICATIONS
+- Extreme gravitational binding (Eg/Et = 323): thermal escape impossible
 - Directly opposite end from TOI-4010b (Eg/Et = 37.4)
 - Extreme mass and gravity compression effects
 - Photochemistry with high-density atmosphere (pressure effects)

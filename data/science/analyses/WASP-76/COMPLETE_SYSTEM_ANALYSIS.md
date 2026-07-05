@@ -191,5 +191,5 @@ Combined with its young age, extreme radius, and high hydrogen escape rate, WASP
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-76 literature; TiO/VO detection papers; F-dwarf exoplanet studies**

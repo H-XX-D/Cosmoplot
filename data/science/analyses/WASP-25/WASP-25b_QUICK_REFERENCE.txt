@@ -45,7 +45,7 @@ Transit Chord:           ~120-150 km (H/R_p ≈ 0.20-0.24)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       600-1450 K (day-side to stratosphere)
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   ~1.70-1.95 × 10⁸ J/kg (estimated)
 Calculation Method:      BE = GM/R (with M/R scaled from data)
@@ -168,9 +168,9 @@ FILES REFERENCED / DATA SOURCES
 ================================================================================
 WASP-25 system data: Limited; estimates based on WASP-19b and similar systems
 Comparative systems: WASP-19b, WASP-52b, HAT-P-18b literature
-Binding Energy Framework: Standard exoplanet physics derivation
+Atmospheric escape: standard exoplanet physics (Jeans + energy-limited)
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 ================================================================================

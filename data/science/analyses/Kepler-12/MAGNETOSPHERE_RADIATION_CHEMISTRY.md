@@ -302,5 +302,5 @@ JWST observations of Kepler-12b will likely establish new benchmarks for transmi
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: Kepler-12 literature; gas giant inflation and transmission spectroscopy studies**

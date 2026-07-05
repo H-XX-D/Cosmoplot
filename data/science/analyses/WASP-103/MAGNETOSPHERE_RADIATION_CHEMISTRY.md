@@ -334,5 +334,5 @@ Future observations of WASP-103b—particularly HST UV observations and long-ter
 
 ---
 
-**Analysis completed using Binding Energy Framework v2.1**
+**Analysis uses standard Jeans and energy-limited escape physics.**
 **References: WASP-103 literature; extreme atmosphere modeling; hydrodynamic escape theory**

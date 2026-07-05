@@ -16,15 +16,14 @@ TOI-1231 is an M3V (mid-to-late M-dwarf) red dwarf with the following fundamenta
 - Luminosity (L*): 0.0326 L☉ (3.26% Solar luminosity)
 - Surface Gravity (log g): 4.8-5.0 (typical for M-dwarf)
 
-**Binding Energy Coupling Parameter for M-Dwarf:**
-- β = +1.31 (M-dwarf spectral type coupling)
-- Sign Interpretation: POSITIVE coupling indicates that stellar extreme-ultraviolet (EUV) and soft X-ray photochemistry directly strengthens atmospheric molecular abundance through:
+**M-dwarf EUV / UV photochemistry:**
+- M-dwarf EUV / soft X-ray photochemistry stellar extreme-ultraviolet (EUV) and soft X-ray photochemistry directly strengthens atmospheric molecular abundance through:
   - Enhanced H₂O photolysis producing H₂O₂ and OH chains that stabilize methane
   - Direct production of atmospheric O₂ via H₂O breakdown creating opacity
   - Formation of secondary organic aerosols from CH₄ photochemistry
   - Net effect: Increases atmospheric scale height and cloud optical depth
 - Photochemical Efficiency: 34-42% of EUV photons drive molecule-producing reactions
-- This contrasts with hot-Jupiter K/G-dwarf systems where β is negative (photochemistry removes opacity)
+- This contrasts with hot-Jupiter K/G-dwarf systems, whose weaker UV fields tend to remove opacity
 
 **Stellar Activity and Magnetic Field:**
 - Rotation Period: ~35-50 days (estimated for M3V with R* = 0.44 R☉)
@@ -110,11 +109,11 @@ TOI-1231 appears to be a main-sequence M-dwarf with:
 
 ## 3. Binding Energy and Atmospheric Retention
 
-### Gravitational Binding Energy Framework
+### Gravitational vs Thermal Energy
 
 **Fundamental Energetics:**
 
-The Binding Energy Framework (BEF) evaluates atmospheric retention through the ratio of gravitational binding energy to thermal energy:
+Atmospheric retention is set by the ratio of gravitational binding energy to thermal energy (equivalently the Jeans parameter):
 
 - **Gravitational Binding Energy**: Eg = 3GMp/(5Rp) = 6.74×10⁹ J/kg
   - Represents the minimum energy required to completely unbind the atmosphere
@@ -192,8 +191,8 @@ For TOI-1231b:
 The composition is inferred from:
 1. **Formation Models**: Core-accretion formation in the nebula at 0.1288 AU implies cool temperatures, high water/volatile content
 2. **Spectral Features**: If transmission spectroscopy is available, H₂O and CH₄ are primary targets
-3. **M-Dwarf Photochemistry**: With β = +1.31, photochemical reactions favor:
-   - H₂O → H + OH (primary pathway, enhanced by β)
+3. **M-Dwarf Photochemistry**: With the M-dwarf's strong UV field, photochemical reactions favor:
+   - H₂O → H + OH (primary pathway, UV-enhanced)
    - OH + CH₄ → CH₃ + H₂O (chain reaction, M-dwarf promotes this)
    - Net result: High CH₃/CH₄ ratio despite moderate temperature
 
@@ -231,7 +230,7 @@ The composition is inferred from:
 ### Comparison to Other Sub-Neptunes
 
 TOI-1231b's composition is similar to but distinct from other sub-Neptunes:
-- **TOI-1695b** (K-dwarf, hotter): Higher CO, less H₂O (β = -0.22, photochemical loss)
+- **TOI-1695b** (K-dwarf, hotter): Higher CO, less H₂O (weaker UV, photochemical loss)
 - **TOI-3757b** (M0V, hotter): Richer composition with SO₂ addition (higher temp drives chemistry)
 - **K2-18b** (M2V, similar): Inferred similar composition, potential methane-rich atmosphere
 
@@ -370,7 +369,7 @@ For JWST observations, the relevant altitudes are 1-2 scale heights (660-1320 km
 
 ---
 
-## 7. Photochemistry (M-Dwarf Positive β Framework)
+## 7. Photochemistry (M-dwarf UV photochemistry)
 
 ### Temperature-Dependent Chemistry (T = 329.6 K)
 
@@ -382,7 +381,7 @@ For JWST observations, the relevant altitudes are 1-2 scale heights (660-1320 km
 - O₂ production: Moderate from H₂O breakdown
 - HCN formation: Very slow at this temperature
 
-### M-Dwarf Positive β Framework (β = +1.31)
+### M-dwarf UV photochemistry (strong M-dwarf UV)
 
 **Key Principle**: Stellar EUV/UV photochemistry STABILIZES atmospheric molecules rather than destroying them.
 
@@ -425,14 +424,14 @@ For JWST observations, the relevant altitudes are 1-2 scale heights (660-1320 km
 | H₂O + hν → OH + H | 2×10⁻¹⁰ | Main dissociation |
 | O + H₂O → OH + OH | 3×10⁻¹⁴ | Slow |
 
-**Carbon Chemistry (M-dwarf positive β drives this):**
+**Carbon Chemistry (the M-dwarf's strong UV field drives this):**
 
-| Reaction | Rate [cm³/s] | Effect | β Effect |
+| Reaction | Rate [cm³/s] | Effect | UV effect |
 |----------|--------------|--------|----------|
 | CH₄ + OH → CH₃ + H₂O | 1×10⁻¹² | Primary loss | Normal rate |
 | CH₃ + HO₂ → CH₄ + O₂ | 2×10⁻¹¹ | Recycling | ENHANCED |
 | CH₄ + hν → CH₃ + H | 5×10⁻¹¹ | Direct photolysis | Weak at 329.6K |
-| CH₃ + CH₃ → C₂H₆ | 3×10⁻¹¹ | Polymerization | Enhanced by β |
+| CH₃ + CH₃ → C₂H₆ | 3×10⁻¹¹ | Polymerization | UV-enhanced |
 
 ### Photochemical Timescales
 
@@ -649,8 +648,8 @@ TOI-1231b represents an ideal case study for understanding sub-Neptune atmospher
    - Understanding transition from icy to warm sub-Neptunes
    - Comparing to Solar System ice giants (Neptune ~72 K, but scaled to sub-Neptune size)
 
-2. **M-Dwarf Positive β Framework Validation**: With β = +1.31 for the M3V host star, TOI-1231b provides an excellent test case for the M-dwarf photochemistry framework:
-   - Prediction: Enhanced H₂O and CH₄ stability due to positive β coupling
+2. **M-dwarf UV photochemistry**: With strong M-dwarf UV for the M3V host star, TOI-1231b provides an excellent test case for the M-dwarf photochemistry framework:
+   - Prediction: Enhanced H₂O and CH₄ stability due to enhanced UV photochemistry
    - Observable: Transmission spectroscopy should show strong H₂O features with modest aerosol optical depth
    - Mechanism: Stellar photochemistry produces OH radicals that recycle back to H₂O (positive feedback)
 
@@ -668,12 +667,12 @@ TOI-1231b represents an ideal case study for understanding sub-Neptune atmospher
 
 **Within M-Dwarf Systems:**
 - TOI-1231b is cooler than TOI-674b (635 K) and TOI-3757b (759 K)
-- All three M-dwarf planets should show enhanced photochemistry via positive β coupling
-- TOI-1231b is most isolated from β effects due to lowest temperature
+- All three M-dwarf planets should show enhanced photochemistry via enhanced UV photochemistry
+- TOI-1231b is least affected by UV photochemistry due to lowest temperature
 
 **Within Sub-Neptune Class:**
 - TOI-1231b and TOI-4010b are both sub-Neptunes
-- TOI-4010b is much hotter (1441 K) and around K-dwarf (β = -0.22)
+- TOI-4010b is much hotter (1441 K) and around K-dwarf (weaker UV)
 - Temperature difference of >1100 K suggests vastly different photochemistries
 
 **Within Close-Orbiting Systems:**
@@ -683,7 +682,7 @@ TOI-1231b represents an ideal case study for understanding sub-Neptune atmospher
 
 ### Outstanding Questions
 
-1. **Does M-dwarf positive β actually enhance observable H₂O/CH₄?**
+1. **Does the M-dwarf's strong UV field actually enhance observable H₂O/CH₄?**
    - Prediction: Yes, transmission spectrum should show both H₂O and CH₄
    - Test: JWST observations comparing to K-dwarf sub-Neptunes
 
@@ -741,11 +740,11 @@ TOI-1231b's characterization will inform several key questions in exoplanet scie
 - **M-Dwarf Photochemistry**: Segura et al. (2005) on biological productivity around M-dwarfs
 - **Sub-Neptune Atmospheres**: Fulton & Petigura (2018) on the radius valley
 - **JWST Predictions**: Barstow et al. (2022) on transmission spectroscopy exoplanet forecasts
-- **Binding Energy Framework**: López-Morales & Seager (2007) on atmospheric escape
+- **Atmospheric escape**: standard energy-limited and Jeans escape treatment
 - **TOI-1231 Discovery**: Gemini/GMOS confirmation and radius measurements
 
 ---
 
 ## Conclusion
 
-TOI-1231b represents a unique opportunity to study sub-Neptune atmospheres in a cool, M-dwarf environment. Its moderate temperature (329.6 K), low surface gravity (1.33 m/s²), and secure atmospheric retention make it an ideal laboratory for understanding volatile-rich planetary atmospheres. With the Binding Energy Framework applied to the M-dwarf positive β coupling regime, we predict detectable H₂O and CH₄ features in transmission spectroscopy, along with aerosol signatures. Future JWST observations will test these predictions and illuminate the composition and evolution of sub-Neptune atmospheres around the most common stars in our Galaxy.
+TOI-1231b represents a unique opportunity to study sub-Neptune atmospheres in a cool, M-dwarf environment. Its moderate temperature (329.6 K), low surface gravity (1.33 m/s²), and secure atmospheric retention make it an ideal laboratory for understanding volatile-rich planetary atmospheres. Applying standard escape physics together with M-dwarf UV photochemistry, we predict detectable H₂O and CH₄ features in transmission spectroscopy, along with aerosol signatures. Future JWST observations will test these predictions and illuminate the composition and evolution of sub-Neptune atmospheres around the most common stars in our Galaxy.

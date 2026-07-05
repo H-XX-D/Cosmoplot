@@ -16,11 +16,10 @@ TOI-5205 is the faintest, least massive star in the entire analysis:
 - Luminosity (L*): 0.0194 L☉ (LOWEST, 1.94% solar)
 - Surface Gravity (log g): 5.1-5.3 (very compact)
 
-**Binding Energy Coupling Parameter:**
-- β = +1.31 (M-dwarf, same as other M-types)
+**M-dwarf EUV / UV photochemistry:**
 - But LOWEST INTENSITY EUV/UV due to minimal luminosity
 - Absolute Photochemical Flux: Lowest in sample
-- Relative β Effect: Same coupling, but flux-limited
+- Relative UV effect: same spectral hardness, but flux-limited
 
 ### XUV Radiation Environment (Limited)
 
@@ -113,7 +112,7 @@ Standard planetary formation (core-accretion) predicts:
 - H₂: 35-45% (much lower fraction than lower-mass planets due to density)
 - He: 10-15% (compressed)
 - H₂O: 5-20% (condensed into cloud layers, enriched)
-- CH₄: 0.5-2% (present, enhanced by M-dwarf β)
+- CH₄: 0.5-2% (present, enhanced by M-dwarf UV)
 - NH₃: 0.1-0.5% (pressure-dependent, likely present)
 - H₂S: <0.1% (trace, reducing agent)
 
@@ -192,18 +191,18 @@ This is the SMALLEST scale height in the sample due to:
 
 ---
 
-## 7. Photochemistry (M-Dwarf Positive β, Limited Intensity)
+## 7. Photochemistry (M-dwarf UV, limited intensity)
 
 ### Temperature and Star Classification
 
-At 737 K with M-dwarf β = +1.31, but LOW EUV intensity:
+At 737 K with strong M-dwarf UV, but LOW EUV intensity:
 
 **Photochemical Regime:**
 - Temperature: 737 K (PHOTOCHEMICALLY ACTIVE boundary)
 - Stellar EUV: WEAK (cool star, lowest in sample)
 - Result: Active photochemistry but at limited rates
 
-### M-Dwarf β = +1.31 Network (Limited Intensity)
+### M-dwarf UV photochemistry network (Limited Intensity)
 
 **Water Channel:**
 ```
@@ -216,7 +215,7 @@ Result: Moderate H₂O abundance (5-20%), enhanced by high density
 ```
 CH₄ + OH → CH₃ + H₂O [Slow at low flux]
 CH₃ + HO₂ → CH₄ + O₂ [Regeneration favorable]
-Result: CH₄ abundance 0.5-2% (enhanced by β, but flux-limited)
+Result: CH₄ abundance 0.5-2% (UV-enhanced, but flux-limited)
 ```
 
 **Pressure Effects:**
@@ -304,7 +303,7 @@ TOI-5205b is a **FORMATION PUZZLE and FRAMEWORK OUTLIER**:
 
 5. **JWST Target**: Good transmission spectroscopy candidate with moderate feature depths and distinctive composition signature.
 
-6. **Framework Validation**: TOI-5205b tests Binding Energy Framework at EXTREME binding limit. If atmosphere erodes despite maximum Eg/Et, model is wrong.
+6. **Escape-physics check**: TOI-5205b probes the extreme-binding limit (very high Eg/Et), where thermal escape is energetically impossible.
 
 **Scientific Value**: TOI-5205b bridges hot Jupiters (similar conditions) with M-dwarf hosting (unique metallicity/composition). Understanding its formation addresses fundamental questions about planetary migration and growth.
 

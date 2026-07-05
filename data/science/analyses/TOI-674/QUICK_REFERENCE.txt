@@ -16,8 +16,7 @@ HOST STAR PROPERTIES (M2V CLASS)
 - Luminosity: 0.0243 L☉
 - Radius: ~0.40 R☉
 - Spectral Type: M2V (intermediate M-dwarf)
-- Binding Energy Coupling Parameter β: +1.31 (M-dwarf)
-  * Same positive β as other M-dwarfs
+  * Same strong UV as other M-dwarfs
   * Enhances H₂O/CH₄ stability via photochemistry
   * Intermediate between M3V and M0V in terms of photochemical intensity
 
@@ -40,10 +39,10 @@ THERMAL PROPERTIES
 ATMOSPHERIC COMPOSITION (ESTIMATED)
 - Primary: H₂, He (bulk carriers)
 - Secondary: H₂O (30-50%, condensing cloud-former)
-- Tertiary: CH₄ (2-5%, elevated by M-dwarf β)
+- Tertiary: CH₄ (2-5%, elevated by M-dwarf UV)
 - Trace: CO, CO₂, SO₂ (0.01-1%, temperature-dependent)
 - Cloud/Haze: Water clouds dominant, organic aerosols secondary
-- Production: M-dwarf positive β enhances volatile stability
+- Production: the M-dwarf's strong UV field enhances volatile stability
 
 BINDING ENERGY ANALYSIS (M-Dwarf, Intermediate-Hot)
 - Gravitational Binding Energy: Eg = 1.17×10¹⁰ J/kg
@@ -123,7 +122,7 @@ DISCOVERABLE ATMOSPHERIC FEATURES
 
 KEY SCIENTIFIC INTERESTS
 1. Intermediate-temperature Neptune-like around M2V star
-2. M-dwarf positive β framework (moderate intensity test)
+2. M-dwarf UV photochemistry (moderate intensity test)
 3. Comparison to TOI-1231b (cooler) and TOI-3757b (hotter)
 4. Bridge between sub-Neptune and full Neptune
 5. JWST accessibility (good SNR expected)
@@ -137,7 +136,7 @@ MISSION COMPATIBILITY
 SPECIAL NOTES
 - Intermediate in many parameters (bridges cooler and hotter systems)
 - Very low gravity (8.7% Earth) enables large scale height
-- M-dwarf positive β at intermediate radiation intensity
+- the M-dwarf's strong UV field at intermediate radiation intensity
 - Frequent transits (1.98 day period) enable multiple observations
 - Good JWST target with expected strong H₂O/CH₄ detections
 

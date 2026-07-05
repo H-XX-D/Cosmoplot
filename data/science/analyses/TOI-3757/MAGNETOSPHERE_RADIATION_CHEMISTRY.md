@@ -91,7 +91,7 @@ At 759 K, the atmosphere transitions from chemically constrained to chemically a
 - H₂: 68-72%
 - He: 22-28%
 - H₂O: 0.5-2% (condensing only at cloud base)
-- CH₄: 1-3% (enhanced by photochemistry and M-dwarf β)
+- CH₄: 1-3% (enhanced by M-dwarf UV photochemistry)
 - SO₂: 0.3-1% (NEW - only at high T!)
 - H₂S: 0.01-0.1% (reducing agent)
 
@@ -131,9 +131,9 @@ At 759 K, TOI-3757b is in the **PHOTOCHEMICALLY ACTIVE** boundary:
 - Radical species: Milliseconds-to-seconds lifetimes
 - Kinetic vs Thermochemical: Kinetically controlled (not equilibrium)
 
-### M-Dwarf Positive β at High Temperature
+### M-dwarf UV photochemistry at high temperature
 
-**Same β = +1.31, but photochemical branching is more complex:**
+**Same strong M-dwarf UV, but photochemical branching is more complex:**
 
 **Water-Hydroxyl Cycle (Primary):**
 ```
@@ -377,7 +377,7 @@ These sulfur ions may contribute to observed SO₂ abundance.
 
 TOI-3757b will provide:
 1. **First observational proof of high-T sulfur chemistry** in exoplanet atmosphere
-2. **Validation of M-dwarf β = +1.31** at temperature extreme (759 K)
+2. **Validation of M-dwarf strong M-dwarf UV** at temperature extreme (759 K)
 3. **Benchmark for hot mini-Neptune models** (atmosphere composition)
 4. **Test of photochemistry kinetics** across 300K-1400K range
 
@@ -391,6 +391,6 @@ TOI-3757b's radiation environment, photochemistry, and escape represent a **CRIT
 - **Photochemistry**: Activates sulfur chemistry (SO₂ formation)
 - **Escape**: 5.7× faster hydrogen loss, but still secure on Gyr timescales
 - **Observable**: Unique SO₂ feature at 7.3 μm not present in cooler planets
-- **Significance**: Validates photochemistry transition models and M-dwarf β framework
+- **Significance**: Validates photochemistry transition models and M-dwarf UV-photochemistry picture
 
 This planet is a **CRITICAL CALIBRATION POINT** for understanding exoplanet atmospheric chemistry across temperature ranges relevant to hot mini-Neptunes around M-dwarfs.

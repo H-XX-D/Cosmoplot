@@ -45,7 +45,7 @@ Transit Chord:           ~80-120 km (H/R_p ≈ 0.11-0.16)
 Homopause Altitude:      ~0.1-1 mbar level
 Temperature Range:       1000-2508 K (extreme day/night asymmetry)
 
-BINDING ENERGY FRAMEWORK
+ATMOSPHERIC ESCAPE (JEANS + ENERGY-LIMITED)
 ================================================================================
 Binding Energy (J/kg):   1.77 × 10⁸ J/kg
 Calculation Method:      BE = GM/R
@@ -174,6 +174,6 @@ Extreme atmosphere models: Recent ultra-hot atmospheric chemistry literature
 
 ================================================================================
 Last Updated: Analysis Date 2026
-Framework Version: Binding Energy Framework v2.1
+Method: standard Jeans + energy-limited escape
 NOTE: WASP-103b represents extreme conditions at limits of hot Jupiter regime
 ================================================================================
