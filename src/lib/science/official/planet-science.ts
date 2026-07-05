@@ -9,7 +9,8 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { deriveRetentionAudit, inferInteriorStructure, propagateCatalogPlanet } from "@/lib/science/physics";
+import { deriveRetentionAudit, inferAtmosphereFromTransmission, inferInteriorStructure, propagateCatalogPlanet } from "@/lib/science/physics";
+import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
 import { measurementBounds } from "@/lib/utils";
 import type {
   AtmosphereEvidence,
@@ -1104,6 +1105,7 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
       stellarRadiusSolar: 1,
     }),
     interior: inferInteriorStructure({ massEarth: 1, radiusEarth: 1, densityGcc: 5.51 }),
+    transmission: null,
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1356,6 +1358,17 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     stellarRadiusSolar,
   });
   const interior = inferInteriorStructure({ massEarth, radiusEarth, densityGcc });
+  const transmissionFeature = await getTransmissionFeature(row?.pl_name ?? planetName);
+  const transmission = transmissionFeature
+    ? inferAtmosphereFromTransmission({
+        featureAmplitudePpm: transmissionFeature.amplitudePpm,
+        equilibriumK,
+        massEarth,
+        radiusEarth,
+        stellarRadiusSolar,
+        densityGcc,
+      })
+    : null;
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1410,6 +1423,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     propagation,
     retention,
     interior,
+    transmission,
     references: mergedReferences,
     sources: [
       archiveSource,

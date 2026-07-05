@@ -147,6 +147,20 @@ export type CatalogPropagation = {
   oneScaleHeightSignalPpm: PropagatedInterval;
 };
 
+export type TransmissionInference = {
+  framework: "scale-height-transmission";
+  featureAmplitudePpm: number;
+  scaleHeightsAssumed: number;
+  impliedScaleHeightKm: number;
+  impliedMeanMolecularWeightAmu: number;
+  atmosphereClass:
+    | "hydrogen-helium-primary"
+    | "intermediate"
+    | "high-mean-weight-secondary"
+    | "very-heavy-or-cloud-muted";
+  notes: string[];
+};
+
 export type PlanetInteriorStructure = {
   framework: "mass-radius-composition";
   bulkDensityGcc: number | null;
@@ -306,6 +320,7 @@ export type PlanetScienceBundle = {
   atmosphere: AtmosphereEvidence;
   propagation: CatalogPropagation;
   interior: PlanetInteriorStructure;
+  transmission: TransmissionInference | null;
   retention: RetentionAudit;
   references: Array<{
     label: string;

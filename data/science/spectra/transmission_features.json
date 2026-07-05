@@ -1,0 +1,712 @@
+{
+ "55 Cancri e": {
+  "amplitudePpm": 10.0,
+  "maxDepthPpm": 52.0,
+  "maxWavelengthUm": 10.0,
+  "minDepthPpm": 42.0,
+  "minWavelengthUm": 4.3,
+  "molecules": [
+   "CO2?",
+   "continuum"
+  ],
+  "nPoints": 5
+ },
+ "Earth": {
+  "amplitudePpm": 30.0,
+  "maxDepthPpm": 45.0,
+  "maxWavelengthUm": 15.0,
+  "minDepthPpm": 15.0,
+  "minWavelengthUm": 0.76,
+  "molecules": [
+   "CO2",
+   "H2O",
+   "O2",
+   "O3"
+  ],
+  "nPoints": 6
+ },
+ "HAT-P-1 b": {
+  "amplitudePpm": 15.4,
+  "maxDepthPpm": 60.9,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-12 b": {
+  "amplitudePpm": 73.8,
+  "maxDepthPpm": 256.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 182.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-13 b": {
+  "amplitudePpm": 17.9,
+  "maxDepthPpm": 61.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 43.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-14 b": {
+  "amplitudePpm": 16.2,
+  "maxDepthPpm": 62.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.8,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-18 b": {
+  "amplitudePpm": 47.1,
+  "maxDepthPpm": 233.5,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 186.4,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-26 b": {
+  "amplitudePpm": 61.0,
+  "maxDepthPpm": 242.5,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 181.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-30 b": {
+  "amplitudePpm": 19.8,
+  "maxDepthPpm": 64.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 44.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-32 b": {
+  "amplitudePpm": 13.3,
+  "maxDepthPpm": 57.4,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 44.1,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HAT-P-65 b": {
+  "amplitudePpm": 12.5,
+  "maxDepthPpm": 58.8,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 46.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "HD 189733 b": {
+  "amplitudePpm": 60.0,
+  "maxDepthPpm": 165.0,
+  "maxWavelengthUm": 6.3,
+  "minDepthPpm": 105.0,
+  "minWavelengthUm": 0.4,
+  "molecules": [
+   "CO2",
+   "H2O",
+   "K",
+   "Na",
+   "Rayleigh"
+  ],
+  "nPoints": 8
+ },
+ "Jupiter": {
+  "amplitudePpm": 40.0,
+  "maxDepthPpm": 80.0,
+  "maxWavelengthUm": 10.5,
+  "minDepthPpm": 40.0,
+  "minWavelengthUm": 1.7,
+  "molecules": [
+   "CH4",
+   "NH3",
+   "PH3"
+  ],
+  "nPoints": 6
+ },
+ "K2-141 b": {
+  "amplitudePpm": 148.8,
+  "maxDepthPpm": 586.7,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 437.9,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "K2-18 b": {
+  "amplitudePpm": 85.0,
+  "maxDepthPpm": 185.0,
+  "maxWavelengthUm": 4.3,
+  "minDepthPpm": 100.0,
+  "minWavelengthUm": 1.15,
+  "molecules": [
+   "CH4",
+   "CO2",
+   "DMS?"
+  ],
+  "nPoints": 8
+ },
+ "KELT-20 b": {
+  "amplitudePpm": 12.9,
+  "maxDepthPpm": 59.3,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 46.4,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "KELT-7 b": {
+  "amplitudePpm": 14.7,
+  "maxDepthPpm": 61.9,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 47.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "KELT-8 b": {
+  "amplitudePpm": 13.3,
+  "maxDepthPpm": 57.8,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 44.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "KELT-9 b": {
+  "amplitudePpm": 12.3,
+  "maxDepthPpm": 59.8,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 47.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "Kepler-12 b": {
+  "amplitudePpm": 13.2,
+  "maxDepthPpm": 59.2,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 46.0,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Kepler-167 e": {
+  "amplitudePpm": 17.6,
+  "maxDepthPpm": 60.6,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 43.0,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Kepler-51 b": {
+  "amplitudePpm": 176.4,
+  "maxDepthPpm": 625.7,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 449.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Kepler-51 d": {
+  "amplitudePpm": 133.8,
+  "maxDepthPpm": 578.4,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 444.6,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Mars": {
+  "amplitudePpm": 30.0,
+  "maxDepthPpm": 70.0,
+  "maxWavelengthUm": 15.0,
+  "minDepthPpm": 40.0,
+  "minWavelengthUm": 2.7,
+  "molecules": [
+   "CO2"
+  ],
+  "nPoints": 3
+ },
+ "NGTS-10 b": {
+  "amplitudePpm": 14.4,
+  "maxDepthPpm": 61.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 46.6,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Neptune": {
+  "amplitudePpm": 27.0,
+  "maxDepthPpm": 92.0,
+  "maxWavelengthUm": 7.7,
+  "minDepthPpm": 65.0,
+  "minWavelengthUm": 1.7,
+  "molecules": [
+   "CH4"
+  ],
+  "nPoints": 4
+ },
+ "Saturn": {
+  "amplitudePpm": 35.0,
+  "maxDepthPpm": 85.0,
+  "maxWavelengthUm": 10.5,
+  "minDepthPpm": 50.0,
+  "minWavelengthUm": 1.7,
+  "molecules": [
+   "CH4",
+   "NH3"
+  ],
+  "nPoints": 5
+ },
+ "TOI-1231 b": {
+  "amplitudePpm": 44.4,
+  "maxDepthPpm": 233.5,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 189.1,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-1468 b": {
+  "amplitudePpm": 161.6,
+  "maxDepthPpm": 598.2,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 436.6,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-178 b": {
+  "amplitudePpm": 193.5,
+  "maxDepthPpm": 633.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 439.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-270 b": {
+  "amplitudePpm": 124.1,
+  "maxDepthPpm": 573.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 448.9,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-270 c": {
+  "amplitudePpm": 118.0,
+  "maxDepthPpm": 579.4,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 461.4,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-3757 b": {
+  "amplitudePpm": 72.8,
+  "maxDepthPpm": 243.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 170.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-4010 b": {
+  "amplitudePpm": 55.2,
+  "maxDepthPpm": 241.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 185.9,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-5205 b": {
+  "amplitudePpm": 13.7,
+  "maxDepthPpm": 59.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.3,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-674 b": {
+  "amplitudePpm": 45.6,
+  "maxDepthPpm": 224.8,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 179.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TOI-849 b": {
+  "amplitudePpm": 51.9,
+  "maxDepthPpm": 230.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 178.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "TrES-4 b": {
+  "amplitudePpm": 13.0,
+  "maxDepthPpm": 58.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.1,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "Uranus": {
+  "amplitudePpm": 30.0,
+  "maxDepthPpm": 90.0,
+  "maxWavelengthUm": 7.7,
+  "minDepthPpm": 60.0,
+  "minWavelengthUm": 1.7,
+  "molecules": [
+   "CH4"
+  ],
+  "nPoints": 4
+ },
+ "Venus": {
+  "amplitudePpm": 25.0,
+  "maxDepthPpm": 95.0,
+  "maxWavelengthUm": 15.0,
+  "minDepthPpm": 70.0,
+  "minWavelengthUm": 2.3,
+  "molecules": [
+   "CO",
+   "CO2",
+   "SO2"
+  ],
+  "nPoints": 4
+ },
+ "WASP-103 b": {
+  "amplitudePpm": 14.9,
+  "maxDepthPpm": 60.7,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.8,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "WASP-107 b": {
+  "amplitudePpm": 145.0,
+  "maxDepthPpm": 215.0,
+  "maxWavelengthUm": 10.0,
+  "minDepthPpm": 70.0,
+  "minWavelengthUm": 1.4,
+  "molecules": [
+   "CO",
+   "CO2",
+   "H2O",
+   "SO2",
+   "Silicate"
+  ],
+  "nPoints": 10
+ },
+ "WASP-12 b": {
+  "amplitudePpm": 132.2,
+  "maxDepthPpm": 575.2,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 443.0,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-121 b": {
+  "amplitudePpm": 40.0,
+  "maxDepthPpm": 100.0,
+  "maxWavelengthUm": 4.6,
+  "minDepthPpm": 60.0,
+  "minWavelengthUm": 0.39,
+  "molecules": [
+   "CO",
+   "Cr",
+   "Fe",
+   "Mg",
+   "TiO",
+   "V",
+   "VO"
+  ],
+  "nPoints": 10
+ },
+ "WASP-127 b": {
+  "amplitudePpm": 57.6,
+  "maxDepthPpm": 239.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 181.4,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-17 b": {
+  "amplitudePpm": 15.1,
+  "maxDepthPpm": 60.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.0,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-18 b": {
+  "amplitudePpm": 16.7,
+  "maxDepthPpm": 62.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.4,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "WASP-19 b": {
+  "amplitudePpm": 14.5,
+  "maxDepthPpm": 59.7,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "WASP-25 b": {
+  "amplitudePpm": 13.0,
+  "maxDepthPpm": 58.5,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-39 b": {
+  "amplitudePpm": 100.0,
+  "maxDepthPpm": 130.0,
+  "maxWavelengthUm": 8.7,
+  "minDepthPpm": 30.0,
+  "minWavelengthUm": 0.589,
+  "molecules": [
+   "CO",
+   "CO2",
+   "H2O",
+   "K",
+   "Na",
+   "SO2"
+  ],
+  "nPoints": 12
+ },
+ "WASP-43 b": {
+  "amplitudePpm": 20.2,
+  "maxDepthPpm": 64.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 43.8,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-52 b": {
+  "amplitudePpm": 12.7,
+  "maxDepthPpm": 57.9,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-69 b": {
+  "amplitudePpm": 55.6,
+  "maxDepthPpm": 234.1,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 178.5,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "CH4",
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ },
+ "WASP-76 b": {
+  "amplitudePpm": 11.8,
+  "maxDepthPpm": 58.0,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 46.2,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2",
+   "TiO"
+  ],
+  "nPoints": 22
+ },
+ "WASP-80 b": {
+  "amplitudePpm": 20.0,
+  "maxDepthPpm": 80.0,
+  "maxWavelengthUm": 4.3,
+  "minDepthPpm": 60.0,
+  "minWavelengthUm": 1.4,
+  "molecules": [
+   "CH4",
+   "CO2",
+   "H2O"
+  ],
+  "nPoints": 4
+ },
+ "WASP-96 b": {
+  "amplitudePpm": 11.9,
+  "maxDepthPpm": 57.8,
+  "maxWavelengthUm": 12.0,
+  "minDepthPpm": 45.9,
+  "minWavelengthUm": 0.8,
+  "molecules": [
+   "H2O",
+   "SO2"
+  ],
+  "nPoints": 22
+ }
+}

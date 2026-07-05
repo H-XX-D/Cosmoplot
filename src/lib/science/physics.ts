@@ -4,6 +4,7 @@ import type {
   PlanetInteriorStructure,
   PlanetMagnetosphere,
   RetentionAudit,
+  TransmissionInference,
 } from "@/lib/science/types";
 
 const EARTH_FLUX_WM2 = 1361;
@@ -386,6 +387,66 @@ export function propagateCatalogPlanet(input: PropagateInput): CatalogPropagatio
     fluxEarthMultiple: summarizeInterval(fluxSamples),
     scaleHeightKm: summarizeInterval(scaleHeightSamples),
     oneScaleHeightSignalPpm: summarizeInterval(scaleSignalSamples),
+  };
+}
+
+// Atmosphere inference from a transmission spectrum, using scale-height physics
+// run backward. The peak-to-trough amplitude of the molecular features is
+// dDepth ~ N_H * (2 * H * R_p / R_star^2), where H = kT/(mu*g) is the scale
+// height and N_H is the number of scale heights a strong band spans (~2 here).
+// Inverting gives H, then the mean molecular weight mu, which separates a light
+// H/He primary atmosphere (large H, deep features) from a heavy secondary
+// atmosphere or a flat/cloudy one (small H, muted features). This is a
+// scale-height retrieval, not a full Bayesian radiative-transfer retrieval.
+export function inferAtmosphereFromTransmission(input: {
+  featureAmplitudePpm: number | null;
+  equilibriumK: number | null;
+  massEarth: number | null;
+  radiusEarth: number | null;
+  stellarRadiusSolar: number | null;
+  densityGcc: number | null;
+}): TransmissionInference | null {
+  const { featureAmplitudePpm, equilibriumK, massEarth, radiusEarth, stellarRadiusSolar } = input;
+  if (!featureAmplitudePpm || featureAmplitudePpm <= 0 || !equilibriumK || !massEarth || !radiusEarth || !stellarRadiusSolar) {
+    return null;
+  }
+  const gravity = deriveSurfaceGravityMs2(massEarth, radiusEarth);
+  if (!gravity) return null;
+
+  const SCALE_HEIGHTS_PER_BAND = 2;
+  const rpM = radiusEarth * R_EARTH;
+  const rsM = stellarRadiusSolar * R_SUN;
+  const amplitude = featureAmplitudePpm * 1e-6;
+  // H = dDepth/N_H * R_star^2 / (2 R_p)
+  const impliedScaleHeightM = (amplitude / SCALE_HEIGHTS_PER_BAND) * (rsM * rsM) / (2 * rpM);
+  if (!Number.isFinite(impliedScaleHeightM) || impliedScaleHeightM <= 0) return null;
+  // mu = k T / (H g)
+  const muKg = (KB * equilibriumK) / (impliedScaleHeightM * gravity);
+  const meanMolecularWeightAmu = muKg / AMU;
+
+  let atmosphereClass: TransmissionInference["atmosphereClass"];
+  if (meanMolecularWeightAmu < 6) atmosphereClass = "hydrogen-helium-primary";
+  else if (meanMolecularWeightAmu < 15) atmosphereClass = "intermediate";
+  else if (meanMolecularWeightAmu < 35) atmosphereClass = "high-mean-weight-secondary";
+  else atmosphereClass = "very-heavy-or-cloud-muted";
+
+  const notes = [
+    "Mean molecular weight is inferred by inverting scale-height physics on the feature amplitude, assuming a strong band spans about two scale heights; it is a screen, not a full radiative-transfer retrieval.",
+  ];
+  if (atmosphereClass === "hydrogen-helium-primary") {
+    notes.push("Large features at this gravity imply a low mean molecular weight, consistent with a hydrogen/helium-dominated primary envelope.");
+  } else if (atmosphereClass === "very-heavy-or-cloud-muted") {
+    notes.push("Muted features imply a high mean molecular weight or aerosols/clouds flattening the spectrum; the two are degenerate from amplitude alone.");
+  }
+
+  return {
+    framework: "scale-height-transmission",
+    featureAmplitudePpm,
+    scaleHeightsAssumed: SCALE_HEIGHTS_PER_BAND,
+    impliedScaleHeightKm: impliedScaleHeightM / 1000,
+    impliedMeanMolecularWeightAmu: meanMolecularWeightAmu,
+    atmosphereClass,
+    notes,
   };
 }
 
