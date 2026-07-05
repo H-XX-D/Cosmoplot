@@ -443,6 +443,8 @@ export type UniverseSystem = {
   planetCount: number;
   planets: UniversePlanet[];
   localAnalysis?: LocalAnalysisSummary | null;
+  researched?: boolean;
+  researchSummary?: string | null;
   provenance: SourceDescriptor[];
 };
 

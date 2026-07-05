@@ -1,0 +1,150 @@
+================================================================================
+                         TOI-674b QUICK REFERENCE
+                    Neptune-like around M2V Star
+================================================================================
+
+SYSTEM DESIGNATION & DISCOVERY
+- TOI Designation: TOI-674b
+- Classification: Neptune-like (H₂O/CH₄/SO₂)
+- Host Star: M2V Red Dwarf
+- Discovery Method: TESS Transit Photometry
+- System Age: ~1-5 Gyr (typical field star)
+
+HOST STAR PROPERTIES (M2V CLASS)
+- Effective Temperature: 3514 K
+- Mass: 0.42 M☉
+- Luminosity: 0.0243 L☉
+- Radius: ~0.40 R☉
+- Spectral Type: M2V (intermediate M-dwarf)
+- Binding Energy Coupling Parameter β: +1.31 (M-dwarf)
+  * Same positive β as other M-dwarfs
+  * Enhances H₂O/CH₄ stability via photochemistry
+  * Intermediate between M3V and M0V in terms of photochemical intensity
+
+PLANET BASIC PROPERTIES
+- Mass: 23.6 M_E (0.0743 M_J)
+- Radius: 5.25 R_E (0.468 R_J)
+- Mean Density: 0.86 g/cm³ (sub-Neptune, volatile-rich)
+- Surface Gravity: 0.85 m/s² (8.7% Earth)
+- Escape Velocity: 4.32 km/s (38.5% Earth)
+- Mass Ratio (M_p/M_*): 1.12×10⁻⁴ (moderate coupling)
+
+THERMAL PROPERTIES
+- Equilibrium Temperature: 635 K (362°C)
+- Orbital Semi-major Axis: 0.025 AU
+- Orbital Period: 1.98 days
+- Stellar Flux Received: 570 W/m² (0.42 S₀)
+- Bond Albedo: ~0.30 (modest albedo, water clouds)
+- Effective Temperature (radiative): 634 K
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+- Primary: H₂, He (bulk carriers)
+- Secondary: H₂O (30-50%, condensing cloud-former)
+- Tertiary: CH₄ (2-5%, elevated by M-dwarf β)
+- Trace: CO, CO₂, SO₂ (0.01-1%, temperature-dependent)
+- Cloud/Haze: Water clouds dominant, organic aerosols secondary
+- Production: M-dwarf positive β enhances volatile stability
+
+BINDING ENERGY ANALYSIS (M-Dwarf, Intermediate-Hot)
+- Gravitational Binding Energy: Eg = 1.17×10¹⁰ J/kg
+- Thermal Energy (mean): Et = 6.87×10⁷ J/kg (at 635 K)
+- Binding Energy Ratio: Eg/Et = 170 (strongly bound)
+- XUV Energy Input (stellar): 1.2×10⁻¹ W/m²
+- Molecular Dissociation Rate: ~2.1×10²⁴ molecules/s
+- H Escape Flux: ~4.1×10⁸ H atoms/(cm² s)
+- Atmospheric Retention Index: 97.2% (excellent retention)
+- Atmospheric Lifetime: ~90 Gyr (very secure)
+
+ATMOSPHERE SCALING PARAMETERS
+- Scale Height: 1050 km (VERY LARGE, low gravity effect)
+- Photochemical Timescale: 450 hours (moderate)
+- Thermospheric Temperature: 1100 K
+- Vertical Structure: Well-defined with cloud layers
+- Convective Timescale: 7.5 hours
+
+EXTREME RECORDS RANKING (Among 29 TOI/HAT-P Planets)
+Rank 6 (Warm):           TOI-674b (635 K)
+Rank 3 (Low Density):    TOI-674b (0.86 g/cm³)
+Rank 2 (Slowest Escape): TOI-674b (4.1×10⁸ H atoms/cm² s)
+Rank 18 (Mid-range):     TOI-674b (intermediate in most metrics)
+
+COMPARATIVE REFERENCE SCALES
+vs. Jupiter:
+- Mass Ratio: 0.0743 (1/13.5 Jupiter mass)
+- Radius Ratio: 0.468 (1/2.1 Jupiter radius)
+- Density Ratio: 0.647 (less dense than Jupiter)
+- Surface Gravity Ratio: 0.087
+
+vs. Earth:
+- Mass Ratio: 23.6 (super-Earth scale)
+- Radius Ratio: 5.25 (5.25× Earth diameter)
+- Density Ratio: 0.155 (much lighter than Earth)
+- Gravity Ratio: 0.087 (very low)
+- Equilibrium Temp Ratio: 2.32 (warmer than Earth)
+
+vs. Neptune:
+- Mass Ratio: 0.0743 (1/13.5 Neptune mass)
+- Radius Ratio: 0.468 (similar to Neptune's ice/water layer)
+- Density Ratio: 0.524 (less dense than Neptune)
+- Type: Mini-Neptune, intermediate between sub-Neptune and Neptune
+
+ORBITAL CONFIGURATION
+- Semi-major Axis: 0.025 AU (3.74 million km)
+- Orbital Period: 1.98 days
+- Insolation: 0.42 Earth solar constants
+- Climate Zone: Warm sub-Neptune
+- Tidal Evolution: Moderate circularization, ~3 Gyr timescale
+- Hill Sphere: 0.000703 AU (2.7× planet radius)
+
+JWST OBSERVATION PREDICTIONS
+Transmission Spectroscopy Capabilities:
+- Transit Depth (H₂O feature): 1.0-1.5% (good detectability)
+- Expected Signal-to-Noise: 35-55 (λ = 1.4 μm)
+- CH₄ Feature Depth: 0.7-1.0% (moderate)
+- Scale Height: 1050 km (very large, aids detection)
+- Recommended Filters: NIRSpec prism (0.6-5.3 μm)
+- Optimal Observation Windows: 3-4 transits (2-day spacing)
+- Estimated Integration Time: 10-12 hours
+- Precision Achievable: ±0.15% per spectral bin
+
+Emission Spectroscopy Predictions:
+- Day-side Temperature: 710 K
+- Thermal Emission (11 μm): 7.8×10⁻⁹ W/(m² sr μm)
+- Expected S/N: 12-18 (good for secondary eclipse)
+- Best Observational Targets: Water and methane bands
+
+DISCOVERABLE ATMOSPHERIC FEATURES
+- Water absorption (main feature)
+- Methane detection (secondary)
+- Haze/aerosol signature
+- Large scale height signature
+- Thermal inversion
+- Temperature profile constraints
+
+KEY SCIENTIFIC INTERESTS
+1. Intermediate-temperature Neptune-like around M2V star
+2. M-dwarf positive β framework (moderate intensity test)
+3. Comparison to TOI-1231b (cooler) and TOI-3757b (hotter)
+4. Bridge between sub-Neptune and full Neptune
+5. JWST accessibility (good SNR expected)
+
+MISSION COMPATIBILITY
+- Recommended: JWST NIRSpec (primary)
+- Alternative: HST WFC3 (limited)
+- Ground-based: High-resolution spectroscopy possible
+- Future: ELT spectroscopy
+
+SPECIAL NOTES
+- Intermediate in many parameters (bridges cooler and hotter systems)
+- Very low gravity (8.7% Earth) enables large scale height
+- M-dwarf positive β at intermediate radiation intensity
+- Frequent transits (1.98 day period) enable multiple observations
+- Good JWST target with expected strong H₂O/CH₄ detections
+
+OBSERVATIONAL STATUS
+- TESS Primary Mission: Completed detection
+- Follow-up Spectroscopy: Requires JWST
+- Radial Velocity: Moderately challenging
+- Current Age: Unknown
+
+================================================================================

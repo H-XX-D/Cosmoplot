@@ -1,0 +1,176 @@
+================================================================================
+                    WASP-25b QUICK REFERENCE GUIDE
+                    Hot Jupiter (1400-1500 K, Estimated)
+================================================================================
+
+SYSTEM PROPERTIES
+================================================================================
+Planet Name:             WASP-25b
+System Type:             Hot Jupiter around Solar-type host
+Temperature Profile:     Hot Jupiter regime (intermediate hot)
+Discovery Status:        Known system; limited characterization available
+
+PLANETARY PARAMETERS
+================================================================================
+Mass (M_E):              ~200-250 (estimated, ≈ 0.63-0.79 M_J)
+Radius (R_E):            ~16 (estimated, ≈ 1.42 R_J)
+Mean Density:            ~0.24-0.28 g/cm³ (estimated)
+Equilibrium Temp:        ~1400-1500 K (estimated)
+Orbital Period:          ~3.76 days (estimated from similar hot Jupiters)
+Semi-major Axis:         Estimated similar to WASP-19b (~0.05-0.06 AU)
+Tidal Locking:           Complete (face-locked to star)
+
+STELLAR PARAMETERS
+================================================================================
+Spectral Type:           Unknown (likely late F to early G)
+Effective Temperature:   5200-5600 K (estimated, solar analog)
+Stellar Mass (M☉):       ~0.9-1.0 (estimated)
+Stellar Luminosity (L☉): ~0.8-1.0 (estimated)
+Age Estimate:            ~1-2 Gyr (typical for hot Jupiters)
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+================================================================================
+Primary Atmosphere:      H₂/He (97-99% by mass)
+Trace Species:           H₂O (partially present), CO, CO₂, SO₂
+Water Status:            Partially dissociated; ~1-5% intact H₂O molecules
+Carbon Monoxide:         Present from C/H photochemistry
+Refractory Species:      TiO possible at cooler regions; not prominent
+Hydrogen Escape:         Active (non-hydrodynamic loss ~10⁵-10⁶ g/s)
+
+ATMOSPHERIC STRUCTURE
+================================================================================
+Scale Height (H):        ~3.2-3.5 km (estimated)
+Atmospheric Scale:       Rayleigh + molecular absorption mixed
+Transit Chord:           ~120-150 km (H/R_p ≈ 0.20-0.24)
+Homopause Altitude:      ~0.1-1 mbar level
+Temperature Range:       600-1450 K (day-side to stratosphere)
+
+BINDING ENERGY FRAMEWORK
+================================================================================
+Binding Energy (J/kg):   ~1.70-1.95 × 10⁸ J/kg (estimated)
+Calculation Method:      BE = GM/R (with M/R scaled from data)
+Critical Parameter:      BE_crit ≈ 3.33 × 10⁶ K·σ_B (for H atoms)
+BE Temperature Ratio:    T/T_BE ≈ 0.012-0.014 (thermal energy << binding)
+
+ATMOSPHERIC STABILITY ANALYSIS
+================================================================================
+Jeans Escape Parameter (λ_J):    ~4-5 (marginal but more stable than WASP-19b)
+Atmospheric Fate:                Moderate hydrogen loss
+H Atom Production Rate:          ~10⁵-10⁶ g/s (photochemical dissociation)
+Hydrogen Escape Channel:         Photochemical + hydrodynamic hybrid
+Critical Altitude:               ~1-10 mbar (escape occurs here)
+Timescale to Significant Loss:   ~10⁷-10⁹ years (H₂ depletion timescale)
+
+THERMAL PROFILE (TEMPERATURE DISTRIBUTION)
+================================================================================
+Dayside Equator:         ~1450 K (maximum)
+Dayside Average:         ~1400 K
+Nightside Minimum:       ~800-1000 K (residual heating)
+Temperature Contrast:    ΔT ≈ 400-600 K (moderate day/night asymmetry)
+Stratospheric Inversion: Not likely (insufficient TiO heating)
+
+PHOTOCHEMISTRY & DYNAMICS
+================================================================================
+CO/CO₂ Ratio:            Intermediate; both CO and CO₂ present
+Active Species:          H, H₂, OH, H₂O (minor), CO, CO₂, O, O₃
+Photodissociation Rate:  H₂O → OH, H significant but not complete
+UV Flux (stellar):       ~10⁴ erg/cm²/s (normalized, slightly lower than WASP-19)
+Wind Regime:             Super-rotating equatorial jets ~3-5 km/s
+Circulation:             Large-scale zonal jets with efficient heat transport
+
+MAGNETOSPHERE & RADIATION
+================================================================================
+Magnetic Field:          Unknown (likely <1-10 mG for gas giant)
+Upper Atmosphere Layer:  Ionospheric layer at ~0.1-1 mbar
+Radiation Environment:   Moderate stellar UV/EUV interaction
+EUV/UV Penetration:      Moderate penetration; photochemical region ~1-100 mbar
+Particle Interactions:   Stellar wind → atmospheric hydrogen escape
+Ion Chemistry:           H⁺, H₃⁺, HCO⁺ present (moderate density)
+
+SPECTROSCOPIC SIGNATURES (TRANSIT TRANSMISSION)
+================================================================================
+Predicted Features:
+  - CO absorption (1-5 μm): ~0.15-0.25% feature depth
+  - H₂O absorption (2.7-6 μm): ~0.1-0.2% features (some water remains)
+  - Rayleigh scattering slope (0.3-1 μm): Moderate negative slope
+  - TiO/VO (if present): Minimal, <0.1% contribution
+  - Na D lines: Possible weak features
+  - Atomic H: Possible weak Balmer lines at terminator
+
+JWST OBSERVATION STRATEGY
+================================================================================
+Primary Instruments:    NIRSpec (1-5 μm), NIRCam (0.6-5 μm)
+Recommended Wavelength: 1-5 μm (CO, H₂O, mixed photochemistry)
+Transit Duration:       ~4-5 hours (typical hot Jupiter)
+Observation Type:       Low/medium-resolution transmission spectroscopy
+Exposure Time Estimate: ~2-3 hours per transit (NIRSpec G395H)
+Signal-to-Noise Ratio:  Good SNR expected (if star is bright)
+
+COMPARATIVE CONTEXT
+================================================================================
+Similar Systems:        WASP-19b (hotter), WASP-52b (similar), HAT-P-18b
+Key Distinction:        Intermediate between WASP-19b and cooler hot Jupiters
+Temperature Bridge:     Bridges ultra-hot regime and typical hot Jupiters
+
+SCIENTIFIC PRIORITIES
+================================================================================
+1. Determine water dissociation status (key diagnostic of T)
+2. Characterize CO/CO₂ ratio (constrain photochemistry)
+3. Measure hydrogen escape rate (if Lyman-alpha observations available)
+4. Determine atmospheric circulation patterns
+5. Confirm presence of TiO/VO refractory species (if present)
+6. Compare chemistry with WASP-19b (similar mass, cooler)
+7. Constrain stellar properties (T_eff, metallicity)
+8. Map temperature structure with thermal emission observations
+
+CHALLENGES & OPPORTUNITIES
+================================================================================
+Challenges:
+  - Limited existing characterization of WASP-25 system
+  - Stellar properties poorly constrained (estimated from similar systems)
+  - Photochemistry intermediate regime; complex modeling required
+  - Water abundance uncertain (key to understanding temperature)
+
+Opportunities:
+  - Bridge between ultra-hot and typical hot Jupiters
+  - Test photochemical models at intermediate T
+  - Potential for detecting both H₂O and CO features
+  - Moderate escape rate allows longer observational timescales
+
+FOLLOW-UP OBSERVATIONS RECOMMENDED
+================================================================================
+- JWST NIRSpec transmission spectroscopy (2-3 transits) for CO/H₂O mapping
+- Ground-based optical spectroscopy (if feasible) for characterization
+- NIRCam imaging for dayside thermal emission (temperature mapping)
+- HST COS UV observations for Lyman-alpha (if star accessible)
+- Follow-up radial velocity observations (improve orbital parameters)
+
+KEY PHYSICAL PROCESSES
+================================================================================
+Dominant Mechanism:      Mixed photochemical + thermal dissociation of H₂O
+Escape Process:          Hydrodynamic H loss + photochemical H₂ escape
+Energy Source:           Stellar EUV/UV heating of upper atmosphere
+Timescale:              H₂ loss ~10⁷-10⁹ yr (slower than WASP-19b)
+Final Fate:             Uncertain; depends on initial conditions
+
+NOTES & CAVEATS
+================================================================================
+- All parameters are ESTIMATED based on similar hot Jupiter systems
+- Stellar spectral type and properties uncertain
+- Temperature estimate based on radiative equilibrium at inferred semi-major axis
+- Atmospheric composition assumes solar baseline
+- Binding energy calculations use standard formulation
+- Scale heights and escape rates are approximate
+- Requires dedicated observations for confirmation of estimates
+- This system needs new observational data for detailed characterization
+
+FILES REFERENCED / DATA SOURCES
+================================================================================
+WASP-25 system data: Limited; estimates based on WASP-19b and similar systems
+Comparative systems: WASP-19b, WASP-52b, HAT-P-18b literature
+Binding Energy Framework: Standard exoplanet physics derivation
+
+================================================================================
+Last Updated: Analysis Date 2026
+Framework Version: Binding Energy Framework v2.1
+================================================================================

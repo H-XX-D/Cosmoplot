@@ -1,0 +1,179 @@
+================================================================================
+                    WASP-52b QUICK REFERENCE GUIDE
+                    Hot Jupiter around K2V Dwarf (1315 K)
+================================================================================
+
+SYSTEM PROPERTIES
+================================================================================
+Planet Name:             WASP-52b
+System Type:             Hot Jupiter around K-type dwarf host
+Temperature Profile:     Hot Jupiter (cooler end of range)
+Discovery Status:        Known system with moderate characterization
+
+PLANETARY PARAMETERS
+================================================================================
+Mass (M_E):              146.2 (≈ 0.461 M_J)
+Radius (R_E):            14.24 (≈ 1.265 R_J)
+Mean Density:            ~0.26 g/cm³
+Equilibrium Temp:        1315 K
+Orbital Period:          1.612 days
+Semi-major Axis:         0.0272 AU
+Tidal Locking:           Complete (face-locked to star)
+
+STELLAR PARAMETERS
+================================================================================
+Spectral Type:           K2V (cool dwarf)
+Effective Temperature:   5000 K
+Stellar Mass (M☉):       0.87
+Stellar Luminosity (L☉): 1.0
+Age Estimate:            ~1-2 Gyr (typical for system with close planets)
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+================================================================================
+Primary Atmosphere:      H₂/He (97-99% by mass)
+Trace Species:           H₂O (significant), CO, CO₂, SO₂, CH₄ (possibly)
+Water Status:            Partially present; ~1-5% intact H₂O molecules
+Carbon Monoxide:         Present from C/H photochemistry
+Methane:                 Possible at lower T regions
+Hydrogen Escape:         Moderate (non-hydrodynamic loss ~10⁵-10⁶ g/s)
+
+ATMOSPHERIC STRUCTURE
+================================================================================
+Scale Height (H):        ~2.6 km
+Atmospheric Scale:       Mixed molecular + atomic features
+Transit Chord:           ~80-100 km (H/R_p ≈ 0.14-0.17)
+Homopause Altitude:      ~0.1-1 mbar level
+Temperature Range:       500-1315 K (nightside to dayside equator)
+
+BINDING ENERGY FRAMEWORK
+================================================================================
+Binding Energy (J/kg):   1.96 × 10⁸ J/kg
+Calculation Method:      BE = GM/R = (6.67×10⁻¹¹ × 9.26×10²⁶)/(1.80×10⁷)
+Critical Parameter:      BE_crit ≈ 3.33 × 10⁶ K·σ_B (for H atoms)
+BE Temperature Ratio:    T/T_BE ≈ 0.0066 (thermal energy << binding)
+
+ATMOSPHERIC STABILITY ANALYSIS
+================================================================================
+Jeans Escape Parameter (λ_J):    ~5-6 (marginally stable)
+Atmospheric Fate:                Moderate hydrogen loss
+H Atom Production Rate:          ~10⁵-10⁶ g/s (photochemical dissociation)
+Hydrogen Escape Channel:         Photochemical + moderate hydrodynamic
+Critical Altitude:               ~1-10 mbar
+Timescale to Loss:              ~10⁷-10⁹ years (slower than ultra-hots)
+
+THERMAL PROFILE (TEMPERATURE DISTRIBUTION)
+================================================================================
+Dayside Equator:         1315 K (maximum)
+Dayside Average:         ~1250 K
+Nightside Minimum:       ~600-800 K (modest residual heating)
+Temperature Contrast:    ΔT ≈ 500-600 K (moderate day/night asymmetry)
+Stratospheric Inversion: Possible (K-dwarf UV heating + molecular opacity)
+
+PHOTOCHEMISTRY & DYNAMICS
+================================================================================
+CO/CO₂ Ratio:            Intermediate; both species significant
+Active Species:          H, H₂, OH, H₂O, CO, CO₂, O, O₃, CH₃, CH₄
+Photodissociation Rate:  H₂O → OH, H significant; CO₂ photochemistry moderate
+UV Flux (stellar):       ~10³-10⁴ erg/cm²/s (reduced due to K-dwarf)
+Wind Regime:             Superrotating jets ~2-3 km/s (weaker than hot Jupiters)
+Circulation:             Modest zonal jets, efficient heat transport possible
+
+MAGNETOSPHERE & RADIATION
+================================================================================
+Magnetic Field:          Unknown (likely <1-10 mG for gas giant)
+Upper Atmosphere Layer:  Ionospheric layer at ~0.1-1 mbar
+Radiation Environment:   K-dwarf star produces lower UV than F/G-dwarfs
+EUV/UV Penetration:      Moderate; photochemical region ~1-100 mbar
+Particle Interactions:   Stellar wind → atmospheric escape (secondary role)
+Ion Chemistry:           H⁺, H₃⁺, HCO⁺, CH₃⁺ possibly present
+
+SPECTROSCOPIC SIGNATURES (TRANSIT TRANSMISSION)
+================================================================================
+Predicted Features:
+  - H₂O absorption (2.7-6 μm): ~0.2-0.4% feature depth (STRONG for WASP-52b)
+  - CO absorption (1-5 μm): ~0.1-0.2% feature depth
+  - CO₂ absorption: ~0.05-0.15% (enhanced vs. hot hot Jupiters)
+  - CH₄ features (possibly): ~0.05-0.1% if significant
+  - Rayleigh scattering: Moderate slope, ~0.2-0.3%
+  - Na D lines: Possible weak features
+  - Atomic features: Weak
+
+JWST OBSERVATION STRATEGY
+================================================================================
+Primary Instruments:    NIRSpec (1-5 μm), MIRI (5-28 μm)
+Recommended Wavelength: 2.5-5 μm (water, CO, CO₂ molecules)
+Transit Duration:       ~4-5 hours
+Observation Type:       Medium-resolution transmission + emission spectroscopy
+Exposure Time Estimate: ~2-3 hours per transit (NIRSpec G395H)
+Signal-to-Noise Ratio:  Moderate-to-good (fainter star than solar analogs)
+
+COMPARATIVE CONTEXT
+================================================================================
+Similar Systems:        WASP-31b, HAT-P-7b (both hot Jupiters)
+K-Dwarf Coupling:      β = -0.22 (strong atmospheric response to host)
+Key Distinction:        K-dwarf host significantly affects UV environment
+Temperature Bridge:     Bridge between ultra-hots and cool hot Jupiters
+
+SCIENTIFIC PRIORITIES
+================================================================================
+1. Detect and characterize water absorption (key molecular signature)
+2. Measure CO/CO₂/CH₄ ratios (test photochemistry models)
+3. Determine K-dwarf UV impact on atmospheric chemistry
+4. Constrain atmospheric circulation (K-dwarf interaction)
+5. Compare with F/G-dwarf hot Jupiters (host star effects)
+6. Measure hydrogen escape rate if feasible
+7. Test methane chemistry predictions for cooler hot Jupiters
+8. Determine thermal structure from dayside emission
+
+CHALLENGES & OPPORTUNITIES
+================================================================================
+Challenges:
+  - Fainter star reduces transmission depth by ~factor of 2
+  - K-dwarf UV production uncertain; affects photochemistry predictions
+  - Multiple molecular species expected; complex spectral deconvolution
+  - Thermal emission dominated by planet's internal heat
+
+Opportunities:
+  - Ideal for detecting multiple molecular species simultaneously
+  - K-dwarf coupling allows testing host star effects
+  - Water detection more likely than in ultra-hots
+  - Possible methane detection would be novel for hot Jupiter
+  - Lower temperature allows testing of chemical models at intermediate regime
+
+FOLLOW-UP OBSERVATIONS RECOMMENDED
+================================================================================
+- JWST NIRSpec G395H transmission (3-4 transits) for detailed chemistry
+- JWST MIRI thermal emission mapping (temperature structure)
+- HST COS UV observations for Lyman-alpha (if feasible)
+- Ground-based high-resolution spectroscopy (CO, H₂O line profiles)
+- Kepler/TESS optical phase curve observations (heat redistribution)
+
+KEY PHYSICAL PROCESSES
+================================================================================
+Dominant Mechanism:      Partial H₂O dissociation + CO photochemistry
+Escape Process:          Photochemical H + moderate hydrodynamic escape
+Energy Source:           Stellar UV heating (K-dwarf modulated)
+Timescale:              H₂ loss ~10⁷-10⁹ yr (slower than ultra-hots)
+Final Fate:             Possible evolution toward Neptune-sized core
+
+NOTES & CAVEATS
+================================================================================
+- K2V spectral classification affects UV flux by ~factor of 2 vs. G-dwarfs
+- Water abundance likely higher than ultra-hots due to cooler temperature
+- CO₂ recombination more efficient than in hot hot Jupiters
+- Methane may be present in trace amounts (novel for hot Jupiters)
+- K-dwarf atmosphere-star coupling warrants detailed comparative study
+- Stellar activity level of K2V host unknown; affects UV variability
+- Scale height estimates use mean molecular weight ~3.0 amu (higher due to H₂O)
+- Hydrogen escape rate estimated from comparative systems
+
+FILES REFERENCED / DATA SOURCES
+================================================================================
+WASP-52 discovery paper: Hellier et al. 2012 (ApJ Letter)
+K-dwarf hot Jupiter context: Comparative HAT-P-7b, WASP-31b literature
+Binding Energy Framework: Standard exoplanet physics derivation
+
+================================================================================
+Last Updated: Analysis Date 2026
+Framework Version: Binding Energy Framework v2.1
+================================================================================

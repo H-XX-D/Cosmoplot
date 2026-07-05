@@ -1,0 +1,179 @@
+================================================================================
+                    WASP-103b QUICK REFERENCE GUIDE
+                    Hottest Ultra-Hot Gas Giant (2508 K, F8V)
+================================================================================
+
+SYSTEM PROPERTIES
+================================================================================
+Planet Name:             WASP-103b
+System Type:             Ultra-hot Jupiter around F8V dwarf
+Temperature Profile:     HOTTEST planet in 7-planet analysis
+Discovery Status:        Known system; extreme parameters confirmed
+
+PLANETARY PARAMETERS
+================================================================================
+Mass (M_E):              473.55 (≈ 1.494 M_J, heaviest in sample)
+Radius (R_E):            17.13 (≈ 1.523 R_J)
+Mean Density:            ~0.44 g/cm³ (higher than most ultra-hots)
+Equilibrium Temp:        2508 K (HIGHEST TEMPERATURE)
+Orbital Period:          0.926 days (SHORTEST ORBITAL PERIOD)
+Semi-major Axis:         0.0198 AU (CLOSEST ORBIT)
+Tidal Locking:           Complete, extreme tidal heating
+
+STELLAR PARAMETERS
+================================================================================
+Spectral Type:           F8V (hot dwarf)
+Effective Temperature:   6110 K
+Stellar Mass (M☉):       1.22
+Stellar Luminosity (L☉): 2.588 (very luminous)
+Age Estimate:            <1 Gyr (young system)
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+================================================================================
+Primary Atmosphere:      H₂/He (97-99% by mass)
+Trace Species:           H₂O (fully dissociated), CO, TiO, VO, SO₂
+Water Status:            Completely dissociated; essentially zero H₂O
+Carbon Monoxide:         Very abundant (dissociation complete)
+Refractory Species:      TiO/VO clouds prominent (likely)
+Hydrogen Escape:         Extreme (>10⁷ g/s, maximum in sample)
+
+ATMOSPHERIC STRUCTURE
+================================================================================
+Scale Height (H):        ~2.5-3.0 km (small due to extreme conditions)
+Atmospheric Scale:       Atomic-dominated with refractory opacity
+Transit Chord:           ~80-120 km (H/R_p ≈ 0.11-0.16)
+Homopause Altitude:      ~0.1-1 mbar level
+Temperature Range:       1000-2508 K (extreme day/night asymmetry)
+
+BINDING ENERGY FRAMEWORK
+================================================================================
+Binding Energy (J/kg):   1.77 × 10⁸ J/kg
+Calculation Method:      BE = GM/R
+Critical Parameter:      BE_crit for H atoms at extreme T
+BE Temperature Ratio:    T/T_BE ≈ 0.0142 (thermal energy ~1.4% of binding)
+
+ATMOSPHERIC STABILITY ANALYSIS
+================================================================================
+Jeans Escape Parameter (λ_J):    ~2 (HIGHLY UNSTABLE, maximum escape)
+Atmospheric Fate:                Extreme hydrogen loss
+H Atom Production Rate:          ~10⁷ g/s (maximum photochemical)
+Hydrogen Escape Channel:         Maximum hydrodynamic + photochemical
+Critical Altitude:               ~1 mbar (critical altitude low)
+Timescale to Loss:              ~10⁶ years (catastrophic depletion possible)
+
+THERMAL PROFILE (TEMPERATURE DISTRIBUTION)
+================================================================================
+Dayside Equator:         2508 K (HOTTEST in sample, second only to extreme planets)
+Dayside Average:         ~2350 K
+Nightside Minimum:       ~1000-1200 K (residual heating)
+Temperature Contrast:    ΔT ≈ 1000-1300 K (EXTREME day/night gap)
+Stratospheric Inversion: Very strong (TiO/VO + H dissociation creates inversion)
+
+PHOTOCHEMISTRY & DYNAMICS
+================================================================================
+CO/CO₂ Ratio:            CO-dominated (CO/CO₂ >> 1000:1, extreme)
+Active Species:          H, H₂, OH, CO, TiO, VO, atomic O
+Photodissociation Rate:  H₂O → completely dissociated; CO → atomic
+UV Flux (stellar):       ~10⁴-10⁵ erg/cm²/s + tidal heating (high)
+Wind Regime:             Super-rotating equatorial jets ~7-8 km/s
+Circulation:             Extreme zonal jets; weak meridional circulation
+
+MAGNETOSPHERE & RADIATION
+================================================================================
+Magnetic Field:          Unknown (likely weak for massive inflated giant)
+Upper Atmosphere Layer:  High-density ionosphere at ~0.1-1 mbar
+Radiation Environment:   Extreme stellar UV/EUV + tidal dissipation
+EUV/UV Penetration:      Deep; photochemical region ~1-100 mbar
+Tidal Heating:           Significant contribution (~10% of insolation?)
+Ion Chemistry:           H⁺, H₃⁺ very abundant; unique ion chemistry
+
+SPECTROSCOPIC SIGNATURES (TRANSIT TRANSMISSION)
+================================================================================
+Predicted Features:
+  - TiO/VO absorption (visible): ~0.4-0.7% feature depth
+  - Rayleigh scattering (0.3-1 μm): Very strong slope
+  - CO absorption (NIR): ~0.15-0.25% features
+  - H₂O features: Essentially absent (<0.05%)
+  - Atomic H: Balmer escape signature expected (strong)
+  - Stratospheric inversion: Clear temperature inversion signature
+
+JWST OBSERVATION STRATEGY
+================================================================================
+Primary Instruments:    NIRCam (optical, UV-vis), NIRSpec (1-5 μm)
+Recommended Wavelength: 0.5-1.5 μm (TiO/VO, refractory opacity)
+Transit Duration:       ~2-3 hours (SHORTEST, rapid observations needed)
+Observation Type:       Low/medium-resolution transmission spectroscopy
+Exposure Time Estimate: ~1-2 hours per transit (FAST observations)
+Signal-to-Noise Ratio:  Very high SNR (bright F-dwarf, large optical depth)
+
+COMPARATIVE CONTEXT
+================================================================================
+Similar Systems:        WASP-76b (cooler), HAT-P-1b (cooler), extreme planets
+F-Dwarf Hosts:         Intense UV production
+Key Distinction:        HOTTEST & most massive in 7-planet sample
+Temperature Bridge:     Extreme end of hot Jupiter population
+
+SCIENTIFIC PRIORITIES
+================================================================================
+1. Confirm extreme temperature with multiple spectroscopic diagnostics
+2. Characterize hydrogen escape at maximum photochemical production rate
+3. Measure CO abundance in most extreme conditions
+4. Detect and map TiO/VO refractory species at highest optical depth
+5. Determine stratospheric inversion magnitude and extent
+6. Constrain wind speeds from line broadening (expected: ~7-8 km/s)
+7. Measure tidal heating contribution (if detectable)
+8. Compare with WASP-76b to quantify temperature-dependent effects
+
+CHALLENGES & OPPORTUNITIES
+================================================================================
+Challenges:
+  - EXTREMELY short orbital period (rapid observations needed, timing critical)
+  - Extreme photochemistry difficult to model (non-equilibrium possible)
+  - Hydrogen escape may be non-hydrodynamic; complex dynamics
+  - Tidal heating uncertain; coupled atmosphere-interior modeling needed
+
+Opportunities:
+  - UNIQUE extreme laboratory for atmospheric physics limits
+  - Clear TiO/VO detection expected (very strong opacity)
+  - Tests atmospheric chemistry models at absolute limits
+  - Hydrogen escape mechanisms directly observable (maximum rates)
+  - Largest transmission features expected in sample (except Kepler-12b scale height)
+
+FOLLOW-UP OBSERVATIONS RECOMMENDED
+================================================================================
+- JWST NIRCam optical transmission (0.5-1.5 μm) for TiO/VO at highest opacity
+- HST COS Lyman-alpha observations (most direct H escape diagnostic)
+- JWST NIRSpec (1-5 μm) for CO detection despite extreme conditions
+- Ground-based high-resolution spectroscopy (wind speed, line profiles)
+- Thermal emission observations for temperature structure at extremes
+
+KEY PHYSICAL PROCESSES
+================================================================================
+Dominant Mechanism:      Complete atmospheric dissociation + extreme escape
+Escape Process:          Hydrodynamic + photochemical H loss at maxima
+Energy Source:           Intense F-dwarf UV/EUV + tidal heating
+Timescale:              H₂ loss ~10⁶ years (rapid planetary evolution)
+Final Fate:             Core erosion and possible planet destruction
+
+NOTES & CAVEATS
+================================================================================
+- Hottest temperature in 7-planet sample; approaches atomic hydrogen escape limit
+- F8V host produces intense UV; combined with short orbit = extreme insolation
+- Orbital period (0.926 days) SHORTEST in sample; extreme tidal effects
+- Mass (1.494 M_J) HEAVIEST in sample; affects gravity and scale height
+- Tidal heating magnitude uncertain; significant but hard to quantify
+- Hydrogen escape rate at theoretical maximum; possible non-equilibrium states
+- 3D modeling essential; 1D approximations may break down
+- Young age (<1 Gyr) suggests system recently migrated to ultra-close orbit
+
+FILES REFERENCED / DATA SOURCES
+================================================================================
+WASP-103 discovery paper: Gillon et al. 2014 (A&A)
+Ultra-hot Jupiter context: Comparative studies with HAT-P-1b, WASP-76b
+Extreme atmosphere models: Recent ultra-hot atmospheric chemistry literature
+
+================================================================================
+Last Updated: Analysis Date 2026
+Framework Version: Binding Energy Framework v2.1
+NOTE: WASP-103b represents extreme conditions at limits of hot Jupiter regime
+================================================================================

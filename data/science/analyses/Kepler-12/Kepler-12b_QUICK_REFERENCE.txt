@@ -1,0 +1,179 @@
+================================================================================
+                    KEPLER-12b QUICK REFERENCE GUIDE
+                    Hot Jupiter around G-Dwarf (1480 K)
+================================================================================
+
+SYSTEM PROPERTIES
+================================================================================
+Planet Name:             Kepler-12b
+System Type:             Hot Jupiter around solar-type G-dwarf host
+Temperature Profile:     Hot Jupiter (intermediate temperature regime)
+Discovery Status:        Known system; discovered by Kepler mission
+
+PLANETARY PARAMETERS
+================================================================================
+Mass (M_E):              137.3 (≈ 0.433 M_J, relatively low mass)
+Radius (R_E):            19.66 (≈ 1.749 R_J, very inflated!)
+Mean Density:            ~0.11 g/cm³ (extremely low; most inflated of sample)
+Equilibrium Temp:        1480 K (moderate-high temperature)
+Orbital Period:          ~1.27 days (estimated from orbit)
+Semi-major Axis:         0.0553 AU
+Tidal Locking:           Complete
+
+STELLAR PARAMETERS
+================================================================================
+Spectral Type:           Unknown (likely G-type, solar analog)
+Effective Temperature:   5947 K
+Stellar Mass (M☉):       1.166 (near-solar mass)
+Stellar Luminosity (L☉): 1.0 (approximately solar)
+Age Estimate:            ~1-2 Gyr (typical for Kepler systems)
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+================================================================================
+Primary Atmosphere:      H₂/He (97-99% by mass)
+Trace Species:           H₂O (partially present), CO, CO₂, SO₂
+Water Status:            Partially dissociated; ~1-3% H₂O
+Carbon Monoxide:         Present from photochemistry
+Refractory Species:      Minimal; TiO/VO not prominent
+Hydrogen Escape:         Moderate (10⁵-10⁶ g/s)
+
+ATMOSPHERIC STRUCTURE
+================================================================================
+Scale Height (H):        ~4.5-5.0 km (VERY LARGE due to low gravity + T)
+Atmospheric Scale:       Mixed molecular + atomic features
+Transit Chord:           ~220-280 km (H/R_p ≈ 0.28-0.36, LARGEST in sample!)
+Homopause Altitude:      ~0.1-1 mbar level
+Temperature Range:       600-1480 K
+
+BINDING ENERGY FRAMEWORK
+================================================================================
+Binding Energy (J/kg):   1.37 × 10⁸ J/kg (lowest mass, lowest BE in sample)
+Calculation Method:      BE = GM/R
+Critical Parameter:      BE_crit for H atoms
+BE Temperature Ratio:    T/T_BE ≈ 0.0108 (thermal energy ~1% of binding)
+
+ATMOSPHERIC STABILITY ANALYSIS
+================================================================================
+Jeans Escape Parameter (λ_J):    ~5-7 (stable but experiencing escape)
+Atmospheric Fate:                Moderate hydrogen loss
+H Atom Production Rate:          ~10⁵-10⁶ g/s (photochemical dissociation)
+Hydrogen Escape Channel:         Photochemical + hydrodynamic hybrid
+Critical Altitude:               ~1-10 mbar
+Timescale to Loss:              ~10⁷-10⁹ years (moderate depletion)
+
+THERMAL PROFILE (TEMPERATURE DISTRIBUTION)
+================================================================================
+Dayside Equator:         1480 K
+Dayside Average:         ~1400 K
+Nightside Minimum:       ~600-800 K (significant cooling)
+Temperature Contrast:    ΔT ≈ 600-700 K (moderate day/night)
+Stratospheric Inversion: Unlikely (molecular opacity dominates)
+
+PHOTOCHEMISTRY & DYNAMICS
+================================================================================
+CO/CO₂ Ratio:            Intermediate; both species present
+Active Species:          H, H₂, OH, H₂O, CO, CO₂, O, SO₂
+Photodissociation Rate:  H₂O → OH, H significant but not complete
+UV Flux (stellar):       ~10⁴ erg/cm²/s (G-dwarf, moderate UV)
+Wind Regime:             Superrotating jets ~3-4 km/s
+Circulation:             Moderate zonal jets; efficient heat transport
+
+MAGNETOSPHERE & RADIATION
+================================================================================
+Magnetic Field:          Unknown (likely <1-10 mG)
+Upper Atmosphere Layer:  Moderate ionospheric layer at ~0.1-1 mbar
+Radiation Environment:   Moderate G-dwarf UV/EUV
+EUV/UV Penetration:      Moderate penetration; photochemical region ~1-100 mbar
+Particle Interactions:   Moderate stellar wind interaction
+Ion Chemistry:           H⁺, H₃⁺, HCO⁺ present
+
+SPECTROSCOPIC SIGNATURES (TRANSIT TRANSMISSION)
+================================================================================
+Predicted Features:
+  - H₂O absorption (2.7-6 μm): ~0.3-0.5% feature depth (strong, detectable)
+  - CO absorption (1-5 μm): ~0.2-0.3% feature depth
+  - CO₂ absorption: ~0.1-0.2% (moderate)
+  - Rayleigh scattering (0.3-1 μm): Moderate slope
+  - Na D lines: Possibly visible (moderate strength)
+  - Atomic features: Weak
+
+JWST OBSERVATION STRATEGY
+================================================================================
+Primary Instruments:    NIRSpec (1-5 μm), MIRI (5-28 μm), NIRCam
+Recommended Wavelength: 2-5 μm (H₂O, CO, CO₂, mixed chemistry)
+Transit Duration:       ~4-5 hours
+Observation Type:       Medium-resolution transmission + thermal emission
+Exposure Time Estimate: ~2-3 hours per transit (NIRSpec G395H)
+Signal-to-Noise Ratio:  Very good (large scale height, bright star)
+
+COMPARATIVE CONTEXT
+================================================================================
+Similar Systems:        HAT-P-1b (similar T, different host), WASP-31b (similar)
+G-Dwarf Hosts:         Solar-analog UV production
+Key Distinction:        Lowest mass & highest scale height in sample
+Temperature Bridge:     Between moderate and hot hot Jupiters
+
+SCIENTIFIC PRIORITIES
+================================================================================
+1. Measure water absorption (test partial dissociation model)
+2. Characterize CO/CO₂ ratio (constrain photochemistry)
+3. Determine atmospheric scale height (LARGEST in sample!)
+4. Map temperature structure from spectral features
+5. Measure hydrogen escape rate (if Lyman-alpha available)
+6. Constrain wind speeds from line broadening
+7. Compare with HAT-P-1b (similar T, different gravity/mass)
+8. Study extremes of gas giant inflation and scale height
+
+CHALLENGES & OPPORTUNITIES
+================================================================================
+Challenges:
+  - Low mass creates unusual radius inflation (interior structure uncertain)
+  - Multiple overlapping molecular features (spectral complexity)
+  - Faint Kepler-mission star may reduce SNR relative to WASP systems
+  - Large scale height means extended atmosphere; transit timing effects possible
+
+Opportunities:
+  - GIANT scale height (4.5-5.0 km) yields unprecedented sensitivity
+  - Multiple molecular detections expected (rich spectroscopy)
+  - Test models of gas giant inflation at extreme limit
+  - First opportunity to study H₂-to-gravity ratio effects
+  - Large transit depth (largest or second-largest in sample) enables precision spectroscopy
+
+FOLLOW-UP OBSERVATIONS RECOMMENDED
+================================================================================
+- JWST NIRSpec G395H transmission (3-4 transits) for complete molecular survey
+- JWST MIRI thermal emission (dayside temperature mapping)
+- Ground-based high-resolution spectroscopy (H₂O, CO line profiles)
+- HST COS Lyman-alpha (if accessible; hydrogen escape diagnostic)
+- Long-term transit depth monitoring (scale height changes, structure evolution)
+
+KEY PHYSICAL PROCESSES
+================================================================================
+Dominant Mechanism:      Partial H₂O dissociation + moderate photochemistry
+Escape Process:          Photochemical H + moderate hydrodynamic loss
+Energy Source:           Stellar UV heating (G-dwarf modulated)
+Timescale:              H₂ loss ~10⁷-10⁹ yr (moderate depletion)
+Final Fate:             Possible evolution toward sub-Neptune core
+
+NOTES & CAVEATS
+================================================================================
+- Extremely low density (0.11 g/cm³) makes this most inflated planet in sample
+- G-dwarf host produces moderate UV (less than F-dwarfs, more than K-dwarfs)
+- Lowest planetary mass in sample; affects gravity and escape dynamics
+- Exceptionally large scale height makes transit chord exceptionally large
+- Scale height estimate uses mean molecular weight ~2.5 amu (H₂O-influenced)
+- Water abundance intermediate between cool and hot hot Jupiters
+- Kepler discovery; star may be fainter than WASP systems (affects observations)
+- This system is IDEAL for large-scale-height spectroscopy
+
+FILES REFERENCED / DATA SOURCES
+================================================================================
+Kepler-12 discovery paper: Fortney et al. 2011 (Kepler discovery paper)
+Hot Jupiter context: HAT-P-1b literature; similar system comparisons
+Binding Energy Framework: Standard exoplanet physics
+
+================================================================================
+Last Updated: Analysis Date 2026
+Framework Version: Binding Energy Framework v2.1
+Note: Kepler-12b is exceptional for scale height measurements and sensitivity
+================================================================================

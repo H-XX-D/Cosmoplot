@@ -761,6 +761,28 @@ function buildGuidedTargets(snapshot: UniverseSnapshot): GuidedTarget[] {
   return targets.slice(0, 5);
 }
 
+// Systems that carry a committed deep-dive analysis get a plotter button. They
+// are force-included in the snapshot, so their primary planet is selectable.
+function buildResearchedTargets(snapshot: UniverseSnapshot): GuidedTarget[] {
+  const targets: GuidedTarget[] = [];
+  for (const system of snapshot.systems) {
+    if (!system.researched) continue;
+    const planet = system.planets[0];
+    if (!planet) continue;
+    targets.push({
+      kind: "planet",
+      id: `researched:${planet.id}`,
+      label: planet.name,
+      eyebrow: "Researched",
+      note: system.researchSummary ?? "Local deep-dive analysis is available for this system.",
+      query: planet.name,
+      systemId: system.id,
+      planetId: planet.id,
+    });
+  }
+  return targets.sort((a, b) => a.label.localeCompare(b.label));
+}
+
 function planetMedianRadius(planet: UniversePlanet) {
   return planet.propagation?.radiusEarth.median ?? planet.radiusEarth;
 }
@@ -5870,6 +5892,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
   const [stageHover, setStageHover] = useState<StageHover | null>(null);
   const planetViewSyncRef = useRef<PlanetGlobeLiveView | null>(null);
   const guidedTargets = useMemo(() => buildGuidedTargets(snapshot), [snapshot]);
+  const researchedTargets = useMemo(() => buildResearchedTargets(snapshot), [snapshot]);
 
   const filteredSystems = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -6319,6 +6342,33 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                         title={target.note}
                       >
                         <div className="text-[0.58rem] uppercase tracking-[0.18em] text-sky-100/48 group-hover:text-sky-100/72">{target.eyebrow}</div>
+                        <div className="mt-1 text-sm font-medium text-white">{target.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {researchedTargets.length ? (
+              <div className="border-b border-white/8 px-5 py-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-[0.66rem] uppercase tracking-[0.24em] text-emerald-200/56">Researched systems</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-300/72">
+                      Systems with a committed deep-dive analysis (formation, interior structure, evolution). Every button plots the researched target.
+                    </p>
+                  </div>
+                  <div className="flex max-h-[8.5rem] flex-wrap gap-2 overflow-y-auto">
+                    {researchedTargets.map((target) => (
+                      <button
+                        key={target.id}
+                        type="button"
+                        onClick={() => selectGuidedTarget(target)}
+                        className="group max-w-[15rem] rounded-2xl border border-emerald-300/18 bg-emerald-300/[0.06] px-3 py-2 text-left transition hover:border-emerald-300/34 hover:bg-emerald-300/12"
+                        title={target.note}
+                      >
+                        <div className="text-[0.58rem] uppercase tracking-[0.18em] text-emerald-200/54 group-hover:text-emerald-100/80">{target.eyebrow}</div>
                         <div className="mt-1 text-sm font-medium text-white">{target.label}</div>
                       </button>
                     ))}

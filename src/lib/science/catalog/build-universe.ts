@@ -7,6 +7,7 @@ import {
   getLegacySystemEntry,
   getLegacySystemSummary,
 } from "@/lib/science/local/legacy-analysis";
+import { getResearchedPlanetNames, getResearchedPlanetSummaryMap, researchedPlanetKey } from "@/lib/science/local/researched-systems";
 import { getWhiteDwarfCatalog } from "@/lib/science/local/white-dwarfs";
 import { fetchArchivePlanetsByNames, fetchNearbyArchivePlanets } from "@/lib/science/official/exoplanet-archive";
 import { propagateCatalogPlanet } from "@/lib/science/physics";
@@ -433,12 +434,17 @@ export async function getUniverseSnapshot(params?: {
     return cachedSnapshot.snapshot;
   }
 
-  const [archive, studiedPlanetNames] = await Promise.all([
+  const [archive, studiedPlanetNames, researchedPlanetNames, researchedSummaryMap] = await Promise.all([
     fetchNearbyArchivePlanets({ radiusPc, limit, search }),
     getLegacyStudiedPlanetNames(),
+    getResearchedPlanetNames(),
+    getResearchedPlanetSummaryMap(),
   ]);
   const whiteDwarfs = await getWhiteDwarfCatalog();
-  const missingStudiedNames = studiedPlanetNames.filter((planetName) => {
+  // Force-include researched systems (deep-dive local analyses) even when they
+  // fall outside the wide-field distance cut, so they can be plotted.
+  const forceIncludeNames = Array.from(new Set([...studiedPlanetNames, ...researchedPlanetNames]));
+  const missingStudiedNames = forceIncludeNames.filter((planetName) => {
     const planetKey = planetName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
     return !archive.rows.some((row) => row.pl_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") === planetKey);
   });
@@ -608,6 +614,17 @@ export async function getUniverseSnapshot(params?: {
 
     system.planets.push(planet);
     system.planetCount = system.planets.length;
+  }
+
+  // Mark systems that carry a committed deep-dive analysis as researched.
+  for (const system of systems.values()) {
+    for (const planet of system.planets) {
+      const summary = researchedSummaryMap.get(researchedPlanetKey(planet.name));
+      if (summary) {
+        system.researched = true;
+        if (!system.researchSummary) system.researchSummary = summary;
+      }
+    }
   }
 
   const snapshot: UniverseSnapshot = {

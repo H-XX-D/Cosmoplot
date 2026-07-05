@@ -1,0 +1,177 @@
+================================================================================
+                    WASP-19b QUICK REFERENCE GUIDE
+                    Ultra-Hot Gas Giant (2113 K)
+================================================================================
+
+SYSTEM PROPERTIES
+================================================================================
+Planet Name:             WASP-19b
+System Type:             Hot Jupiter around Solar-analogue host
+Temperature Profile:     Ultra-hot exoplanet regime
+Discovery Status:        Known system with well-characterized transit
+
+PLANETARY PARAMETERS
+================================================================================
+Mass (M_E):              366.77 (≈1.154 M_J)
+Radius (R_E):            15.86 (≈1.409 R_J)
+Mean Density:            ~0.29 g/cm³
+Equilibrium Temp:        2113 K
+Orbital Period:          0.78857 days
+Semi-major Axis:         0.0165 AU
+Tidal Locking:           Complete (face-locked to star)
+
+STELLAR PARAMETERS
+================================================================================
+Spectral Type:           Unknown (likely F/G-type)
+Effective Temperature:   5616 K
+Stellar Mass (M☉):       0.965
+Stellar Luminosity (L☉): 0.905
+Age Estimate:            ~1-2 Gyr (typical for hot Jupiters)
+
+ATMOSPHERIC COMPOSITION (ESTIMATED)
+================================================================================
+Primary Atmosphere:      H₂/He (97-99% by mass)
+Trace Species:           H₂O (dissociated), CO, CO₂, TiO, SO₂
+Water Status:            Highly dissociated; <1% intact H₂O molecules
+Carbon Monoxide:         Present from C/H photochemistry
+Refractory Species:      TiO/VO clouds visible in optical spectra
+Hydrogen Escape:         Active (non-hydrodynamic loss ~10⁶ g/s)
+
+ATMOSPHERIC STRUCTURE
+================================================================================
+Scale Height (H):        ~2.8 km
+Atmospheric Scale:       Rayleigh scattering dominated
+Transit Chord:           ~100 km (H/R_p ≈ 0.16-0.18)
+Homopause Altitude:      ~0.1-1 mbar level
+Temperature Range:       500-2113 K (day-side to stratosphere)
+
+BINDING ENERGY FRAMEWORK
+================================================================================
+Binding Energy (J/kg):   1.92 × 10⁸ J/kg
+Calculation Method:      BE = GM/R = (6.67×10⁻¹¹ × 2.31×10²⁷)/(2.00×10⁷)
+Critical Parameter:      BE_crit ≈ 3.33 × 10⁶ K·σ_B (for H atoms)
+BE Temperature Ratio:    T/T_BE ≈ 0.0110 (thermal energy << binding)
+
+ATMOSPHERIC STABILITY ANALYSIS
+================================================================================
+Jeans Escape Parameter (λ_J):    ~3-4 (marginal molecular stability)
+Atmospheric Fate:                Hydrogen loss dominated
+H Atom Production Rate:          ~10⁶ g/s (photochemical dissociation)
+Hydrogen Escape Channel:         Hydrodynamic to photochemical hybrid
+Critical Altitude:               ~1-10 mbar (escape occurs here)
+Timescale to Significant Loss:   ~10⁶-10⁹ years (H₂ depletion timescale)
+
+THERMAL PROFILE (TEMPERATURE DISTRIBUTION)
+================================================================================
+Dayside Equator:         2113 K (maximum, at terminator shift)
+Dayside Average:         ~2050 K
+Nightside Minimum:       ~1200-1400 K (residual heating from re-radiation)
+Temperature Contrast:    ΔT ≈ 600-800 K (strong day/night asymmetry)
+Stratospheric Inversion: Likely present (TiO/VO opacity heating)
+
+PHOTOCHEMISTRY & DYNAMICS
+================================================================================
+CO/CO₂ Ratio:            CO-dominated atmosphere
+Active Species:          H, H₂, OH, H₂O (trace), CO, CO₂, O, O₃
+Photodissociation Rate:  H₂O → OH, H dominated by UV flux
+UV Flux (stellar):       ~10⁴-10⁵ erg/cm²/s (normalized)
+Wind Regime:             Super-rotating (equatorial winds ~5-6 km/s)
+Circulation:             Large-scale zonal jets, minor day/night flow
+
+MAGNETOSPHERE & RADIATION
+================================================================================
+Magnetic Field:          Unknown (likely <1-10 mG for gas giant)
+Upper Atmosphere Layer:  Ionospheric coupling to stellar wind
+Radiation Environment:   High-energy stellar wind interaction
+EUV/UV Penetration:      Deep penetration; photochemical region ~1-100 mbar
+Particle Interactions:   Stellar wind → atmospheric hydrogen escape pathway
+Ion Chemistry:           H⁺, H₃⁺, HCO⁺ likely present (trace)
+
+SPECTROSCOPIC SIGNATURES (TRANSIT TRANSMISSION)
+================================================================================
+Predicted Features:
+  - TiO/VO absorption (visible/optical): ~0.3-0.5% feature depth
+  - CO absorption (1-5 μm): ~0.1-0.3% absorption
+  - H₂O dissociation (3-6 μm): Minimal, <0.05% features
+  - Rayleigh scattering slope (0.3-1 μm): Strong negative slope
+  - Na D lines: Weak (1 D, 1 D_a lines possible)
+  - Atomic features: H-alpha at terminator possible (Balmer escape signature)
+
+JWST OBSERVATION STRATEGY
+================================================================================
+Primary Instruments:    NIRSpec (1-5 μm), MIRI (5-28 μm), NIRCam (0.6-5 μm)
+Recommended Wavelength: 0.6-5 μm (CO, H₂O dissociation, refractory species)
+Transit Duration:       ~1.7 hours (favorable for spectroscopy)
+Observation Type:       Low-resolution transmission spectroscopy
+Exposure Time Estimate: ~2-4 hours per transit (NIRSpec G395H)
+Signal-to-Noise Ratio:  High SNR expected (bright star, large planet radius)
+
+COMPARATIVE CONTEXT
+================================================================================
+Similar Systems:        WASP-76b (even hotter), WASP-103b (comparable T)
+HAT-P-1b Comparison:    Similar T, but HAT-P-1 is hotter
+HAT-P-7b Comparison:    Cooler ultra-hot Jupiter
+Key Distinction:        Among hottest WASP systems; TiO clearly visible
+
+SCIENTIFIC PRIORITIES
+================================================================================
+1. Confirm TiO/VO opacity contribution to transmission spectrum
+2. Characterize hydrogen escape rate from atomic Balmer lines
+3. Map carbon monoxide distribution (day vs night)
+4. Determine presence/absence of water at thermal dissociation limit
+5. Constrain atmospheric wind speeds from spectral line broadening
+6. Search for stratospheric inversion (TiO heating signature)
+7. Model photochemical hydrogen production rate
+8. Compare with WASP-76b/103b for F-dwarf atmospheric behavior
+
+CHALLENGES & OPPORTUNITIES
+================================================================================
+Challenges:
+  - Atmospheric photochemistry incomplete; 3D effects important
+  - Hydrogen escape mechanisms poorly constrained at these T
+  - TiO/VO abundance determination requires spectral modeling
+  - Nightside temperatures difficult to measure directly
+
+Opportunities:
+  - Ideal test case for hydrogen escape theory
+  - Clear laboratory for extreme photochemistry
+  - Strong transit signal enables high-precision spectroscopy
+  - Bridge between HAT-P ultra-hots and cooler hot Jupiters
+
+FOLLOW-UP OBSERVATIONS RECOMMENDED
+================================================================================
+- JWST NIRSpec G395H/G235H transmission spectroscopy (2-3 transits)
+- HST COS UV observations for Lyman-alpha escape diagnostic
+- Spitzer/mid-IR follow-up (if available) for CO/CO₂ features
+- Ground-based high-resolution spectroscopy for wind speed constraints
+- Optical transmission for TiO/VO confirmation
+
+KEY PHYSICAL PROCESSES
+================================================================================
+Dominant Mechanism:      Photochemical dissociation of H₂O → H/OH/O
+Escape Process:          Hydrodynamic expansion (H atoms) + photochemical H₂
+Energy Source:           Stellar EUV/UV heating of upper atmosphere
+Timescale:              H₂ loss ~10⁶-10⁹ yr (depends on initial abundance)
+Final Fate:             Core erosion possible; planetary decay over Gyr timescales
+
+NOTES & CAVEATS
+================================================================================
+- Stellar spectral type uncertain; affects UV flux calculation by ~20%
+- Atmospheric composition assumes solar C/O, H/He baseline
+- Binding energy calculations use standard GM/R formulation
+- Scale height estimates use mean molecular weight ~2.3 amu
+- Temperature profile averages multiple models; local variations expected
+- Hydrogen escape rate scaled from comparative systems
+- Future observations will refine all parameters significantly
+
+FILES REFERENCED / DATA SOURCES
+================================================================================
+WASP-19b discovery paper: Hebb et al. 2009 (ApJ, Vol. 693)
+Atmospheric characterization: Huitson et al. (implied observations)
+Comparative ultra-hot systems: WASP-76b, HAT-P-1b literature
+Binding Energy Framework: Standard exoplanet physics derivation
+
+================================================================================
+Last Updated: Analysis Date 2026
+Framework Version: Binding Energy Framework v2.1
+================================================================================

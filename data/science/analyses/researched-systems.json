@@ -1,0 +1,369 @@
+{
+ "generatedNote": "Researched exoplanet systems: local deep-dive analyses (formation, interior structure, long-term evolution, magnetosphere). Numeric truth remains the NASA archive; these add narrative context.",
+ "planetNames": [
+  "HAT-P-1 b",
+  "HAT-P-12 b",
+  "HAT-P-18 b",
+  "HAT-P-32 b",
+  "HAT-P-65 b",
+  "K2-141 b",
+  "KELT-20 b",
+  "KELT-9 b",
+  "Kepler-12 b",
+  "Kepler-167 e",
+  "Kepler-51 b",
+  "Kepler-51 d",
+  "TOI-1231 b",
+  "TOI-1468 b",
+  "TOI-270 b",
+  "TOI-270 c",
+  "TOI-3757 b",
+  "TOI-5205 b",
+  "TOI-674 b",
+  "WASP-103 b",
+  "WASP-18 b",
+  "WASP-19 b",
+  "WASP-25 b",
+  "WASP-52 b",
+  "WASP-69 b",
+  "WASP-76 b",
+  "WASP-96 b"
+ ],
+ "systems": [
+  {
+   "system": "HAT-P-12",
+   "planets": [
+    "HAT-P-12 b"
+   ],
+   "summary": "HAT-P-12b is a warm super-Jupiter (Teq \u2248 900 K) with mass 0.21 M_J and radius 1.79 R_J orbiting a K-type star every 3.21 days. Extremely low density (0.04 g/cm\u00b3) and high H/He envelope fraction make HAT-P-12b the most inflated known exoplanet, ideal for transmission spectroscopy.",
+   "files": [
+    "HAT-P-12b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "HAT-P-12b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "HAT-P-12b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "HAT-P-18",
+   "planets": [
+    "HAT-P-18 b"
+   ],
+   "summary": "HAT-P-18b is a warm Jupiter with distinctive characteristics that shape its evolutionary trajectory. With a mean density of 0.140 g/cm\u00b3, it occupies a unique position in the density-temperature phase space of exoplanet atmospheres, directly influencing how stellar radiation impacts its long-term atmospheric stability.",
+   "files": [
+    "HAT-P-18b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "HAT-P-18b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "HAT-P-18b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "HAT-P-1",
+   "planets": [
+    "HAT-P-1 b"
+   ],
+   "summary": "HAT-P-1b is a hot Jupiter (Teq \u2248 1449 K) with mass 0.531 M_J and radius 1.320 R_J orbiting a G-type star every 3.52 days. Despite its relatively low mass, HAT-P-1b exhibits a massive core (~60 M_\u2295) for its size, representing an extreme case of core-dominated composition. The planet shows strong water vapor features in transmission spectroscopy.",
+   "files": [
+    "HAT-P-1b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "HAT-P-1b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "HAT-P-1b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "HAT-P-32",
+   "planets": [
+    "HAT-P-32 b"
+   ],
+   "summary": "HAT-P-32b is a hot Jupiter (Teq \u2248 1900 K) with mass 0.947 M_J and radius 1.789 R_J, exhibiting moderate atmosphere expansion. With an orbital period of 2.15 days around an F-star, HAT-P-32b represents a transition between ultra-hot and typical hot Jupiters with significant molecular absorption features.",
+   "files": [
+    "HAT-P-32b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "HAT-P-32b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "HAT-P-32b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "HAT-P-65",
+   "planets": [
+    "HAT-P-65 b"
+   ],
+   "summary": "HAT-P-65b is a hot Jupiter (Teq \u2248 1750 K) with mass 1.89 M_J and radius 1.46 R_J orbiting an F-star every 2.61 days. This moderately massive hot Jupiter exhibits strong water vapor absorption and represents the transition zone where methane becomes a significant atmospheric component.",
+   "files": [
+    "HAT-P-65b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "HAT-P-65b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "HAT-P-65b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "K2-141",
+   "planets": [
+    "K2-141 b"
+   ],
+   "summary": "**System:** K2-141 **Host Star:** K2-141 (Unknown) **Stellar Temperature:** 4570.0 K **Stellar Mass:** 0.708 M\u2609 **Stellar Age:** 6.3 Gyr **Planet Classification:** Super-Earth",
+   "files": [
+    "K2-141b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "K2-141b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "K2-141b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "KELT-20",
+   "planets": [
+    "KELT-20 b"
+   ],
+   "summary": "- **Mass**: 3.93 M_J (1,250 M_E) - **Radius**: 1.730 R_J (19.5 R_E) - **Equilibrium Temperature**: 2,262 K - **Orbital Period**: 3.60 days - **Stellar XUV Flux**: ~700 erg/s/cm\u00b2 (at 1 AU equivalent: ~360,000 W/m\u00b2) - **Orbital Distance**: 0.0460 AU - **Mean Density**: \u03c1 = M/V\u00b3 = 3.93 / (1.730)\u00b3 = **0.755 g/cm\u00b3** (extremely dense for a gas giant)",
+   "files": [
+    "KELT-20b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "KELT-20b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "KELT-20b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "KELT-9",
+   "planets": [
+    "KELT-9 b"
+   ],
+   "summary": "**System:** KELT-9 **Host Star:** KELT-9 (B9.5-A0) **Stellar Temperature:** 10170.0 K **Stellar Mass:** 2.52 M\u2609 **Stellar Age:** 0.3 Gyr **Planet Classification:** Gas Giant",
+   "files": [
+    "KELT-9b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "KELT-9b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "KELT-9b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "Kepler-12",
+   "planets": [
+    "Kepler-12 b"
+   ],
+   "summary": "**Key Distinction:** Lowest mass but HIGHEST radius = MOST INFLATED gas giant in sample",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "Kepler-12b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "Kepler-12b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "Kepler-12b_LONG_TERM_EVOLUTION.md",
+    "Kepler-12b_QUICK_REFERENCE.txt",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md"
+   ]
+  },
+  {
+   "system": "Kepler-167",
+   "planets": [
+    "Kepler-167 e"
+   ],
+   "summary": "Kepler-167e is a sub-Neptune with distinctive characteristics that shape its evolutionary trajectory. With a mean density of 2.520 g/cm\u00b3, it occupies a unique position in the density-temperature phase space of exoplanet atmospheres, directly influencing how stellar radiation impacts its long-term atmospheric stability.",
+   "files": [
+    "Kepler-167e_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "Kepler-51",
+   "planets": [
+    "Kepler-51 b",
+    "Kepler-51 d"
+   ],
+   "summary": "**System:** Kepler-51 **Host Star:** Kepler-51 (Unknown) **Stellar Temperature:** 6018.0 K **Stellar Mass:** 1.04 M\u2609 **Stellar Age:** 0.3 Gyr **Planet Classification:** Neptune-like",
+   "files": [
+    "Kepler-51b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "Kepler-51b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "Kepler-51b_LONG_TERM_EVOLUTION.md",
+    "Kepler-51d_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-1231",
+   "planets": [
+    "TOI-1231 b"
+   ],
+   "summary": "TOI-1231 is an M3V (mid-to-late M-dwarf) red dwarf with the following fundamental properties:",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "QUICK_REFERENCE.txt",
+    "TOI-1231b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-1231b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-1231b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-1468",
+   "planets": [
+    "TOI-1468 b"
+   ],
+   "summary": "**System:** TOI-1468 **Host Star:** TOI-1468 (Unknown) **Stellar Temperature:** 3376.0 K **Stellar Mass:** 0.3527 M\u2609 **Stellar Age:** 5.0 Gyr **Planet Classification:** Rocky",
+   "files": [
+    "TOI-1468b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-1468b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-1468b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-270",
+   "planets": [
+    "TOI-270 b",
+    "TOI-270 c"
+   ],
+   "summary": "TOI-270b is a cool sub-Neptune (Teq \u2248 530 K) with mass 3.2 M_E and radius 2.4 R_E orbiting a K-star every 3.35 days. First member of compact multi-planet system, TOI-270b exhibits pronounced molecular features with significant ammonia and methane across day-night terminator.",
+   "files": [
+    "TOI-270b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-270b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-270b_LONG_TERM_EVOLUTION.md",
+    "TOI-270c_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-3757",
+   "planets": [
+    "TOI-3757 b"
+   ],
+   "summary": "TOI-3757 is an M0V (early M-dwarf) with enhanced luminosity compared to later M-types:",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "QUICK_REFERENCE.txt",
+    "TOI-3757b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-3757b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-3757b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-5205",
+   "planets": [
+    "TOI-5205 b"
+   ],
+   "summary": "TOI-5205 is the faintest, least massive star in the entire analysis:",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "QUICK_REFERENCE.txt",
+    "TOI-5205b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-5205b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-5205b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "TOI-674",
+   "planets": [
+    "TOI-674 b"
+   ],
+   "summary": "**Spectroscopic Parameters:** - Effective Temperature (Teff): 3514 K - Mass (M*): 0.42 M\u2609 - Radius (R*): ~0.40 R\u2609 - Luminosity (L*): 0.0243 L\u2609 - Surface Gravity (log g): 4.8-5.0",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "QUICK_REFERENCE.txt",
+    "TOI-674b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "TOI-674b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "TOI-674b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "WASP-103",
+   "planets": [
+    "WASP-103 b"
+   ],
+   "summary": "This is an unusually luminous F8V star, producing extreme insolation at 0.0198 AU.",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-103b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-103b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-103b_LONG_TERM_EVOLUTION.md",
+    "WASP-103b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-18",
+   "planets": [
+    "WASP-18 b"
+   ],
+   "summary": "- **Mass**: 10.43 M_J (3,316 M_E) - Most massive in our sample - **Radius**: 2.0 R_J (22.5 R_E) - **Equilibrium Temperature**: 2,429 K - **Orbital Period**: 0.941 days - **Stellar XUV Flux**: ~1,050 erg/s/cm\u00b2 (at 1 AU equivalent: ~540,000 W/m\u00b2) - **Orbital Distance**: 0.0224 AU - **Mean Density**: \u03c1 = M/V = 10.43 / (2.0)\u00b3 = **1.303 g/cm\u00b3** (very dense for its size)",
+   "files": [
+    "WASP-18b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-18b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-18b_LONG_TERM_EVOLUTION.md"
+   ]
+  },
+  {
+   "system": "WASP-19",
+   "planets": [
+    "WASP-19 b"
+   ],
+   "summary": "The WASP-19 host star exhibits characteristics of a late F/G-type main-sequence dwarf with the following parameters:",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-19b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-19b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-19b_LONG_TERM_EVOLUTION.md",
+    "WASP-19b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-25",
+   "planets": [
+    "WASP-25 b"
+   ],
+   "summary": "The WASP-25 host star exhibits characteristics of a late F/early G-type main-sequence dwarf with the following estimated parameters:",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-25b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-25b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-25b_LONG_TERM_EVOLUTION.md",
+    "WASP-25b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-52",
+   "planets": [
+    "WASP-52 b"
+   ],
+   "summary": "The K2V classification provides **reduced UV flux** compared to F/G-type hosts (by factor of \u223c2-3). This fundamentally alters atmospheric photochemistry.",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-52b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-52b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-52b_LONG_TERM_EVOLUTION.md",
+    "WASP-52b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-69",
+   "planets": [
+    "WASP-69 b"
+   ],
+   "summary": "This is an **extremely cool and dim host star**, producing minimal UV flux.",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-69b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-69b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-69b_LONG_TERM_EVOLUTION.md",
+    "WASP-69b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-76",
+   "planets": [
+    "WASP-76 b"
+   ],
+   "summary": "This is an extremely hot and luminous F-dwarf, producing intense UV flux.",
+   "files": [
+    "COMPLETE_SYSTEM_ANALYSIS.md",
+    "MAGNETOSPHERE_RADIATION_CHEMISTRY.md",
+    "WASP-76b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-76b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-76b_LONG_TERM_EVOLUTION.md",
+    "WASP-76b_QUICK_REFERENCE.txt"
+   ]
+  },
+  {
+   "system": "WASP-96",
+   "planets": [
+    "WASP-96 b"
+   ],
+   "summary": "WASP-96b is a hot Jupiter (Teq \u2248 1449 K) with mass 0.52 M_J and radius 1.43 R_J orbiting a G-type star every 3.41 days. Low-mass inflated hot Jupiter (density 0.21 g/cm\u00b3) with pronounced water vapor absorption making it an ideal JWST transmission spectroscopy target.",
+   "files": [
+    "WASP-96b_FORMATION_AND_COMPARATIVE_ANALYSIS.md",
+    "WASP-96b_INTERIOR_STRUCTURE_AND_CHEMISTRY.md",
+    "WASP-96b_LONG_TERM_EVOLUTION.md"
+   ]
+  }
+ ]
+}
