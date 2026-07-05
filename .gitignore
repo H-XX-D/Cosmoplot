@@ -50,3 +50,6 @@ next-env.d.ts
 .topdown/
 __pycache__/
 *.pyc
+
+# playwright artifacts
+.playwright-mcp/

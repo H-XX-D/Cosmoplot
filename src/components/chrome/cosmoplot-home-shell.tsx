@@ -8,7 +8,7 @@ import {
   Telescope,
   TrendingUp,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { format } from "date-fns";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { UniverseStage } from "@/components/universe/universe-stage";
@@ -16,7 +16,6 @@ import type { UniverseSnapshot } from "@/lib/science/types";
 import { LeadCaptureForm } from "@/components/chrome/lead-capture-form";
 import { LockoutTargetPlanner } from "@/components/science/lockout-target-planner";
 
-const INTRO_DELAY_MS = 7000;
 const HERO_FADE_MS = 1600;
 const SCROLL_DURATION_MS = 3400;
 const SCROLL_TOP_OFFSET = 96;
@@ -91,7 +90,6 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
   const [heroFading, setHeroFading] = useState(false);
   const [introArmed, setIntroArmed] = useState(false);
   const sequenceStartedRef = useRef(false);
-  const timerRef = useRef<number | null>(null);
   const totalPlanets = snapshot.systems.reduce((sum, system) => sum + system.planetCount, 0);
   const nearest = snapshot.systems.slice(0, 6);
   const primarySource = snapshot.sources[0];
@@ -108,17 +106,6 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
       scrollToScienceDeck(SCROLL_DURATION_MS);
     }, Math.round(HERO_FADE_MS * 0.2));
   }, []);
-
-  useEffect(() => {
-    timerRef.current = window.setTimeout(() => {
-      startSequence();
-    }, INTRO_DELAY_MS);
-    return () => {
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
-      }
-    };
-  }, [startSequence]);
 
   const heroClassName = heroFading
     ? "opacity-0 blur-xl -translate-y-6 scale-[0.985]"
@@ -314,7 +301,11 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
             <div className="relative z-10">
               <div className="text-[0.68rem] uppercase tracking-[0.24em] text-sky-100/48">Archive pulse</div>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300/76">
-                Generated {format(new Date(snapshot.generatedAt), "PPpp")}. This chart is built from the current archive snapshot, local cache state, and selected-target enrichment when available. It is designed for exploration and triage; instrument-grade planning still requires the proper JWST checks.
+                Generated{" "}
+                <time dateTime={snapshot.generatedAt} suppressHydrationWarning>
+                  {format(new Date(snapshot.generatedAt), "PPpp")}
+                </time>
+                . This chart is built from the current archive snapshot, local cache state, and selected-target enrichment when available. It is designed for exploration and triage; instrument-grade planning still requires the proper JWST checks.
               </p>
               {primarySource ? (
                 <a
