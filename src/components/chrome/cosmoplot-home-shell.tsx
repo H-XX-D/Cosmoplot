@@ -8,6 +8,7 @@ import {
   Telescope,
   TrendingUp,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { UniverseStage } from "@/components/universe/universe-stage";
@@ -54,7 +55,33 @@ const supporterModules = [
   },
 ] as const;
 
-export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot }) {
+const FAR_FIELD_RADIUS_PC = 50;
+const FAR_FIELD_LIMIT = 400;
+
+export function CosmoplotHomeShell({ snapshot: initialSnapshot }: { snapshot: UniverseSnapshot }) {
+  // The server renders a fast near-field snapshot; the fuller far field is
+  // fetched on the client after mount and swapped in, so first paint stays light.
+  const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const [fieldExpanding, setFieldExpanding] = useState(false);
+
+  useEffect(() => {
+    if (initialSnapshot.query.radiusPc >= FAR_FIELD_RADIUS_PC) return;
+    let cancelled = false;
+    setFieldExpanding(true);
+    fetch(`/api/science/universe?radiusPc=${FAR_FIELD_RADIUS_PC}&limit=${FAR_FIELD_LIMIT}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((full: UniverseSnapshot | null) => {
+        if (!cancelled && full?.systems?.length) setSnapshot(full);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setFieldExpanding(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSnapshot.query.radiusPc]);
+
   const totalPlanets = snapshot.systems.reduce((sum, system) => sum + system.planetCount, 0);
   const nearest = snapshot.systems.slice(0, 6);
   const primarySource = snapshot.sources[0];
@@ -132,7 +159,9 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
               {
                 label: "Systems loaded",
                 value: snapshot.systems.length.toString(),
-                note: "Nearby confirmed host systems ready for chart plotting.",
+                note: fieldExpanding
+                  ? "Near field ready; expanding the far field to the full sampling radius..."
+                  : "Confirmed host systems ready for chart plotting.",
               },
               {
                 label: "Planets organized",
