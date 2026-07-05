@@ -725,6 +725,20 @@ function findPlanetTarget(snapshot: UniverseSnapshot, planetName: string) {
   return null;
 }
 
+// Zoom and orbit-speed sliders use a log scale centered on 1x so control is
+// smooth and uniform (each step is a constant ratio) instead of a linear scale
+// that feels abrupt on a multiplier. Slider position t in [0,1]: t=0.5 -> 1x,
+// t=1 -> max, t=0 -> 1/max, with fine control near the 1x center.
+const ZOOM_SLIDER_MAX = 4; // 0.25x .. 4x
+const ORBIT_SLIDER_MAX = 10; // 0.1x .. 10x
+function logSliderToValue(t: number, max: number) {
+  return Math.pow(max, 2 * t - 1);
+}
+function valueToLogSlider(value: number, max: number) {
+  const clamped = Math.min(max, Math.max(1 / max, value));
+  return (Math.log(clamped) / Math.log(max) + 1) / 2;
+}
+
 // Deterministic shuffle seeded by a string, so a target's highlight cards are
 // stable while it is selected but vary from target to target.
 function seededShuffle<T>(items: T[], seedText: string): T[] {
@@ -6970,11 +6984,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                 <div className="text-[0.68rem] font-medium text-white">{zoomFactor.toFixed(2)}x</div>
                 <input
                   type="range"
-                  min={0.35}
-                  max={2.4}
-                  step={0.01}
-                  value={zoomFactor}
-                  onChange={(event) => setZoomFactor(Number(event.target.value))}
+                  min={0}
+                  max={1}
+                  step={0.004}
+                  value={valueToLogSlider(zoomFactor, ZOOM_SLIDER_MAX)}
+                  onChange={(event) => setZoomFactor(Number(logSliderToValue(Number(event.target.value), ZOOM_SLIDER_MAX).toFixed(3)))}
                   aria-label="Stage zoom"
                   className="mx-auto h-16 w-3 cursor-pointer appearance-none rounded-full bg-white/8 accent-cyan-300 [writing-mode:vertical-lr]"
                   style={{ direction: "rtl" }}
@@ -6983,11 +6997,11 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                 <div className="text-[0.68rem] font-medium text-white">{orbitSpeedLabel}</div>
                 <input
                   type="range"
-                  min={0.1}
-                  max={6}
-                  step={0.1}
-                  value={orbitSpeedMultiplier}
-                  onChange={(event) => setOrbitSpeedMultiplier(Number(event.target.value))}
+                  min={0}
+                  max={1}
+                  step={0.004}
+                  value={valueToLogSlider(orbitSpeedMultiplier, ORBIT_SLIDER_MAX)}
+                  onChange={(event) => setOrbitSpeedMultiplier(Number(logSliderToValue(Number(event.target.value), ORBIT_SLIDER_MAX).toFixed(3)))}
                   aria-label="Orbit speed"
                   className="mx-auto h-20 w-3 cursor-pointer appearance-none rounded-full bg-white/8 accent-sky-300 [writing-mode:vertical-lr]"
                   style={{ direction: "rtl" }}
