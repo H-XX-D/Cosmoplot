@@ -7,7 +7,13 @@ import {
   Crosshair,
   Database,
   House,
+  Maximize2,
+  Minimize2,
   Orbit,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -5758,6 +5764,23 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
   const [orbitSpeedMultiplier, setOrbitSpeedMultiplier] = useState(1);
   const [zoomFactor, setZoomFactor] = useState(1);
   const [followLocked, setFollowLocked] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fsNavOpen, setFsNavOpen] = useState(true);
+  const [fsInfoOpen, setFsInfoOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFullscreen]);
   const [freeRoam, setFreeRoam] = useState(false);
   const [showWhiteDwarfs, setShowWhiteDwarfs] = useState(false);
   const [showMagnetosphere, setShowMagnetosphere] = useState(false);
@@ -6170,11 +6193,20 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
   }
 
   return (
-    <section id="science-deck" className="scroll-mt-28 space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_30rem] xl:items-start">
-        <div className="space-y-6">
-          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(7,16,34,0.82),rgba(3,9,22,0.62))] shadow-[0_30px_120px_rgba(2,8,24,0.42)] backdrop-blur-xl">
-            <div className="flex flex-col gap-4 border-b border-white/8 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
+    <section
+      id="science-deck"
+      className={isFullscreen ? "fixed inset-0 z-[70] overflow-hidden bg-[#020610]" : "scroll-mt-28 space-y-6"}
+    >
+      <div className={isFullscreen ? "relative h-full" : "grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_30rem] xl:items-start"}>
+        <div className={isFullscreen ? "h-full" : "space-y-6"}>
+          <div
+            className={
+              isFullscreen
+                ? "relative flex h-full flex-col overflow-hidden bg-[#020610]"
+                : "overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(7,16,34,0.82),rgba(3,9,22,0.62))] shadow-[0_30px_120px_rgba(2,8,24,0.42)] backdrop-blur-xl"
+            }
+          >
+            <div className={`flex-col gap-4 border-b border-white/8 px-5 py-5 lg:flex-row lg:items-end lg:justify-between ${isFullscreen ? "hidden" : "flex"}`}>
               <div>
                 <div className="text-[0.68rem] uppercase tracking-[0.28em] text-sky-100/52">3D Star Plotter</div>
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">Star chart plotter</h2>
@@ -6187,6 +6219,13 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
               </div>
             </div>
 
+            <div
+              className={
+                isFullscreen
+                  ? `absolute inset-y-0 left-0 z-30 w-[24rem] max-w-[88vw] overflow-y-auto border-r border-white/10 bg-[#030a18]/94 pt-16 backdrop-blur-xl transition-transform duration-300 ${fsNavOpen ? "translate-x-0" : "-translate-x-full"}`
+                  : undefined
+              }
+            >
             {guidedTargets.length ? (
               <div className="border-b border-white/8 px-5 py-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -6484,8 +6523,10 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
               </div>
             </div>
 
+            </div>
+
             <div
-              className="relative h-[620px] w-full overflow-hidden"
+              className={`relative w-full overflow-hidden ${isFullscreen ? "min-h-0 flex-1" : "h-[620px]"}`}
               onPointerLeave={() => setStageHover(null)}
               onContextMenu={(event) => {
                 event.preventDefault();
@@ -6587,7 +6628,37 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                   ? "Free cam · drag, pan, zoom anywhere · double-click star/planet to fly"
                   : "Drag to orbit · wheel to zoom · right-click for free cam · click to set orbit point · double-click star/planet to fly"}
               </div>
+              {isFullscreen ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setFsNavOpen((value) => !value)}
+                    title={fsNavOpen ? "Hide plotter controls" : "Show plotter controls"}
+                    className="absolute left-3 top-3 z-40 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/72 px-3 py-2 text-[0.6rem] uppercase tracking-[0.18em] text-slate-100 backdrop-blur-md transition hover:bg-white/[0.1]"
+                  >
+                    {fsNavOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+                    Controls
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFsInfoOpen((value) => !value)}
+                    title={fsInfoOpen ? "Hide information" : "Show information"}
+                    className="absolute right-3 top-3 z-40 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/72 px-3 py-2 text-[0.6rem] uppercase tracking-[0.18em] text-slate-100 backdrop-blur-md transition hover:bg-white/[0.1]"
+                  >
+                    Info
+                    {fsInfoOpen ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
+                  </button>
+                </>
+              ) : null}
               <div className="absolute bottom-4 right-4 z-20 flex w-[5.5rem] flex-col items-center gap-2 rounded-[1.05rem] border border-white/10 bg-slate-950/58 px-2 py-2 shadow-[0_18px_48px_rgba(2,8,24,0.48)] backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen((value) => !value)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2 py-1.5 text-[0.54rem] uppercase tracking-[0.18em] text-slate-100 transition hover:bg-white/[0.1]"
+                >
+                  {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                  {isFullscreen ? "Exit" : "Full"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -6661,7 +6732,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
               </div>
             </div>
 
-            <div className="space-y-4 border-t border-white/8 px-5 py-5">
+            <div className={`space-y-4 border-t border-white/8 px-5 py-5 ${isFullscreen ? "hidden" : ""}`}>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/30 p-4">
                   <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">Chart Fix Report</div>
@@ -6881,7 +6952,13 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
           </div>
         </div>
 
-        <aside className="space-y-4">
+        <aside
+          className={
+            isFullscreen
+              ? `absolute inset-y-0 right-0 z-30 w-[26rem] max-w-[92vw] space-y-4 overflow-y-auto border-l border-white/10 bg-[#030a18]/94 p-4 pt-16 backdrop-blur-xl transition-transform duration-300 ${fsInfoOpen ? "translate-x-0" : "translate-x-full"}`
+              : "space-y-4"
+          }
+        >
           {selectedDeepSky ? (
             <DeepSkyVisualFocus entry={selectedDeepSky} />
           ) : selectedWhiteDwarf ? (
