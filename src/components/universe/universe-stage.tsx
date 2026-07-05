@@ -6951,15 +6951,15 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                   </p>
                   {activeFocusKind === "planet" || activeFocusKind === "system" ? (
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
-                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">XYZ from Sun</div>
-                        <div className="mt-1 text-sm text-white">
+                      <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-3 py-3 text-emerald-50">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] opacity-70">XYZ from Sun</div>
+                        <div className="mt-1 text-sm">
                           {selectedSystem ? `${formatSigned(selectedSystem.cartesianPc.x, 2)}, ${formatSigned(selectedSystem.cartesianPc.y, 2)}, ${formatSigned(selectedSystem.cartesianPc.z, 2)} pc` : "Unresolved"}
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
-                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Host star</div>
-                        <div className="mt-1 text-sm text-white">{selectedSystem?.name ?? "Unresolved"} · {selectedSystem?.stellar.spectralType ?? "Unknown"}</div>
+                      <div className="rounded-2xl border border-sky-300/18 bg-sky-300/10 px-3 py-3 text-sky-50">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] opacity-70">Host star</div>
+                        <div className="mt-1 text-sm">{selectedSystem?.name ?? "Unresolved"} · {selectedSystem?.stellar.spectralType ?? "Unknown"}</div>
                         <div className="mt-1 text-xs text-slate-300/68">
                           {selectedSystem?.stellar.radiusSolar
                             ? `R ${formatNumber(selectedSystem.stellar.radiusSolar, 2)} R☉`
@@ -6970,9 +6970,9 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                         </div>
                         <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-slate-400/60">Source: Archive host row</div>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
-                        <div className="text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">Active target</div>
-                        <div className="mt-1 text-sm text-white">{activeFocusKind === "planet" ? "Planet detail" : "System overview"}</div>
+                      <div className="rounded-2xl border border-amber-300/16 bg-amber-300/10 px-3 py-3 text-amber-50">
+                        <div className="text-[0.65rem] uppercase tracking-[0.22em] opacity-70">Active target</div>
+                        <div className="mt-1 text-sm">{activeFocusKind === "planet" ? "Planet detail" : "System overview"}</div>
                         {selectedPlanet ? (
                           <div className="mt-1 text-xs text-slate-300/68">
                             {compactPlanetFluxTemp(selectedSystem!, selectedPlanet, selectedPlanetScience) || compactPlanetMassRadius(selectedPlanet, selectedPlanetScience) || "Science summary unresolved"}
@@ -7044,6 +7044,14 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                       </div>
                     </div>
                   ) : null}
+
+                  {reportHighlightCards.length ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {reportHighlightCards.map((metric) => (
+                        <MetricCard key={metric.label} metric={metric} />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="rounded-[1.5rem] border border-white/8 bg-slate-950/30 p-4">
@@ -7113,14 +7121,6 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                   </div>
                 </div>
               </div>
-
-              {reportHighlightCards.length ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {reportHighlightCards.map((metric) => (
-                    <MetricCard key={metric.label} metric={metric} />
-                  ))}
-                </div>
-              ) : null}
 
               <div className="rounded-[1.7rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
