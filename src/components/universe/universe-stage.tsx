@@ -6474,7 +6474,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
 
               <div className="relative flex items-end xl:min-w-[8rem]">
                 {advancedFiltersOpen ? (
-                  <div className="absolute bottom-[calc(100%+0.75rem)] right-0 z-30 w-[22rem] rounded-[1.35rem] border border-white/12 bg-slate-950/90 p-4 shadow-[0_18px_48px_rgba(2,8,24,0.55)] backdrop-blur-xl">
+                  <div className="absolute top-[calc(100%+0.75rem)] right-0 z-30 max-h-[28rem] w-[22rem] overflow-y-auto rounded-[1.35rem] border border-white/12 bg-slate-950/90 p-4 shadow-[0_18px_48px_rgba(2,8,24,0.55)] backdrop-blur-xl">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-[0.62rem] uppercase tracking-[0.24em] text-sky-100/50">Advanced Filters</div>
