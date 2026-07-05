@@ -6110,10 +6110,12 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
       : activeFocusKind === "referenceStar" && selectedReferenceStar
         ? buildReferenceStarAnalysis(selectedReferenceStar)
         : selectedSystem
-          ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)
-            + (selectedPlanetScience?.researchNarrative
-              ? `\n\n===== DEEP-DIVE ANALYSIS (RESEARCHED SYSTEM) =====\n\n${selectedPlanetScience.researchNarrative}`
-              : "")
+          ? (selectedSystem.researched
+            ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)
+              + (selectedPlanetScience?.researchNarrative
+                ? `\n\n===== DEEP-DIVE ANALYSIS (RESEARCHED SYSTEM) =====\n\n${selectedPlanetScience.researchNarrative}`
+                : "")
+            : `INCOMPLETE ANALYSIS — AWAITING MORE DATA\n\n${selectedPlanet?.name ?? selectedSystem.name} does not yet have a committed deep-dive analysis. The archive-derived metrics, uncertainty propagation, and habitability estimates in the side panel remain available; a full science write-up appears here once this system is researched.`)
           : "No target in the current filtered universe slice.";
   const sources = activeFocusKind === "deepSky" && selectedDeepSky
     ? deepSkySources(selectedDeepSky)
@@ -6339,8 +6341,8 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
       id="science-deck"
       className={isFullscreen ? "fixed inset-0 z-[70] overflow-hidden bg-[#020610]" : "scroll-mt-28 space-y-6"}
     >
-      <div className={isFullscreen ? "relative h-full" : "grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_30rem] xl:items-start"}>
-        <div className={isFullscreen ? "h-full" : "space-y-6"}>
+      <div className={isFullscreen ? "relative h-full" : "space-y-6"}>
+        <div className={isFullscreen ? "h-full" : ""}>
           <div
             className={
               isFullscreen
@@ -7115,7 +7117,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                     </button>
                   </div>
                 </div>
-                <pre className="mt-5 whitespace-pre-wrap break-words rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-5 font-mono text-[0.84rem] leading-7 text-slate-200/82">{analysis}</pre>
+                <pre className="mt-5 max-h-[42rem] overflow-y-auto whitespace-pre-wrap break-words rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-5 font-mono text-[0.84rem] leading-7 text-slate-200/82">{analysis}</pre>
               </div>
             </div>
           </div>
@@ -7125,7 +7127,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
           className={
             isFullscreen
               ? `absolute inset-y-0 right-0 z-30 w-[26rem] max-w-[92vw] space-y-4 overflow-y-auto border-l border-white/10 bg-[#030a18]/94 p-4 pt-16 backdrop-blur-xl transition-transform duration-300 ${fsInfoOpen ? "translate-x-0" : "translate-x-full"}`
-              : "space-y-4"
+              : "gap-4 [column-fill:balance] columns-1 lg:columns-2 2xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid"
           }
         >
           {selectedDeepSky ? (
