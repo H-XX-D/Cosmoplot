@@ -8,7 +8,6 @@ import {
   Telescope,
   TrendingUp,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
 import { format } from "date-fns";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { UniverseStage } from "@/components/universe/universe-stage";
@@ -16,9 +15,6 @@ import type { UniverseSnapshot } from "@/lib/science/types";
 import { LeadCaptureForm } from "@/components/chrome/lead-capture-form";
 import { LockoutTargetPlanner } from "@/components/science/lockout-target-planner";
 
-const HERO_FADE_MS = 1600;
-const SCROLL_DURATION_MS = 3400;
-const SCROLL_TOP_OFFSET = 96;
 
 const engineModules = [
   {
@@ -58,58 +54,10 @@ const supporterModules = [
   },
 ] as const;
 
-function easeInOutCubic(value: number) {
-  return value < 0.5
-    ? 4 * value * value * value
-    : 1 - Math.pow(-2 * value + 2, 3) / 2;
-}
-
-function scrollToScienceDeck(durationMs: number) {
-  const target = document.getElementById("science-deck");
-  if (!target) return;
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const currentY = window.scrollY;
-  const targetY = Math.max(0, currentY + target.getBoundingClientRect().top - SCROLL_TOP_OFFSET);
-  if (prefersReducedMotion) {
-    window.scrollTo(0, targetY);
-    return;
-  }
-  const startedAt = performance.now();
-  const step = (now: number) => {
-    const t = Math.min(1, (now - startedAt) / durationMs);
-    const eased = easeInOutCubic(t);
-    window.scrollTo(0, currentY + (targetY - currentY) * eased);
-    if (t < 1) {
-      window.requestAnimationFrame(step);
-    }
-  };
-  window.requestAnimationFrame(step);
-}
-
 export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot }) {
-  const [heroFading, setHeroFading] = useState(false);
-  const [introArmed, setIntroArmed] = useState(false);
-  const sequenceStartedRef = useRef(false);
   const totalPlanets = snapshot.systems.reduce((sum, system) => sum + system.planetCount, 0);
   const nearest = snapshot.systems.slice(0, 6);
   const primarySource = snapshot.sources[0];
-
-  const startSequence = useCallback(() => {
-    if (sequenceStartedRef.current) {
-      scrollToScienceDeck(SCROLL_DURATION_MS * 0.7);
-      return;
-    }
-    sequenceStartedRef.current = true;
-    setHeroFading(true);
-    window.setTimeout(() => {
-      setIntroArmed(true);
-      scrollToScienceDeck(SCROLL_DURATION_MS);
-    }, Math.round(HERO_FADE_MS * 0.2));
-  }, []);
-
-  const heroClassName = heroFading
-    ? "opacity-0 blur-xl -translate-y-6 scale-[0.985]"
-    : "opacity-100 blur-0 translate-y-0 scale-100";
 
   return (
     <div className="relative z-10">
@@ -140,20 +88,17 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
             </a>
           </div>
 
-          <button
-            type="button"
-            onClick={startSequence}
+          <a
+            href="#science-deck"
             className="rounded-full border border-sky-300/24 bg-sky-300/12 px-4 py-2 text-sm font-medium text-sky-50 transition hover:bg-sky-300/18"
           >
             Plot a Course
-          </button>
+          </a>
         </div>
       </nav>
 
       <section id="hero" className="flex min-h-screen items-center justify-center px-6 pb-20 pt-28 lg:px-10">
-        <div
-          className={`mx-auto flex w-full max-w-[1500px] flex-col gap-12 transition-[opacity,transform,filter] duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${heroClassName}`}
-        >
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-12">
           <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[0.72rem] uppercase tracking-[0.28em] text-slate-100/72">
               <Sparkles className="h-3.5 w-3.5 text-sky-200" />
@@ -167,13 +112,12 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <button
-                type="button"
-                onClick={startSequence}
+              <a
+                href="#science-deck"
                 className="rounded-full border border-sky-300/24 bg-sky-300/14 px-6 py-3 text-sm font-medium text-sky-50 transition hover:bg-sky-300/20"
               >
                 Plot Guided Fixes
-              </button>
+              </a>
               <a
                 href="#evidence"
                 className="rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
@@ -257,7 +201,7 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
 
       <section className="px-6 pb-20 lg:px-10">
         <div className="mx-auto max-w-[1500px]">
-          <UniverseStage snapshot={snapshot} introArmed={introArmed} />
+          <UniverseStage snapshot={snapshot} />
         </div>
       </section>
 
