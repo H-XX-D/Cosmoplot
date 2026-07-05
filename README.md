@@ -13,7 +13,7 @@ A science-first, Sun-centered map of nearby worlds. Cosmoplot plots real exoplan
 <p align="center">
   <img src="docs/cover.png" alt="Cosmoplot: a science-first universe explorer with a Sun-centered 3D map of nearby worlds" width="920">
 </p>
-<p align="center"><em>The Dream (WIP): a concept for where the interface is headed, not a screenshot of the current build. The star-compass mark to the left of the wordmark is the Cosmoplot logo and favicon.</em></p>
+<p align="center"><em>The Dream (WIP): a concept for where the interface is headed, not a screenshot of the current build.</em></p>
 
 ## Contents
 
