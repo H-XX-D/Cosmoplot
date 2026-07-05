@@ -10,7 +10,7 @@ import {
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
 import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, estimateThermalEmission, forecastMassFromRadius, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
-import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
+import { getSpectrumPoints, getTransmissionFeature } from "@/lib/science/local/transmission-features";
 import { getResearchedNarrative } from "@/lib/science/local/researched-systems";
 import { measurementBounds } from "@/lib/utils";
 import type {
@@ -1392,6 +1392,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
       })
     : null;
   const researchNarrative = await getResearchedNarrative(row?.pl_name ?? planetName);
+  const spectrumPoints = await getSpectrumPoints(row?.pl_name ?? planetName);
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1466,6 +1467,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     ],
     localAnalysis,
     researchNarrative,
+    spectrumPoints,
     uncertainty,
   } satisfies PlanetScienceBundle;
 }

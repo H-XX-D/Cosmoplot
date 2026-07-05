@@ -44,3 +44,23 @@ export async function getTransmissionFeature(planetName: string): Promise<Transm
   const map = await loadFeatures();
   return map.get(normalizeName(planetName)) ?? null;
 }
+
+const POINTS_PATH = path.join(process.cwd(), "data", "science", "spectra", "spectra-points.json");
+let pointsCache: Map<string, Array<[number, number]>> | null = null;
+
+// Per-planet reduced transmission spectrum: [wavelength_um, transit_depth_ppm]
+// points, committed to the repo for the spectrum chart on researched targets.
+export async function getSpectrumPoints(planetName: string): Promise<Array<[number, number]> | null> {
+  if (!planetName) return null;
+  if (!pointsCache) {
+    const map = new Map<string, Array<[number, number]>>();
+    try {
+      const parsed = JSON.parse(await readFile(POINTS_PATH, "utf8")) as Record<string, Array<[number, number]>>;
+      for (const [name, points] of Object.entries(parsed)) map.set(normalizeName(name), points);
+    } catch {
+      // No committed spectrum points.
+    }
+    pointsCache = map;
+  }
+  return pointsCache.get(normalizeName(planetName)) ?? null;
+}

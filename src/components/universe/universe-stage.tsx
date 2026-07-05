@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { DISPLAY_LOG_SCALE, equatorialToCartesianPc, logScaledVector } from "@/lib/science/coordinates";
@@ -371,9 +373,9 @@ function analysisSectionSubtitle(focusKind: FocusKind | null) {
     case "referenceStar":
       return "Reference-star context retained under the map";
     case "system":
-      return "Full science write-up for the selected system, below the chart";
+      return "Deep-dive write-up and derivations for the selected system";
     default:
-      return "Full science narrative, derivations, and deep-dive for the plotted target, below the chart";
+      return "Deep-dive analysis, derivations, and provenance for the plotted target";
   }
 }
 
@@ -2113,6 +2115,80 @@ function MetricCard({ metric }: { metric: Metric }) {
         {metric.equation ? <div>{metric.equation}</div> : null}
       </div>
     </article>
+  );
+}
+
+// Reduced transmission spectrum as an inline SVG: transit depth (ppm) vs
+// wavelength (um). Wavelength axis is drawn short-to-long (left to right).
+function SpectrumChart({ points, molecules }: { points: Array<[number, number]>; molecules?: string[] }) {
+  const W = 640;
+  const H = 220;
+  const padL = 48;
+  const padR = 16;
+  const padT = 16;
+  const padB = 34;
+  const sorted = [...points].sort((a, b) => a[0] - b[0]);
+  const wls = sorted.map((p) => p[0]);
+  const dps = sorted.map((p) => p[1]);
+  const wMin = Math.min(...wls);
+  const wMax = Math.max(...wls);
+  const dMin = Math.min(...dps);
+  const dMax = Math.max(...dps);
+  const dPad = (dMax - dMin) * 0.1 || 1;
+  const x = (w: number) => padL + ((w - wMin) / (wMax - wMin || 1)) * (W - padL - padR);
+  const y = (d: number) => padT + (1 - (d - (dMin - dPad)) / ((dMax + dPad) - (dMin - dPad))) * (H - padT - padB);
+  const line = sorted.map((p, i) => `${i === 0 ? "M" : "L"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(wMax).toFixed(1)},${(H - padB).toFixed(1)} L${x(wMin).toFixed(1)},${(H - padB).toFixed(1)} Z`;
+  const xTicks = [wMin, (wMin + wMax) / 2, wMax];
+  const yTicks = [dMin, (dMin + dMax) / 2, dMax];
+  return (
+    <div className="rounded-[1.2rem] border border-sky-300/16 bg-slate-950/50 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[0.64rem] uppercase tracking-[0.22em] text-sky-100/60">Transmission spectrum</div>
+        {molecules?.length ? (
+          <div className="text-[0.6rem] uppercase tracking-[0.16em] text-emerald-200/70">{molecules.join(" · ")}</div>
+        ) : null}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="Transmission spectrum">
+        <defs>
+          <linearGradient id="spec-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {yTicks.map((t) => (
+          <g key={`y${t}`}>
+            <line x1={padL} y1={y(t)} x2={W - padR} y2={y(t)} stroke="#ffffff" strokeOpacity="0.06" />
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize="9" fill="#94a3b8">{t.toFixed(0)}</text>
+          </g>
+        ))}
+        {xTicks.map((t) => (
+          <text key={`x${t}`} x={x(t)} y={H - padB + 16} textAnchor="middle" fontSize="9" fill="#94a3b8">{t.toFixed(1)}</text>
+        ))}
+        <path d={area} fill="url(#spec-fill)" />
+        <path d={line} fill="none" stroke="#7dd3fc" strokeWidth="1.8" />
+        {sorted.map((p, i) => (
+          <circle key={i} cx={x(p[0])} cy={y(p[1])} r="1.6" fill="#e0f2fe" />
+        ))}
+        <text x={(W) / 2} y={H - 4} textAnchor="middle" fontSize="9" fill="#64748b">Wavelength (um)</text>
+        <text x={12} y={H / 2} textAnchor="middle" fontSize="9" fill="#64748b" transform={`rotate(-90 12 ${H / 2})`}>Transit depth (ppm)</text>
+      </svg>
+    </div>
+  );
+}
+
+const CONTRAST_SCROLLBAR =
+  "[scrollbar-width:thin] [scrollbar-color:theme(colors.sky.400)_transparent] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-800/40 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sky-400/60 hover:[&::-webkit-scrollbar-thumb]:bg-sky-300/80";
+
+// Formatted deep-dive: renders the committed markdown analysis with real
+// headings, tables, and lists inside a bounded, contrast-scrollbar panel.
+function MarkdownDeepDive({ text }: { text: string }) {
+  return (
+    <div className={`mt-5 max-h-[46rem] overflow-y-auto rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-6 ${CONTRAST_SCROLLBAR}`}>
+      <div className="space-y-3 text-sm leading-7 text-slate-200/85 [&_a]:text-sky-300 [&_code]:rounded [&_code]:bg-slate-800/60 [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.82em] [&_em]:text-slate-300 [&_h1]:mt-6 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-white [&_h2]:mt-5 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-sky-100 [&_h3]:mt-4 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-[0.14em] [&_h3]:text-sky-200/70 [&_hr]:my-5 [&_hr]:border-white/10 [&_li]:ml-4 [&_li]:list-disc [&_strong]:font-semibold [&_strong]:text-white [&_table]:my-3 [&_table]:w-full [&_table]:text-xs [&_td]:border [&_td]:border-white/8 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-white/8 [&_th]:bg-white/[0.04] [&_th]:px-2 [&_th]:py-1 [&_th]:text-left">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    </div>
   );
 }
 
@@ -6139,9 +6215,6 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
         : selectedSystem
           ? (selectedSystem.researched
             ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)
-              + (selectedPlanetScience?.researchNarrative
-                ? `\n\n===== DEEP-DIVE ANALYSIS (RESEARCHED SYSTEM) =====\n\n${selectedPlanetScience.researchNarrative}`
-                : "")
             : `INCOMPLETE ANALYSIS — AWAITING MORE DATA\n\n${selectedPlanet?.name ?? selectedSystem.name} does not yet have a committed deep-dive analysis. The archive-derived metrics, uncertainty propagation, and habitability estimates in the side panel remain available; a full science write-up appears here once this system is researched.`)
           : "No target in the current filtered universe slice.";
   const sources = activeFocusKind === "deepSky" && selectedDeepSky
@@ -7152,7 +7225,18 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                     </button>
                   </div>
                 </div>
-                <pre className="mt-5 max-h-[42rem] overflow-y-auto whitespace-pre-wrap break-words rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-5 font-mono text-[0.84rem] leading-7 text-slate-200/82">{analysis}</pre>
+                {activeFocusKind === "planet" && selectedPlanetScience?.spectrumPoints?.length ? (
+                  <div className="mt-5">
+                    <SpectrumChart
+                      points={selectedPlanetScience.spectrumPoints}
+                      molecules={selectedPlanetScience.transmission ? undefined : undefined}
+                    />
+                  </div>
+                ) : null}
+                <pre className={`mt-5 max-h-[42rem] overflow-y-auto whitespace-pre-wrap break-words rounded-[1.5rem] border border-white/8 bg-slate-950/42 p-5 font-mono text-[0.84rem] leading-7 text-slate-200/82 ${CONTRAST_SCROLLBAR}`}>{analysis}</pre>
+                {selectedSystem?.researched && selectedPlanetScience?.researchNarrative ? (
+                  <MarkdownDeepDive text={selectedPlanetScience.researchNarrative} />
+                ) : null}
               </div>
             </div>
           </div>
@@ -7224,8 +7308,8 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-semibold text-white">{source.name}</span>
-                      <span className={`rounded-full border px-2 py-1 text-[0.64rem] uppercase tracking-[0.18em] ${source.cache === "hit" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-50" : "border-amber-300/20 bg-amber-300/10 text-amber-50"}`}>
-                        {source.cache}
+                      <span className={`rounded-full border px-2 py-1 text-[0.64rem] uppercase tracking-[0.18em] ${source.cache === "hit" ? "border-sky-300/20 bg-sky-300/10 text-sky-50" : "border-emerald-300/20 bg-emerald-300/10 text-emerald-50"}`}>
+                        {source.cache === "hit" ? "cached" : "live"}
                       </span>
                     </div>
                     <p className="mt-2 text-xs leading-5 text-slate-300/70">{source.kind} · fetched <time dateTime={source.accessedAt} suppressHydrationWarning>{new Date(source.accessedAt).toLocaleString()}</time></p>
