@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use Cosmoplot, please cite it using the metadata below."
+title: Cosmoplot
+abstract: >-
+  A science-first, Sun-centered web app that maps nearby exoplanet systems in 3D
+  from live NASA Exoplanet Archive data and derives each world's physics
+  (interior, atmosphere, climate, escape, and detectability) from published
+  relations, with the provenance of every value kept visible.
+type: software
+authors:
+  - family-names: Hendrixx
+    given-names: Todd
+    alias: ">X<"
+version: 0.1.0
+date-released: 2026-07-05
+license: MIT
+url: "https://cosmoplot.vercel.app"
+repository-code: "https://github.com/H-XX-D/Cosmoplot"
+keywords:
+  - exoplanets
+  - astronomy
+  - astrophysics
+  - data-visualization
+  - NASA Exoplanet Archive
+  - JWST
+  - three.js
