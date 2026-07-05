@@ -9,7 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, forecastMassFromRadius, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
+import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, estimateThermalEmission, forecastMassFromRadius, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
 import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
 import { measurementBounds } from "@/lib/utils";
 import type {
@@ -1109,6 +1109,7 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
     earthSimilarity: computeEarthSimilarityIndex({ radiusEarth: 1, densityGcc: 5.51, massEarth: 1, equilibriumK: 255 }),
     habitableZone: assessHabitableZone({ luminositySolar: 1, stellarTeffK: 5772, semiMajorAxisAu: 1 }),
     massForecast: forecastMassFromRadius(1),
+    emission: estimateThermalEmission({ equilibriumK: 255, stellarTeffK: 5772, radiusEarth: 1, stellarRadiusSolar: 1 }),
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1372,6 +1373,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
   };
   const earthSimilarity = computeEarthSimilarityIndex({ radiusEarth, densityGcc, massEarth, equilibriumK });
   const massForecast = forecastMassFromRadius(radiusEarth);
+  const emission = estimateThermalEmission({ equilibriumK, stellarTeffK: stellarTemperatureK, radiusEarth, stellarRadiusSolar });
   const habitableZone = assessHabitableZone({
     luminositySolar: stellarLuminosity,
     stellarTeffK: stellarTemperatureK,
@@ -1446,6 +1448,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     earthSimilarity,
     habitableZone,
     massForecast,
+    emission,
     references: mergedReferences,
     sources: [
       archiveSource,

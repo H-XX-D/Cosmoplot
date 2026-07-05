@@ -5,6 +5,7 @@ import type {
   PlanetInteriorStructure,
   PlanetMagnetosphere,
   RetentionAudit,
+  ThermalEmission,
   TransmissionInference,
 } from "@/lib/science/types";
 
@@ -16,6 +17,55 @@ const M_EARTH = 5.972e24;
 const R_EARTH = 6.371e6;
 const R_SUN = 6.957e8;
 const AMU = 1.6605390666e-27;
+const H_PLANCK = 6.62607015e-34;
+const C_LIGHT = 2.99792458e8;
+const WIEN_UM_K = 2897.771955;
+
+// Planck spectral radiance B(lambda, T) = 2hc^2 / lambda^5 / (exp(hc/lambda k T) - 1).
+function planckSpectralRadiance(wavelengthM: number, temperatureK: number) {
+  const numerator = (2 * H_PLANCK * C_LIGHT * C_LIGHT) / Math.pow(wavelengthM, 5);
+  const exponent = (H_PLANCK * C_LIGHT) / (wavelengthM * KB * temperatureK);
+  return numerator / (Math.exp(exponent) - 1);
+}
+
+// Thermal emission from a planet's dayside. The archive equilibrium temperature
+// assumes full heat redistribution; the dayside (no redistribution, f = 2/3) is
+// (8/3)^0.25 hotter, and the substellar point peaks at sqrt(2) hotter. Wien's law
+// gives where it glows, and the secondary-eclipse depth (planet/star flux ratio
+// via Planck functions at a MIRI reference wavelength) gives how detectable it is.
+export function estimateThermalEmission(input: {
+  equilibriumK: number | null;
+  stellarTeffK: number | null;
+  radiusEarth: number | null;
+  stellarRadiusSolar: number | null;
+}): ThermalEmission | null {
+  if (!input.equilibriumK || input.equilibriumK <= 0) return null;
+  const daysideTemperatureK = input.equilibriumK * Math.pow(8 / 3, 0.25);
+  const substellarMaxK = input.equilibriumK * Math.SQRT2;
+  const thermalPeakUm = WIEN_UM_K / daysideTemperatureK;
+
+  let secondaryEclipseDepthPpm: number | null = null;
+  const referenceWavelengthUm = 15;
+  if (input.stellarTeffK && input.radiusEarth && input.stellarRadiusSolar) {
+    const lambdaM = referenceWavelengthUm * 1e-6;
+    const rpM = input.radiusEarth * R_EARTH;
+    const rsM = input.stellarRadiusSolar * R_SUN;
+    const ratio = planckSpectralRadiance(lambdaM, daysideTemperatureK) / planckSpectralRadiance(lambdaM, input.stellarTeffK);
+    secondaryEclipseDepthPpm = Number((Math.pow(rpM / rsM, 2) * ratio * 1e6).toFixed(1));
+  }
+
+  return {
+    framework: "thermal-emission",
+    daysideTemperatureK: Number(daysideTemperatureK.toFixed(0)),
+    substellarMaxK: Number(substellarMaxK.toFixed(0)),
+    thermalPeakUm: Number(thermalPeakUm.toFixed(2)),
+    referenceWavelengthUm,
+    secondaryEclipseDepthPpm,
+    notes: [
+      "Dayside temperature assumes no day-night heat redistribution ((8/3)^0.25 above the full-redistribution equilibrium temperature); the secondary-eclipse depth is a blackbody planet/star flux ratio at the reference wavelength, not a spectral model.",
+    ],
+  };
+}
 
 type NumericMeasurementInput = {
   value: number | null;

@@ -183,6 +183,16 @@ export type PlanetInteriorStructure = {
   notes: string[];
 };
 
+export type ThermalEmission = {
+  framework: "thermal-emission";
+  daysideTemperatureK: number;
+  substellarMaxK: number;
+  thermalPeakUm: number;
+  referenceWavelengthUm: number;
+  secondaryEclipseDepthPpm: number | null;
+  notes: string[];
+};
+
 export type MassForecast = {
   framework: "empirical-mass-radius";
   massEarth: number;
@@ -353,6 +363,7 @@ export type PlanetScienceBundle = {
   earthSimilarity: EarthSimilarityIndex | null;
   habitableZone: HabitableZoneAssessment | null;
   massForecast: MassForecast | null;
+  emission: ThermalEmission | null;
   retention: RetentionAudit;
   references: Array<{
     label: string;

@@ -3032,6 +3032,80 @@ function buildDerivedMetrics(system: UniverseSystem, planet: UniversePlanet | nu
     });
   }
 
+  if (science?.interior && science.interior.composition !== "unresolved") {
+    const top = science.interior.probabilities?.[0];
+    metrics.push({
+      label: "Interior Composition",
+      value: `${titleCaseSlug(science.interior.composition)}${top ? ` (${Math.round(top.probability * 100)}% ${titleCaseSlug(top.composition)})` : ""}`,
+      note: science.interior.requiresVolatiles
+        ? "Radius exceeds a pure-rock body at this mass, so a volatile layer is required. Monte Carlo over mass-radius uncertainty vs Zeng et al. (2016) curves."
+        : "Bulk composition from the mass-radius point vs Zeng et al. (2016) reference curves; probabilities from Monte Carlo over the uncertainties.",
+      kind: "inferred",
+      provenance: "Source: archive mass + radius",
+      equation: "Eq: R = C * M^(1/3.7) reference curves (iron/rock/water)",
+    });
+  }
+
+  if (science?.earthSimilarity) {
+    const esi = science.earthSimilarity;
+    metrics.push({
+      label: "Earth Similarity Index",
+      value: `${formatNumber(esi.index, 2)} (interior ${formatNumber(esi.interiorIndex, 2)}, surface ${formatNumber(esi.surfaceIndex, 2)})`,
+      note: "Schulze-Makuch et al. (2011) similarity over radius, density, escape velocity, and equilibrium temperature. A similarity score, not a habitability probability.",
+      kind: "derived",
+      provenance: "Source: archive radius / mass / temperature",
+      equation: "Eq: ESI = product (1 - |(x - x_E)/(x + x_E)|)^(w/n)",
+    });
+  }
+
+  if (science?.habitableZone) {
+    const hz = science.habitableZone;
+    metrics.push({
+      label: "Habitable Zone (Kopparapu)",
+      value: `${titleCaseSlug(hz.zone)}${hz.insolationEarth !== null && hz.insolationEarth !== undefined ? ` at ${formatNumber(hz.insolationEarth, 2)} S⊕` : ""}`,
+      note: `Conservative ${formatNumber(hz.conservativeInnerAu, 2)}-${formatNumber(hz.conservativeOuterAu, 2)} AU, optimistic ${formatNumber(hz.optimisticInnerAu, 2)}-${formatNumber(hz.optimisticOuterAu, 2)} AU (Kopparapu et al. 2013).`,
+      kind: "inferred",
+      provenance: "Source: stellar luminosity + effective temperature",
+      equation: "Eq: d = sqrt((L/L_sun)/S_eff), S_eff quartic in (Teff - 5780)",
+    });
+  }
+
+  if (science?.transmission) {
+    const t = science.transmission;
+    metrics.push({
+      label: "Atmosphere (spectrum)",
+      value: `${titleCaseSlug(t.atmosphereClass)} (mu ~ ${formatNumber(t.impliedMeanMolecularWeightAmu, 1)} amu)`,
+      note: `Mean molecular weight inverted from a ${formatNumber(t.featureAmplitudePpm, 0)} ppm feature amplitude via scale-height physics; H ~ ${formatNumber(t.impliedScaleHeightKm, 0)} km. Screen, not a full retrieval.`,
+      kind: "inferred",
+      provenance: "Source: transmission spectrum sample",
+      equation: "Eq: dDepth ~ 2 N_H H R_p / R_star^2; mu = kT/(H g)",
+    });
+  }
+
+  if (science?.emission) {
+    const e = science.emission;
+    metrics.push({
+      label: "Thermal Emission",
+      value: `Dayside ${formatNumber(e.daysideTemperatureK, 0)} K, peak ${formatNumber(e.thermalPeakUm, 1)} um${e.secondaryEclipseDepthPpm !== null && e.secondaryEclipseDepthPpm !== undefined ? `, eclipse ${formatNumber(e.secondaryEclipseDepthPpm, 0)} ppm at ${e.referenceWavelengthUm}um` : ""}`,
+      note: "Dayside temperature (no heat redistribution), Wien peak wavelength, and a blackbody secondary-eclipse depth. Emission-side estimate.",
+      kind: "derived",
+      provenance: "Source: equilibrium temperature + stellar Teff + R_p/R_star",
+      equation: "Eq: T_day = T_eq (8/3)^0.25; depth = (Rp/Rs)^2 B(l,Tp)/B(l,Ts)",
+    });
+  }
+
+  if (science?.massForecast) {
+    const f = science.massForecast;
+    metrics.push({
+      label: "Mass Forecast (M-R)",
+      value: `${formatNumber(f.massEarth, 2)} M(+) (${formatNumber(f.lowEarth, 2)}-${formatNumber(f.highEarth, 2)})`,
+      note: `Empirical mass-radius forecast (QR least-squares fit, ${f.scatterDex} dex scatter). ${f.notes[f.notes.length - 1] ?? ""}`,
+      kind: "inferred",
+      provenance: "Source: empirical mass-radius relation over archive planets",
+      equation: `Eq: ${f.relation}`,
+    });
+  }
+
   return metrics;
 }
 
