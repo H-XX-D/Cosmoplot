@@ -1,7 +1,13 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
-const CACHE_ROOT = path.join(process.cwd(), ".cache", "science");
+// On serverless hosts (Vercel) the deployment filesystem is read-only except
+// the system temp dir, so writing under process.cwd() throws EROFS. Use a
+// writable temp base there; keep the in-repo .cache for local development.
+const CACHE_ROOT = process.env.VERCEL
+  ? path.join(os.tmpdir(), "cosmoplot-cache", "science")
+  : path.join(process.cwd(), ".cache", "science");
 
 type CacheEnvelope<T> = {
   createdAt: string;
@@ -17,7 +23,6 @@ function cachePath(key: string) {
 }
 
 export async function readThroughJsonCache<T>(key: string, maxAgeMs: number, loader: () => Promise<T>) {
-  await ensureCacheDir();
   const target = cachePath(key);
 
   try {
@@ -28,7 +33,7 @@ export async function readThroughJsonCache<T>(key: string, maxAgeMs: number, loa
       return { payload: envelope.payload, cache: "hit" as const, createdAt: envelope.createdAt };
     }
   } catch {
-    // cache miss
+    // cache miss or unreadable cache entry
   }
 
   const payload = await loader();
@@ -36,6 +41,13 @@ export async function readThroughJsonCache<T>(key: string, maxAgeMs: number, loa
     createdAt: new Date().toISOString(),
     payload,
   };
-  await writeFile(target, JSON.stringify(envelope, null, 2), "utf8");
+  // Best-effort persistence: a read-only or full filesystem must never break
+  // the request, so swallow any write failure and still return fresh data.
+  try {
+    await ensureCacheDir();
+    await writeFile(target, JSON.stringify(envelope, null, 2), "utf8");
+  } catch {
+    // ignore cache write failures
+  }
   return { payload, cache: "miss" as const, createdAt: envelope.createdAt };
 }

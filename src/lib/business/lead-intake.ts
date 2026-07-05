@@ -1,4 +1,5 @@
 import { mkdir, appendFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { z } from "zod";
@@ -29,13 +30,23 @@ export type LeadRecord = LeadInput & {
 };
 
 function supporterStorePath() {
-  return path.join(process.cwd(), ".cache", "business", "supporters.jsonl");
+  // Serverless deployment filesystem is read-only except the temp dir.
+  const base = process.env.VERCEL
+    ? path.join(os.tmpdir(), "cosmoplot-cache", "business")
+    : path.join(process.cwd(), ".cache", "business");
+  return path.join(base, "supporters.jsonl");
 }
 
 async function persistLead(record: LeadRecord) {
-  const filePath = supporterStorePath();
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await appendFile(filePath, JSON.stringify(record) + "\n", "utf8");
+  // Best-effort local log; webhook and email are the durable delivery paths,
+  // so a read-only filesystem must not fail the submission.
+  try {
+    const filePath = supporterStorePath();
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await appendFile(filePath, JSON.stringify(record) + "\n", "utf8");
+  } catch {
+    // ignore local persistence failures
+  }
 }
 
 async function sendLeadWebhook(record: LeadRecord) {
