@@ -723,6 +723,27 @@ function findPlanetTarget(snapshot: UniverseSnapshot, planetName: string) {
   return null;
 }
 
+// Deterministic shuffle seeded by a string, so a target's highlight cards are
+// stable while it is selected but vary from target to target.
+function seededShuffle<T>(items: T[], seedText: string): T[] {
+  let h = 1779033703 ^ seedText.length;
+  for (let i = 0; i < seedText.length; i += 1) {
+    h = Math.imul(h ^ seedText.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  const rand = () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function buildGuidedTargets(snapshot: UniverseSnapshot): GuidedTarget[] {
   const targets: GuidedTarget[] = [];
   const addPlanet = (planetName: string, eyebrow: string, note: string, query: string) => {
@@ -6094,6 +6115,12 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
         : selectedSystem
           ? buildUncertaintyMetrics(selectedSystem, selectedPlanet, selectedPlanetScience)
           : [];
+  const reportHighlightCards = useMemo(() => {
+    if (activeFocusKind !== "planet" && activeFocusKind !== "system") return [];
+    const pool = [...observedMetrics, ...derivedMetrics];
+    return seededShuffle(pool, `${selectedPlanet?.id ?? selectedSystem?.id ?? "none"}`).slice(0, 6);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFocusKind, selectedPlanet?.id, selectedSystem?.id, observedMetrics, derivedMetrics]);
   const chartRows = activeFocusKind === "deepSky" && selectedDeepSky
     ? buildDeepSkyChartRows(selectedDeepSky)
     : activeFocusKind === "whiteDwarf" && selectedWhiteDwarf
@@ -7087,6 +7114,14 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                 </div>
               </div>
 
+              {reportHighlightCards.length ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {reportHighlightCards.map((metric) => (
+                    <MetricCard key={metric.label} metric={metric} />
+                  ))}
+                </div>
+              ) : null}
+
               <div className="rounded-[1.7rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
@@ -7165,15 +7200,6 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {derivedMetrics.map((metric) => (
-                <MetricCard key={metric.label} metric={metric} />
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
-            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{uncertaintyTitle}</div>
-            <div className="mt-4 grid gap-3">
-              {uncertaintyMetrics.map((metric) => (
                 <MetricCard key={metric.label} metric={metric} />
               ))}
             </div>
@@ -7272,6 +7298,17 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
             ) : null}
           </section>
         </aside>
+
+        {!isFullscreen && uncertaintyMetrics.length ? (
+          <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 backdrop-blur-xl">
+            <div className="text-[0.68rem] uppercase tracking-[0.26em] text-sky-100/48">{uncertaintyTitle}</div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+              {uncertaintyMetrics.map((metric) => (
+                <MetricCard key={metric.label} metric={metric} />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );
