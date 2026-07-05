@@ -6954,7 +6954,7 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
                         {source.cache}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs leading-5 text-slate-300/70">{source.kind} · fetched {new Date(source.accessedAt).toLocaleString()}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-300/70">{source.kind} · fetched <time dateTime={source.accessedAt} suppressHydrationWarning>{new Date(source.accessedAt).toLocaleString()}</time></p>
                   </a>
                 ))}
               </div>
