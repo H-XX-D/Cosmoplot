@@ -179,6 +179,25 @@ export type PlanetInteriorStructure = {
     water50: number;
     water100: number;
   } | null;
+  probabilities?: Array<{ composition: string; probability: number }> | null;
+  notes: string[];
+};
+
+export type EarthSimilarityIndex = {
+  index: number;
+  interiorIndex: number;
+  surfaceIndex: number;
+  reference: string;
+  notes: string[];
+};
+
+export type HabitableZoneAssessment = {
+  zone: "conservative" | "optimistic" | "too-hot" | "too-cold" | "unresolved";
+  insolationEarth: number | null;
+  conservativeInnerAu: number | null;
+  conservativeOuterAu: number | null;
+  optimisticInnerAu: number | null;
+  optimisticOuterAu: number | null;
   notes: string[];
 };
 
@@ -321,6 +340,8 @@ export type PlanetScienceBundle = {
   propagation: CatalogPropagation;
   interior: PlanetInteriorStructure;
   transmission: TransmissionInference | null;
+  earthSimilarity: EarthSimilarityIndex | null;
+  habitableZone: HabitableZoneAssessment | null;
   retention: RetentionAudit;
   references: Array<{
     label: string;

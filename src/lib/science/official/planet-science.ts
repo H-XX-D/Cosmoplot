@@ -9,7 +9,7 @@ import {
   getLegacyPlanetEntry,
 } from "@/lib/science/local/legacy-analysis";
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
-import { deriveRetentionAudit, inferAtmosphereFromTransmission, inferInteriorStructure, propagateCatalogPlanet } from "@/lib/science/physics";
+import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
 import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
 import { measurementBounds } from "@/lib/utils";
 import type {
@@ -1106,6 +1106,8 @@ const SOLAR_FALLBACKS: Record<string, Omit<PlanetScienceBundle, "fetchedAt" | "s
     }),
     interior: inferInteriorStructure({ massEarth: 1, radiusEarth: 1, densityGcc: 5.51 }),
     transmission: null,
+    earthSimilarity: computeEarthSimilarityIndex({ radiusEarth: 1, densityGcc: 5.51, massEarth: 1, equilibriumK: 255 }),
+    habitableZone: assessHabitableZone({ luminositySolar: 1, stellarTeffK: 5772, semiMajorAxisAu: 1 }),
     references: [
       { label: "NASA Solar System Exploration", url: "https://solarsystem.nasa.gov/planets/earth/overview/" },
     ],
@@ -1357,7 +1359,22 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     fluxEarthMultiple: radiation.fluxEarthMultiple,
     stellarRadiusSolar,
   });
-  const interior = inferInteriorStructure({ massEarth, radiusEarth, densityGcc });
+  const interior = {
+    ...inferInteriorStructure({ massEarth, radiusEarth, densityGcc }),
+    probabilities: interiorCompositionProbabilities({
+      planetName: row?.pl_name ?? planetName,
+      massEarth,
+      radiusEarth,
+      massBounds: uncertainty.massEarth,
+      radiusBounds: uncertainty.radiusEarth,
+    }),
+  };
+  const earthSimilarity = computeEarthSimilarityIndex({ radiusEarth, densityGcc, massEarth, equilibriumK });
+  const habitableZone = assessHabitableZone({
+    luminositySolar: stellarLuminosity,
+    stellarTeffK: stellarTemperatureK,
+    semiMajorAxisAu,
+  });
   const transmissionFeature = await getTransmissionFeature(row?.pl_name ?? planetName);
   const transmission = transmissionFeature
     ? inferAtmosphereFromTransmission({
@@ -1424,6 +1441,8 @@ export async function fetchPlanetScienceBundle(planetName: string) {
     retention,
     interior,
     transmission,
+    earthSimilarity,
+    habitableZone,
     references: mergedReferences,
     sources: [
       archiveSource,

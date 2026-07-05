@@ -450,6 +450,157 @@ export function inferAtmosphereFromTransmission(input: {
   };
 }
 
+// Shared mass-radius composition classifier (Zeng et al. 2016 reference curves),
+// used for both the single-point call and the Monte Carlo probability sampler.
+function classifyByMassRadius(
+  massEarth: number,
+  radiusEarth: number,
+): Exclude<PlanetInteriorStructure["composition"], "unresolved"> {
+  if (massEarth > 20 || radiusEarth > 6) return "giant";
+  const mPow = Math.pow(massEarth, 1 / 3.7);
+  const iron = 0.86 * mPow;
+  const rock = 1.07 * mPow;
+  const water50 = 1.24 * mPow;
+  const water100 = 1.41 * mPow;
+  if (radiusEarth < iron) return "iron-dominated";
+  if (radiusEarth <= rock) return "rocky-terrestrial";
+  if (radiusEarth <= water50) return "rock-volatile-mix";
+  if (radiusEarth <= water100) return "water-ice-rich";
+  return "gas-envelope";
+}
+
+// Monte Carlo interior-composition probabilities: sample mass and radius from
+// their measurement uncertainties, classify each draw against the Zeng curves,
+// and tally the fraction landing in each composition class. This captures the
+// real ambiguity a single mass-radius point hides (e.g. rocky vs water-world).
+export function interiorCompositionProbabilities(input: {
+  planetName: string;
+  massEarth: number | null;
+  radiusEarth: number | null;
+  massBounds: MeasurementBounds;
+  radiusBounds: MeasurementBounds;
+}): Array<{ composition: string; probability: number }> | null {
+  const { massEarth, radiusEarth } = input;
+  if (!massEarth || !radiusEarth) return null;
+  const random = createSeededRandom(`${input.planetName}:interior`);
+  const massSigma = Math.max(averageMagnitudeBounds(input.massBounds) ?? massEarth * 0.15, massEarth * 0.03);
+  const radiusSigma = Math.max(averageMagnitudeBounds(input.radiusBounds) ?? radiusEarth * 0.05, radiusEarth * 0.01);
+  const counts = new Map<string, number>();
+  const samples = 2000;
+  let valid = 0;
+  for (let i = 0; i < samples; i += 1) {
+    const m = massEarth + sampleStandardNormal(random) * massSigma;
+    const r = radiusEarth + sampleStandardNormal(random) * radiusSigma;
+    if (m <= 0 || r <= 0) continue;
+    const cls = classifyByMassRadius(m, r);
+    counts.set(cls, (counts.get(cls) ?? 0) + 1);
+    valid += 1;
+  }
+  if (!valid) return null;
+  return Array.from(counts.entries())
+    .map(([composition, n]) => ({ composition, probability: Number((n / valid).toFixed(4)) }))
+    .sort((a, b) => b.probability - a.probability);
+}
+
+// Earth Similarity Index (Schulze-Makuch et al. 2011): a 0-1 score of how
+// Earth-like a planet is, from radius, bulk density, escape velocity, and
+// temperature, each weighted. Uses equilibrium temperature consistently (Earth
+// reference 255 K) so Earth itself scores 1.0.
+export function computeEarthSimilarityIndex(input: {
+  radiusEarth: number | null;
+  densityGcc: number | null;
+  massEarth: number | null;
+  equilibriumK: number | null;
+}): { index: number; interiorIndex: number; surfaceIndex: number; reference: string; notes: string[] } | null {
+  const escapeVelocityKmS = deriveEscapeVelocityKmS(input.massEarth, input.radiusEarth);
+  const density = input.densityGcc ?? deriveDensityGcc(input.massEarth, input.radiusEarth);
+  if (!input.radiusEarth || !density || !escapeVelocityKmS || !input.equilibriumK) return null;
+
+  const factor = (value: number, ref: number, weight: number, n: number) =>
+    Math.pow(1 - Math.abs((value - ref) / (value + ref)), weight / n);
+
+  const interiorIndex =
+    factor(input.radiusEarth, 1, 0.57, 2) * factor(density, 5.51, 1.07, 2);
+  const surfaceIndex =
+    factor(escapeVelocityKmS, 11.19, 0.7, 2) * factor(input.equilibriumK, 255, 5.58, 2);
+  const index =
+    factor(input.radiusEarth, 1, 0.57, 4) *
+    factor(density, 5.51, 1.07, 4) *
+    factor(escapeVelocityKmS, 11.19, 0.7, 4) *
+    factor(input.equilibriumK, 255, 5.58, 4);
+
+  return {
+    index: Number(index.toFixed(4)),
+    interiorIndex: Number(interiorIndex.toFixed(4)),
+    surfaceIndex: Number(surfaceIndex.toFixed(4)),
+    reference: "equilibrium-temperature (Earth = 255 K)",
+    notes: [
+      "Earth Similarity Index (Schulze-Makuch et al. 2011) over radius, density, escape velocity, and equilibrium temperature; a similarity score, not a habitability probability.",
+    ],
+  };
+}
+
+// Habitable-zone placement from the Kopparapu et al. (2013) stellar-flux limits.
+// Conservative HZ runs from the runaway greenhouse to the maximum greenhouse;
+// the optimistic HZ from recent Venus to early Mars. Boundaries in AU come from
+// d = sqrt((L/Lsun) / S_eff), with S_eff a quartic in (Teff - 5780).
+export function assessHabitableZone(input: {
+  luminositySolar: number | null;
+  stellarTeffK: number | null;
+  semiMajorAxisAu: number | null;
+}): {
+  zone: "conservative" | "optimistic" | "too-hot" | "too-cold" | "unresolved";
+  insolationEarth: number | null;
+  conservativeInnerAu: number | null;
+  conservativeOuterAu: number | null;
+  optimisticInnerAu: number | null;
+  optimisticOuterAu: number | null;
+  notes: string[];
+} | null {
+  const { luminositySolar, stellarTeffK, semiMajorAxisAu } = input;
+  if (!luminositySolar || !stellarTeffK || luminositySolar <= 0) return null;
+
+  const t = stellarTeffK - 5780;
+  // [S_sun, a, b, c, d] for each limit (Kopparapu et al. 2013/2014).
+  const limits = {
+    recentVenus: [1.776, 2.136e-4, 2.533e-8, -1.332e-11, -3.097e-15],
+    runaway: [1.107, 1.332e-4, 1.58e-8, -8.308e-12, -1.931e-15],
+    maxGreenhouse: [0.356, 6.171e-5, 1.698e-9, -3.198e-12, -5.575e-16],
+    earlyMars: [0.32, 5.547e-5, 1.526e-9, -2.874e-12, -5.011e-16],
+  } as const;
+  const seff = (k: readonly number[]) => k[0] + k[1] * t + k[2] * t * t + k[3] * t ** 3 + k[4] * t ** 4;
+  const auAt = (k: readonly number[]) => Math.sqrt(luminositySolar / seff(k));
+
+  const conservativeInnerAu = auAt(limits.runaway);
+  const conservativeOuterAu = auAt(limits.maxGreenhouse);
+  const optimisticInnerAu = auAt(limits.recentVenus);
+  const optimisticOuterAu = auAt(limits.earlyMars);
+  const insolationEarth = semiMajorAxisAu ? luminositySolar / (semiMajorAxisAu * semiMajorAxisAu) : null;
+
+  let zone: "conservative" | "optimistic" | "too-hot" | "too-cold" | "unresolved" = "unresolved";
+  if (semiMajorAxisAu) {
+    if (semiMajorAxisAu >= conservativeInnerAu && semiMajorAxisAu <= conservativeOuterAu) zone = "conservative";
+    else if (semiMajorAxisAu >= optimisticInnerAu && semiMajorAxisAu <= optimisticOuterAu) zone = "optimistic";
+    else if (semiMajorAxisAu < optimisticInnerAu) zone = "too-hot";
+    else zone = "too-cold";
+  }
+
+  const notes = ["Habitable-zone limits follow Kopparapu et al. (2013); the conservative zone spans runaway-to-maximum greenhouse, the optimistic zone recent-Venus to early-Mars."];
+  if (stellarTeffK < 2600 || stellarTeffK > 7200) {
+    notes.push("Host temperature is outside the 2600-7200 K range the boundary fit was calibrated on, so the limits are extrapolated.");
+  }
+
+  return {
+    zone,
+    insolationEarth: insolationEarth !== null ? Number(insolationEarth.toFixed(4)) : null,
+    conservativeInnerAu: Number(conservativeInnerAu.toFixed(4)),
+    conservativeOuterAu: Number(conservativeOuterAu.toFixed(4)),
+    optimisticInnerAu: Number(optimisticInnerAu.toFixed(4)),
+    optimisticOuterAu: Number(optimisticOuterAu.toFixed(4)),
+    notes,
+  };
+}
+
 // Bulk interior composition from the mass-radius point, compared against the
 // Zeng, Sasselov & Stewart (2016) mass-radius relations. Each reference radius
 // is R/R_earth = C * (M/M_earth)^(1/3.7), with C set by core mass fraction:
@@ -494,13 +645,7 @@ export function inferInteriorStructure(input: {
   const water50 = 1.24 * mPow; // ~50% water mantle
   const water100 = 1.41 * mPow; // ~100% water/ice
 
-  let composition: PlanetInteriorStructure["composition"];
-  if (radiusEarth < iron) composition = "iron-dominated";
-  else if (radiusEarth <= rock) composition = "rocky-terrestrial";
-  else if (radiusEarth <= water50) composition = "rock-volatile-mix";
-  else if (radiusEarth <= water100) composition = "water-ice-rich";
-  else composition = "gas-envelope";
-
+  const composition = classifyByMassRadius(massEarth, radiusEarth);
   const requiresVolatiles = radiusEarth > rock;
   const notes = [
     "Composition class is read from the mass-radius point against Zeng et al. (2016) reference curves; it is a bulk inference, not a layered interior model.",
