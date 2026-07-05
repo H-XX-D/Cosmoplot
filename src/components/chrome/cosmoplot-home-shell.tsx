@@ -105,7 +105,7 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
               A star chart plotter for real nearby systems
             </div>
             <h1 className="mt-8 max-w-5xl bg-gradient-to-b from-[#eef7ff] via-[#d8e7ff] to-[#ffcad7] bg-clip-text text-5xl font-semibold tracking-[-0.06em] text-transparent sm:text-6xl lg:text-8xl">
-              Plot a course through nearby worlds without losing track of what is actually known.
+              Plot a course to nearby worlds. Explore the actual data.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-200/78 sm:text-xl">
               Cosmoplot works like a sailing chart plotter for the sky: pick a fix, read the bearing and distance, then inspect the catalog evidence, uncertainty, and model labels behind the object.
