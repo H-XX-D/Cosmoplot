@@ -142,7 +142,7 @@ export function CosmoplotHomeShell({ snapshot }: { snapshot: UniverseSnapshot })
               {
                 label: "Sampling radius",
                 value: `${snapshot.query.radiusPc} pc`,
-                note: "Current local-neighborhood chart volume around the Sun.",
+                note: "Solar-neighborhood chart volume around the Sun, plus researched systems plotted beyond it.",
               },
               {
                 label: "Source of truth",

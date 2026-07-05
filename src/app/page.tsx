@@ -6,7 +6,7 @@ import { getUniverseSnapshot } from "@/lib/science/catalog/build-universe";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const snapshot = await getUniverseSnapshot({ radiusPc: 35, limit: 320 });
+  const snapshot = await getUniverseSnapshot({ radiusPc: 50, limit: 400 });
 
   return (
     <main className="relative min-h-screen overflow-x-hidden text-white">

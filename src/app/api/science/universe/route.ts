@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUniverseSnapshot } from "@/lib/science/catalog/build-universe";
 
 export async function GET(request: NextRequest) {
-  const radiusPc = Number(request.nextUrl.searchParams.get("radiusPc") || 35);
+  const radiusPc = Number(request.nextUrl.searchParams.get("radiusPc") || 50);
   const limit = Number(request.nextUrl.searchParams.get("limit") || 800);
   const search = request.nextUrl.searchParams.get("search");
 

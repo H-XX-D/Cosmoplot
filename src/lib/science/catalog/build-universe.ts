@@ -425,7 +425,7 @@ export async function getUniverseSnapshot(params?: {
   limit?: number;
   search?: string | null;
 }) {
-  const radiusPc = params?.radiusPc ?? 35;
+  const radiusPc = params?.radiusPc ?? 50;
   const limit = params?.limit ?? 800;
   const search = params?.search ?? null;
   const snapshotCacheKey = JSON.stringify({ radiusPc, limit, search: search ?? "" });

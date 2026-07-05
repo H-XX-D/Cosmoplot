@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const radiusPc = Number(request.nextUrl.searchParams.get("radiusPc") || 35);
+  const radiusPc = Number(request.nextUrl.searchParams.get("radiusPc") || 50);
   const limit = Number(request.nextUrl.searchParams.get("limit") || 800);
   const search = request.nextUrl.searchParams.get("search");
 
