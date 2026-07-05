@@ -11,6 +11,7 @@ import {
 import { fetchArchivePlanetByName } from "@/lib/science/official/exoplanet-archive";
 import { assessHabitableZone, computeEarthSimilarityIndex, deriveRetentionAudit, estimateThermalEmission, forecastMassFromRadius, inferAtmosphereFromTransmission, inferInteriorStructure, interiorCompositionProbabilities, propagateCatalogPlanet } from "@/lib/science/physics";
 import { getTransmissionFeature } from "@/lib/science/local/transmission-features";
+import { getResearchedNarrative } from "@/lib/science/local/researched-systems";
 import { measurementBounds } from "@/lib/utils";
 import type {
   AtmosphereEvidence,
@@ -1390,6 +1391,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
         densityGcc,
       })
     : null;
+  const researchNarrative = await getResearchedNarrative(row?.pl_name ?? planetName);
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1463,6 +1465,7 @@ export async function fetchPlanetScienceBundle(planetName: string) {
       ...(localAnalysis ? [localSource] : []),
     ],
     localAnalysis,
+    researchNarrative,
     uncertainty,
   } satisfies PlanetScienceBundle;
 }

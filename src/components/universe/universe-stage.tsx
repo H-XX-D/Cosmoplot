@@ -371,9 +371,9 @@ function analysisSectionSubtitle(focusKind: FocusKind | null) {
     case "referenceStar":
       return "Reference-star context retained under the map";
     case "system":
-      return "System-level narrative retained under the map";
+      return "Full science write-up for the selected system, below the chart";
     default:
-      return "Science-side narrative retained under the map";
+      return "Full science narrative, derivations, and deep-dive for the plotted target, below the chart";
   }
 }
 
@@ -6111,6 +6111,9 @@ export function UniverseStage({ snapshot }: { snapshot: UniverseSnapshot; introA
         ? buildReferenceStarAnalysis(selectedReferenceStar)
         : selectedSystem
           ? buildAnalysis(selectedSystem, selectedPlanet, selectedPlanetScience)
+            + (selectedPlanetScience?.researchNarrative
+              ? `\n\n===== DEEP-DIVE ANALYSIS (RESEARCHED SYSTEM) =====\n\n${selectedPlanetScience.researchNarrative}`
+              : "")
           : "No target in the current filtered universe slice.";
   const sources = activeFocusKind === "deepSky" && selectedDeepSky
     ? deepSkySources(selectedDeepSky)

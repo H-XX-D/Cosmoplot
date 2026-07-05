@@ -58,3 +58,32 @@ export async function getResearchedPlanetSummaryMap(): Promise<Map<string, strin
 export function researchedPlanetKey(name: string) {
   return normalize(name);
 }
+
+const ANALYSES_DIR = path.join(process.cwd(), "data", "science", "analyses");
+
+// Full deep-dive narrative for a researched planet's system: the committed
+// analysis files (formation, interior structure, evolution, magnetosphere)
+// concatenated, for the maximal-analysis card. Reads from the repo, so it works
+// in production; returns null for non-researched targets.
+export async function getResearchedNarrative(planetName: string): Promise<string | null> {
+  const { byPlanet } = await load();
+  const system = byPlanet.get(normalize(planetName));
+  if (!system) return null;
+  const dir = path.join(ANALYSES_DIR, system.system);
+  const order = (file: string) =>
+    /INTERIOR/i.test(file) ? 0 : /FORMATION/i.test(file) ? 1 : /MAGNETO|CHEMISTRY/i.test(file) ? 2 : /EVOLUTION/i.test(file) ? 3 : 4;
+  const files = [...system.files].filter((f) => f.endsWith(".md")).sort((a, b) => order(a) - order(b));
+  const parts: string[] = [];
+  for (const file of files) {
+    try {
+      const text = (await readFile(path.join(dir, file), "utf8")).trim();
+      if (text) {
+        const heading = file.replace(/\.md$/i, "").replace(/_/g, " ");
+        parts.push(`===== ${heading} =====\n\n${text}`);
+      }
+    } catch {
+      // Skip files that cannot be read.
+    }
+  }
+  return parts.length ? parts.join("\n\n") : null;
+}

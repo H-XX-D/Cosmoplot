@@ -371,6 +371,7 @@ export type PlanetScienceBundle = {
   }>;
   sources: SourceDescriptor[];
   localAnalysis?: LocalAnalysisBundle | null;
+  researchNarrative?: string | null;
   uncertainty: {
     radiusEarth: MeasurementBounds;
     massEarth: MeasurementBounds;
