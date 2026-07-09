@@ -9,10 +9,22 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { UniverseStage } from "@/components/universe/universe-stage";
 import type { UniverseSnapshot } from "@/lib/science/types";
+
+const UniverseStage = dynamic(
+  () => import("@/components/universe/universe-stage").then((m) => m.UniverseStage),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[60vh] items-center justify-center text-white/60">
+        Loading star field…
+      </div>
+    ),
+  },
+);
 import { LeadCaptureForm } from "@/components/chrome/lead-capture-form";
 import { LockoutTargetPlanner } from "@/components/science/lockout-target-planner";
 

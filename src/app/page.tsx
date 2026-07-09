@@ -3,7 +3,9 @@ import { CosmoplotHomeShell } from "@/components/chrome/cosmoplot-home-shell";
 import { ShootingStars } from "@/components/ui/shooting-stars";
 import { getUniverseSnapshot } from "@/lib/science/catalog/build-universe";
 
-export const dynamic = "force-dynamic";
+// ISR: cache the universe snapshot for 1 hour and refresh in the background
+// instead of re-running getUniverseSnapshot on every request. Big TTFB win.
+export const revalidate = 3600;
 
 export default async function Home() {
   // Near field for a fast first paint; the client expands to the full 50 pc far
